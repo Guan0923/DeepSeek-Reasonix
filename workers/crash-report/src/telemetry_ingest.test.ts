@@ -136,4 +136,49 @@ describe("telemetry queue database batching", () => {
       expect(message.retry).not.toHaveBeenCalled();
     }
   });
+
+  it("dual-writes Studio deliveries before the database cutover", async () => {
+    const makeDB = () => {
+      const batches: unknown[][] = [];
+      const db = {
+        prepare(sql: string) {
+          return { sql, bind: (...bindings: unknown[]) => ({ sql, bindings }) };
+        },
+        async batch(statements: unknown[]) {
+          batches.push(statements);
+          return [];
+        },
+      } as unknown as D1Database;
+      return { db, batches };
+    };
+    const legacy = makeDB();
+    const isolated = makeDB();
+    const message = {
+      body: {
+        version: 1 as const,
+        eventId: crypto.randomUUID(),
+        receivedAt: "2026-09-27T06:00:00.000Z",
+        kind: "ping" as const,
+        payload: {
+          installId: "d".repeat(32), version: "2.20.2", os: "linux", arch: "x64", surface: "studio",
+        },
+      },
+      ack: vi.fn(),
+      retry: vi.fn(),
+    };
+    const bindings = {
+      DB: legacy.db,
+      TELEMETRY_DB: isolated.db,
+      TELEMETRY_DB_MODE: "dual",
+      TELEMETRY_RAW: { put: vi.fn().mockResolvedValue(undefined) },
+    } as unknown as Env;
+
+    await worker.queue({ messages: [message] } as unknown as MessageBatch<typeof message.body>, bindings);
+
+    expect(legacy.batches.at(-1)).toHaveLength(2);
+    expect(isolated.batches.at(-1)).toHaveLength(2);
+    expect(JSON.stringify(legacy.batches.at(-1))).toContain("studio_pings");
+    expect(JSON.stringify(isolated.batches.at(-1))).toContain("studio_pings");
+    expect(message.ack).toHaveBeenCalledOnce();
+  });
 });

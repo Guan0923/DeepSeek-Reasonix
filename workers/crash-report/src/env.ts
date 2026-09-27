@@ -4,6 +4,10 @@ export interface RateLimiter {
 
 export interface Env {
   DB: D1Database;
+  // CLI and Studio telemetry are isolated from crash diagnostics. Optional
+  // only for local tests and rolling back to a pre-split deployment.
+  TELEMETRY_DB?: D1Database;
+  TELEMETRY_DB_MODE?: string;
   // Skill/MCP registry database — the folded registry API + moderation console
   // read and write it; the crash tables stay in DB.
   REGISTRY_DB: D1Database;

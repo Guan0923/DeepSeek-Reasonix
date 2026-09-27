@@ -10,6 +10,7 @@ import {
   ensureCLITelemetrySchema,
   ensureStudioTelemetrySchema,
   nativeWebRuntimeFingerprintBasis,
+  telemetryDatabase,
   telemetryTableNames,
 } from "./index";
 import {
@@ -27,6 +28,7 @@ import type { Env } from "./env";
 import { renderStats } from "./stats";
 import clientSurfaceMigrationSQL from "../migrate-client-surface.sql?raw";
 import studioTelemetryMigrationSQL from "../migrate-studio-telemetry.sql?raw";
+import telemetrySchemaSQL from "../telemetry-schema.sql?raw";
 
 const base = {
   kind: "crash",
@@ -149,6 +151,24 @@ describe("metrics compatibility", () => {
 });
 
 describe("telemetry deployment order compatibility", () => {
+  it("routes CLI and Studio to the isolated database with a rollback fallback", () => {
+    const crash = {} as D1Database;
+    const telemetry = {} as D1Database;
+    const isolated = { DB: crash, TELEMETRY_DB: telemetry, TELEMETRY_DB_MODE: "isolated" };
+    expect(telemetryDatabase(isolated, "desktop")).toBe(crash);
+    expect(telemetryDatabase(isolated, "cli")).toBe(telemetry);
+    expect(telemetryDatabase(isolated, "studio")).toBe(telemetry);
+    expect(telemetryDatabase({ DB: crash, TELEMETRY_DB: telemetry, TELEMETRY_DB_MODE: "dual" }, "studio")).toBe(crash);
+    expect(telemetryDatabase({ DB: crash }, "studio")).toBe(crash);
+  });
+
+  it("keeps the isolated database schema additive and idempotent", () => {
+    expect(telemetrySchemaSQL).not.toMatch(/\b(?:DROP|ALTER|DELETE)\b/);
+    for (const table of ["cli_pings", "cli_metrics", "studio_pings", "studio_metrics", "telemetry_receipts"]) {
+      expect(telemetrySchemaSQL).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS\\s+${table}\\b`));
+    }
+  });
+
   it("keeps the released Desktop tables unchanged and isolates newer surfaces", () => {
     expect(telemetryTableNames("desktop")).toEqual({
       pings: "pings",

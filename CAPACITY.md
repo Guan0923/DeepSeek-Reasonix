@@ -43,8 +43,9 @@ must mirror production bindings and use isolated databases, queues, and R2.
 
 ## Current known gaps
 
-- The crash/telemetry D1 database is a single write target and must be split
-  before growth approaches its database limit.
+- CLI and Studio telemetry use an isolated D1 write plane. Legacy desktop
+  telemetry still shares the crash database because diagnostics attribution
+  depends on it; that remaining dependency is the next database split.
 - The global telemetry budget is currently 1,000 events/minute. It protects the
   database but cannot satisfy the 10,000/minute durable-intake target.
 - Queue consumption is deliberately serialized for D1. A delivery is persisted
