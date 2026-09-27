@@ -19,6 +19,13 @@ const DESKTOP_ASSET_NAMES = new Set(DESKTOP_ASSETS.map(([, , name]) => name));
 const OFFICIAL_DESKTOP_RELEASE_TAG = /^(?:desktop-)?(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const MAX_RELEASE_ASSET_SIZE = 1 << 30;
+const STUDIO_VERSION = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const STUDIO_ASSETS = [
+  ["downloads", "ReasonixStudio-darwin-arm64.dmg", "ReasonixStudio-darwin-arm64.dmg"],
+  ["downloads", "ReasonixStudio-darwin-amd64.dmg", "ReasonixStudio-darwin-amd64.dmg"],
+  ["downloads", "ReasonixStudio-windows-amd64-installer.exe", "ReasonixStudio-windows-amd64-installer.exe"],
+  ["native_packages", "linux-amd64", "ReasonixStudio-linux-amd64.deb"],
+];
 
 // Keep in lockstep with workers/crash-report CLI asset gate.
 export const CLI_RELEASE_ASSETS = [
@@ -244,6 +251,122 @@ export function desktopReleaseModel(manifest, requestedChannel) {
       ? manifest.release_notes_url
       : "https://reasonix.io/changelog/",
   };
+}
+
+export function studioReleaseModel(manifest) {
+  const version = typeof manifest?.version === "string" ? manifest.version : "";
+  if (!STUDIO_VERSION.test(version)) return null;
+  const tag = `studio-${version}`;
+  const assetBase = `https://github.com/esengine/DeepSeek-Reasonix/releases/download/${tag}/`;
+  const releaseURL = `https://github.com/esengine/DeepSeek-Reasonix/releases/tag/${tag}`;
+  if (manifest?.download_page !== releaseURL || manifest?.release_notes_url !== releaseURL) return null;
+
+  const assets = {};
+  for (const [group, key, name] of STUDIO_ASSETS) {
+    const asset = manifest?.[group]?.[key];
+    const rawURL = typeof asset?.url === "string" ? asset.url : "";
+    const url = safeHTTPSURL(rawURL);
+    if (
+      !url ||
+      url.href !== rawURL ||
+      rawURL !== assetBase + name ||
+      asset.sig !== `${rawURL}.minisig` ||
+      !Number.isSafeInteger(asset.size) ||
+      asset.size <= 0 ||
+      asset.size > MAX_RELEASE_ASSET_SIZE ||
+      typeof asset.sha256 !== "string" ||
+      !SHA256.test(asset.sha256)
+    ) {
+      return null;
+    }
+    assets[name] = rawURL;
+  }
+  return {
+    version,
+    displayVersion: version.slice(1),
+    assets,
+    releaseURL,
+    changelogURL: releaseURL,
+  };
+}
+
+export function studioGitHubReleaseModel(release) {
+  const match = typeof release?.tag_name === "string"
+    ? release.tag_name.match(/^studio-(v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))$/)
+    : null;
+  if (!match || release?.draft !== false) return null;
+  const tag = release.tag_name;
+  const found = {};
+  const seen = new Set();
+  const names = new Set(STUDIO_ASSETS.map(([, , name]) => name));
+  for (const asset of Array.isArray(release.assets) ? release.assets : []) {
+    const name = String(asset?.name || "");
+    if (!names.has(name)) continue;
+    if (seen.has(name)) return null;
+    seen.add(name);
+    const rawURL = typeof asset?.browser_download_url === "string" ? asset.browser_download_url : "";
+    const expected = `https://github.com/esengine/DeepSeek-Reasonix/releases/download/${tag}/${name}`;
+    const url = safeHTTPSURL(rawURL);
+    if (
+      !url ||
+      url.href !== rawURL ||
+      rawURL !== expected ||
+      !Number.isSafeInteger(asset?.size) ||
+      asset.size <= 0 ||
+      asset.size > MAX_RELEASE_ASSET_SIZE
+    ) return null;
+    found[name] = rawURL;
+  }
+  if (STUDIO_ASSETS.some(([, , name]) => !found[name])) return null;
+  const version = match[1];
+  const releaseURL = `https://github.com/esengine/DeepSeek-Reasonix/releases/tag/${tag}`;
+  return {
+    version,
+    displayVersion: version.slice(1),
+    assets: found,
+    releaseURL,
+    changelogURL: releaseURL,
+  };
+}
+
+export async function fetchStudioDownloadModel(fetchImpl = fetch) {
+  try {
+    const catalog = await fetchFirstJSON(
+      ["https://dl.reasonix.io/studio/versions.json"],
+      fetchImpl,
+      (payload) => payload?.schemaVersion === 1 && Array.isArray(payload?.versions) && payload.versions.length > 0,
+    );
+    const latest = catalog.versions[0];
+    const version = typeof latest?.version === "string" ? latest.version : "";
+    const manifestURL = `https://dl.reasonix.io/studio-${version}/latest.json`;
+    if (!STUDIO_VERSION.test(version) || latest?.manifest !== manifestURL) return null;
+    const manifest = await fetchFirstJSON(
+      [manifestURL],
+      fetchImpl,
+      (payload) => payload?.version === version && Boolean(studioReleaseModel(payload)),
+    );
+    return studioReleaseModel(manifest);
+  } catch {
+    try {
+      const releases = await fetchFirstJSON(
+        ["https://api.github.com/repos/esengine/DeepSeek-Reasonix/releases?per_page=100"],
+        fetchImpl,
+        Array.isArray,
+      );
+      let selected = null;
+      for (const release of releases) {
+        const model = studioGitHubReleaseModel(release);
+        if (!model) continue;
+        if (!selected || compareOrder(
+          model.version.match(STUDIO_VERSION).slice(1),
+          selected.version.match(STUDIO_VERSION).slice(1),
+        ) > 0) selected = model;
+      }
+      return selected;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Accept both historical desktop-v* releases and the combined v* release.
