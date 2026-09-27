@@ -10,10 +10,9 @@ export function offeredProtocols(request: Request): string[] {
     .filter(Boolean);
 }
 
-export interface DeviceReply {
-  to: string;
-  payload: string;
-}
+export type DeviceMessage =
+  | { type: "reply"; to: string; payload: string }
+  | { type: "disconnect_controller"; connectionId: string };
 
 export function controllerMessage(
   connectionId: string,
@@ -31,7 +30,7 @@ export function controllerPresence(
   return JSON.stringify({ type, connectionId, scopes });
 }
 
-export function parseDeviceReply(message: string): DeviceReply | null {
+export function parseDeviceMessage(message: string): DeviceMessage | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(message);
@@ -40,7 +39,11 @@ export function parseDeviceReply(message: string): DeviceReply | null {
   }
   if (!parsed || typeof parsed !== "object") return null;
   const candidate = parsed as Record<string, unknown>;
+  if (candidate.type === "disconnect_controller") {
+    if (!/^[0-9a-f]{32}$/.test(String(candidate.connectionId ?? ""))) return null;
+    return { type: "disconnect_controller", connectionId: String(candidate.connectionId) };
+  }
   if (!/^[0-9a-f]{32}$/.test(String(candidate.to ?? ""))) return null;
   if (typeof candidate.payload !== "string") return null;
-  return { to: String(candidate.to), payload: candidate.payload };
+  return { type: "reply", to: String(candidate.to), payload: candidate.payload };
 }

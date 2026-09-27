@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { controllerMessage, offeredProtocols, parseDeviceReply } from "./protocol";
+import { controllerMessage, offeredProtocols, parseDeviceMessage } from "./protocol";
 
 describe("remote message routing envelope", () => {
   it("carries connection scopes outside the opaque payload", () => {
@@ -12,12 +12,24 @@ describe("remote message routing envelope", () => {
   });
 
   it("accepts only a directed device reply", () => {
-    expect(parseDeviceReply(JSON.stringify({ to: "b".repeat(32), payload: "encrypted-response" }))).toEqual({
+    expect(parseDeviceMessage(JSON.stringify({ to: "b".repeat(32), payload: "encrypted-response" }))).toEqual({
+      type: "reply",
       to: "b".repeat(32),
       payload: "encrypted-response",
     });
-    expect(parseDeviceReply(JSON.stringify({ payload: "broadcast" }))).toBeNull();
-    expect(parseDeviceReply("not-json")).toBeNull();
+    expect(parseDeviceMessage(JSON.stringify({ payload: "broadcast" }))).toBeNull();
+    expect(parseDeviceMessage("not-json")).toBeNull();
+  });
+
+  it("accepts a device-owned controller disconnect", () => {
+    expect(parseDeviceMessage(JSON.stringify({
+      type: "disconnect_controller",
+      connectionId: "c".repeat(32),
+    }))).toEqual({ type: "disconnect_controller", connectionId: "c".repeat(32) });
+    expect(parseDeviceMessage(JSON.stringify({
+      type: "disconnect_controller",
+      connectionId: "not-a-connection",
+    }))).toBeNull();
   });
 });
 

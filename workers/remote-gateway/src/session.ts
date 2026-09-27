@@ -3,7 +3,7 @@ import {
   controllerMessage,
   controllerPresence,
   offeredProtocols,
-  parseDeviceReply,
+  parseDeviceMessage,
   REMOTE_WEBSOCKET_PROTOCOL,
 } from "./protocol";
 
@@ -125,15 +125,24 @@ export class RemoteSession {
       return;
     }
 
-    const reply = parseDeviceReply(message);
-    if (!reply) {
-      socket.close(1008, "A directed reply is required");
+    const deviceMessage = parseDeviceMessage(message);
+    if (!deviceMessage) {
+      socket.close(1008, "A directed device message is required");
+      return;
+    }
+    if (deviceMessage.type === "disconnect_controller") {
+      for (const controller of this.state.getWebSockets("controller")) {
+        const peer = controller.deserializeAttachment() as SocketAttachment | null;
+        if (peer?.userId === sender.userId && peer.connectionId === deviceMessage.connectionId) {
+          controller.close(4004, "Disconnected by device");
+        }
+      }
       return;
     }
     for (const controller of this.state.getWebSockets("controller")) {
       const peer = controller.deserializeAttachment() as SocketAttachment | null;
-      if (peer?.userId === sender.userId && peer.connectionId === reply.to && controller.readyState === WebSocket.OPEN) {
-        controller.send(reply.payload);
+      if (peer?.userId === sender.userId && peer.connectionId === deviceMessage.to && controller.readyState === WebSocket.OPEN) {
+        controller.send(deviceMessage.payload);
       }
     }
   }
