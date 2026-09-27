@@ -105,16 +105,17 @@ export { diagnosticWindowWhere, effectiveGroupSeverity, isDevelopmentGroup } fro
 const MAX_BODY_BYTES = 96 * 1024;
 const LATEST_SAMPLES_PER_GROUP = 5;
 
-const ClientSurface = z.enum(["desktop", "cli"]);
+const ClientSurface = z.enum(["desktop", "studio", "cli"]);
 type ClientSurfaceName = z.infer<typeof ClientSurface>;
 
 type TelemetryTableNames = {
-  pings: "pings" | "cli_pings";
-  metrics: "metrics" | "cli_metrics";
+  pings: "pings" | "studio_pings" | "cli_pings";
+  metrics: "metrics" | "studio_metrics" | "cli_metrics";
 };
 
 const TELEMETRY_TABLES: Record<ClientSurfaceName, TelemetryTableNames> = {
   desktop: { pings: "pings", metrics: "metrics" },
+  studio: { pings: "studio_pings", metrics: "studio_metrics" },
   cli: { pings: "cli_pings", metrics: "cli_metrics" },
 };
 
@@ -156,7 +157,40 @@ export const CLI_TELEMETRY_SCHEMA_SQL = [
   // what every dashboard query filters on. See migrate-window-index-fix.sql.
 ] as const;
 
+export const STUDIO_TELEMETRY_SCHEMA_SQL = [
+  `CREATE TABLE IF NOT EXISTS studio_pings (
+     date TEXT NOT NULL,
+     install_id TEXT NOT NULL,
+     version TEXT NOT NULL,
+     os TEXT NOT NULL,
+     arch TEXT NOT NULL,
+     os_version TEXT NOT NULL DEFAULT '',
+     os_build INTEGER NOT NULL DEFAULT 0,
+     os_revision INTEGER NOT NULL DEFAULT 0,
+     channel TEXT NOT NULL DEFAULT '',
+     distro_id TEXT NOT NULL DEFAULT '',
+     distro_version TEXT NOT NULL DEFAULT '',
+     kernel_version TEXT NOT NULL DEFAULT '',
+     session_type TEXT NOT NULL DEFAULT '',
+     runtime_engine TEXT NOT NULL DEFAULT '',
+     runtime_version TEXT NOT NULL DEFAULT '',
+     gpu_mode TEXT NOT NULL DEFAULT '',
+     opens INTEGER NOT NULL DEFAULT 1,
+     PRIMARY KEY (date, install_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS studio_metrics (
+     date TEXT NOT NULL,
+     version TEXT NOT NULL,
+     os TEXT NOT NULL,
+     signal TEXT NOT NULL,
+     bucket TEXT NOT NULL,
+     count INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (date, version, os, signal, bucket)
+   )`,
+] as const;
+
 const cliTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
+const studioTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
 
 export function ensureCLITelemetrySchema(env: Pick<Env, "DB">): Promise<void> {
   const key = env.DB as unknown as object;
@@ -170,6 +204,21 @@ export function ensureCLITelemetrySchema(env: Pick<Env, "DB">): Promise<void> {
       throw err;
     });
   cliTelemetrySchemaPromises.set(key, creation);
+  return creation;
+}
+
+export function ensureStudioTelemetrySchema(env: Pick<Env, "DB">): Promise<void> {
+  const key = env.DB as unknown as object;
+  const existing = studioTelemetrySchemaPromises.get(key);
+  if (existing) return existing;
+  const creation = env.DB
+    .batch(STUDIO_TELEMETRY_SCHEMA_SQL.map((sql) => env.DB.prepare(sql)))
+    .then(() => undefined)
+    .catch((err) => {
+      studioTelemetrySchemaPromises.delete(key);
+      throw err;
+    });
+  studioTelemetrySchemaPromises.set(key, creation);
   return creation;
 }
 
@@ -815,6 +864,7 @@ type TelemetryReceipt = { eventId: string; receivedAt: string };
 async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: TelemetryReceipt): Promise<void> {
   const tables = telemetryTableNames(p.surface);
   if (p.surface === "cli") await ensureCLITelemetrySchema(env);
+  if (p.surface === "studio") await ensureStudioTelemetrySchema(env);
   const bindings = [
     p.installId, p.version, p.os, p.arch, p.osVersion ?? "", p.osBuild ?? 0, p.osRevision ?? 0,
     p.channel ?? "", p.distroId ?? "", p.distroVersion ?? "", p.kernelVersion ?? "",
@@ -861,6 +911,7 @@ async function persistMetrics(env: Env, m: z.infer<typeof Metrics>, receipt?: Te
   if (m.counters.length === 0) return;
   const tables = telemetryTableNames(m.surface);
   if (m.surface === "cli") await ensureCLITelemetrySchema(env);
+  if (m.surface === "studio") await ensureStudioTelemetrySchema(env);
 
   if (!receipt) {
     const direct = env.DB.prepare(
@@ -998,7 +1049,7 @@ async function latestAdoptionPct(env: Env, latestVersion: string, days: 7 | 30, 
 }
 
 async function diagnosticOverview(env: Env, latestVersion: string, days: 7 | 30, surface: ClientSurfaceName): Promise<OverviewCounts> {
-  if (surface === "cli") {
+  if (surface !== "desktop") {
     return {
       latestAdoptionPct: await latestAdoptionPct(env, latestVersion, days, surface),
       openReports: 0,
@@ -1082,6 +1133,7 @@ async function handleStats(request: Request, env: Env, user: User, activeModule:
   const surface = activeModule === "diagnostics" ? "desktop" : filters.surface;
   if (activeModule === "diagnostics") filters.surface = "desktop";
   if (surface === "cli") await ensureCLITelemetrySchema(env);
+  if (surface === "studio") await ensureStudioTelemetrySchema(env);
   const pingsTable = telemetryTableNames(surface).pings;
   const bars = (sql: string) => env.DB.prepare(sql).all<Bar>().then((r) => r.results);
   const pingVersions = () =>
@@ -1467,6 +1519,8 @@ const RETENTION = [
   { table: "metrics", keepDays: 60 },
   { table: "cli_pings", keepDays: 30 },
   { table: "cli_metrics", keepDays: 60 },
+  { table: "studio_pings", keepDays: 30 },
+  { table: "studio_metrics", keepDays: 60 },
   { table: "telemetry_receipts", keepDays: 8 },
 ] as const;
 // Deletes run in rowid chunks so a run never holds one giant transaction.

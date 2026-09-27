@@ -574,7 +574,7 @@ export function renderStats(
     overview: OverviewCounts;
     latestVersion: string;
     filters: {
-      surface: "desktop" | "cli";
+      surface: "desktop" | "studio" | "cli";
       status: string;
       source: string;
       version: string;
@@ -658,7 +658,7 @@ export function renderStats(
     put("exitCode", data.filters.exitCode ?? "");
     put("recovery", data.filters.recovery ?? "");
     put("gpu", data.filters.gpu ?? "");
-    put("surface", data.filters.surface === "cli" ? "cli" : "");
+    put("surface", data.filters.surface === "desktop" ? "" : data.filters.surface);
     if (data.filters.newLatest) params.set("new", "latest");
     if (data.filters.regressed) params.set("regressed", "1");
     if (data.filters.windowDays === 7) params.set("window", "7d");
@@ -680,6 +680,7 @@ export function renderStats(
 </div>`;
   const surfaceControls = `<div class="segmented" aria-label="Client surface">
 <a class="${data.filters.surface === "desktop" ? "active" : ""}"${data.filters.surface === "desktop" ? ` aria-current="true"` : ""} href="${esc(filterQS({ surface: "" }))}">${i18n("Desktop", "桌面端")}</a>
+<a class="${data.filters.surface === "studio" ? "active" : ""}"${data.filters.surface === "studio" ? ` aria-current="true"` : ""} href="${esc(filterQS({ surface: "studio" }))}">Studio</a>
 <a class="${data.filters.surface === "cli" ? "active" : ""}"${data.filters.surface === "cli" ? ` aria-current="true"` : ""} href="${esc(filterQS({ surface: "cli" }))}">CLI</a>
 </div>`;
   const overviewTone = topSeverityTone(data.overview.openReports, data.overview.regressedReports, data.overview.criticalOpenReports);

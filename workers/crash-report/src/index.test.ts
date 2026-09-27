@@ -6,7 +6,9 @@ import {
   Ping,
   Metrics,
   CLI_TELEMETRY_SCHEMA_SQL,
+  STUDIO_TELEMETRY_SCHEMA_SQL,
   ensureCLITelemetrySchema,
+  ensureStudioTelemetrySchema,
   nativeWebRuntimeFingerprintBasis,
   telemetryTableNames,
 } from "./index";
@@ -24,6 +26,7 @@ import {
 import type { Env } from "./env";
 import { renderStats } from "./stats";
 import clientSurfaceMigrationSQL from "../migrate-client-surface.sql?raw";
+import studioTelemetryMigrationSQL from "../migrate-studio-telemetry.sql?raw";
 
 const base = {
   kind: "crash",
@@ -65,6 +68,17 @@ describe("metrics compatibility", () => {
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.surface).toBe("cli");
+  });
+
+  it("accepts Studio as a distinct client surface", () => {
+    const ping = Ping.parse({
+      surface: "studio",
+      installId: "b".repeat(32),
+      version: "2.20.1",
+      os: "darwin",
+      arch: "arm64",
+    });
+    expect(ping.surface).toBe("studio");
   });
 
   it("rejects invalid client surfaces", () => {
@@ -135,7 +149,7 @@ describe("metrics compatibility", () => {
 });
 
 describe("telemetry deployment order compatibility", () => {
-  it("keeps the released Desktop tables unchanged and isolates CLI rows", () => {
+  it("keeps the released Desktop tables unchanged and isolates newer surfaces", () => {
     expect(telemetryTableNames("desktop")).toEqual({
       pings: "pings",
       metrics: "metrics",
@@ -144,6 +158,19 @@ describe("telemetry deployment order compatibility", () => {
       pings: "cli_pings",
       metrics: "cli_metrics",
     });
+    expect(telemetryTableNames("studio")).toEqual({
+      pings: "studio_pings",
+      metrics: "studio_metrics",
+    });
+  });
+
+  it("keeps the Studio migration additive", () => {
+    expect(studioTelemetryMigrationSQL).not.toMatch(/\b(?:DROP|ALTER)\b/);
+    for (const table of ["studio_pings", "studio_metrics"]) {
+      expect(studioTelemetryMigrationSQL).toMatch(
+        new RegExp(`CREATE TABLE IF NOT EXISTS\\s+${table}\\b`),
+      );
+    }
   });
 
   it("keeps the migration additive when it runs before the released Worker", () => {
@@ -188,6 +215,29 @@ describe("telemetry deployment order compatibility", () => {
     expect(prepared).toEqual([...CLI_TELEMETRY_SCHEMA_SQL]);
     expect(prepared.every((sql) => /CREATE (?:TABLE|INDEX) IF NOT EXISTS/.test(sql))).toBe(true);
     expect(prepared.join("\n")).not.toMatch(/\b(?:DROP|ALTER)\b/);
+  });
+
+  it("bootstraps the Studio schema once per Worker isolate", async () => {
+    const prepared: string[] = [];
+    let batches = 0;
+    const db = {
+      prepare(sql: string) {
+        prepared.push(sql);
+        return { sql };
+      },
+      async batch() {
+        batches++;
+        return [];
+      },
+    } as unknown as D1Database;
+
+    await Promise.all([
+      ensureStudioTelemetrySchema({ DB: db }),
+      ensureStudioTelemetrySchema({ DB: db }),
+    ]);
+
+    expect(batches).toBe(1);
+    expect(prepared).toEqual([...STUDIO_TELEMETRY_SCHEMA_SQL]);
   });
 
   it("retries schema initialization after a transient D1 failure", async () => {
@@ -499,6 +549,26 @@ describe("diagnostics dashboard lanes", () => {
     expect(html).toContain("surface=cli");
     expect(html).toContain('aria-label="Client surface"');
     expect(html).toContain('href="/stats"');
+  });
+
+  it("renders Studio as an independent dashboard surface", () => {
+    type StatsData = Parameters<typeof renderStats>[0];
+    const data: StatsData = {
+      daily: [], versions: [], platforms: [], crashes: [], metrics: [], previousMetrics: [], sources: [],
+      overview: { latestAdoptionPct: null, openReports: 0, newLatestReports: 0, regressedReports: 0, criticalOpenReports: 0 },
+      latestVersion: "",
+      filters: {
+        surface: "studio", status: "", source: "", version: "", os: "", platform: "",
+        newLatest: false, regressed: false, windowDays: 30,
+      },
+    };
+    const html = renderStats(
+      data,
+      { id: 1, email: "viewer@example.com", role: "viewer", created_at: "", approved_at: "" },
+      "usage",
+    );
+    expect(html).toContain("surface=studio");
+    expect(html).toContain(">Studio</a>");
   });
 
   it("makes triage priorities scannable with labeled metrics and explicit status", () => {
