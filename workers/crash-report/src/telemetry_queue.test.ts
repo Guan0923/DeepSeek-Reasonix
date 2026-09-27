@@ -39,17 +39,35 @@ describe("telemetry queue", () => {
     expect(send.mock.calls[0][0].eventId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it("archives before acknowledging persisted messages", async () => {
+  it("archives before acknowledging a persisted batch", async () => {
     const put = vi.fn().mockResolvedValue(undefined);
     const persist = vi.fn().mockResolvedValue(undefined);
-    const message = queuedMessage(envelope());
+    const first = envelope();
+    const second = envelope("metrics");
+    const messages = [queuedMessage(first), queuedMessage(second)];
 
-    await consumeTelemetryBatch(batch([message]), { TELEMETRY_RAW: { put } as unknown as R2Bucket }, persist);
+    await consumeTelemetryBatch(batch(messages), { TELEMETRY_RAW: { put } as unknown as R2Bucket }, persist);
 
     expect(put).toHaveBeenCalledOnce();
     expect(persist).toHaveBeenCalledOnce();
-    expect(message.ack).toHaveBeenCalledOnce();
-    expect(message.retry).not.toHaveBeenCalled();
+    expect(persist).toHaveBeenCalledWith([first, second]);
+    for (const message of messages) {
+      expect(message.ack).toHaveBeenCalledOnce();
+      expect(message.retry).not.toHaveBeenCalled();
+    }
+  });
+
+  it("retries the whole batch when atomic persistence fails", async () => {
+    const put = vi.fn().mockResolvedValue(undefined);
+    const persist = vi.fn().mockRejectedValue(new Error("overloaded"));
+    const messages = [queuedMessage(envelope()), queuedMessage(envelope("metrics"))];
+
+    await consumeTelemetryBatch(batch(messages), { TELEMETRY_RAW: { put } as unknown as R2Bucket }, persist);
+
+    for (const message of messages) {
+      expect(message.retry).toHaveBeenCalledOnce();
+      expect(message.ack).not.toHaveBeenCalled();
+    }
   });
 
   it("retries without persisting when the archive is unavailable", async () => {
