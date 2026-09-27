@@ -1,0 +1,31 @@
+---
+import Account from '../layouts/Account.astro';
+---
+<Account
+  wide
+  title="Remote devices — Reasonix"
+  titleEn="Remote devices — Reasonix"
+  titleZh="远程设备 — Reasonix"
+  description="Connect securely to your Reasonix Studio devices.">
+  <div id="remote-gate" class="auth-head">
+    <p><span class="l-en">Checking your account…</span><span class="l-zh">正在检查账号…</span></p>
+  </div>
+
+  <div id="remote-view" hidden>
+    <div class="auth-head">
+      <h1><span class="l-en">Your Studio devices</span><span class="l-zh">你的 Studio 设备</span></h1>
+      <p><span class="l-en">Connect through the Reasonix relay from this browser.</span><span class="l-zh">从当前浏览器通过 Reasonix 中转连接你的电脑。</span></p>
+    </div>
+
+    <div class="remote-security">
+      <span aria-hidden="true">⌁</span>
+      <p><span class="l-en">Messages are end-to-end encrypted. The relay routes ciphertext and cannot read your content.</span><span class="l-zh">消息采用端到端加密，中转服务只负责转发密文，无法读取内容。</span></p>
+    </div>
+
+    <div id="remote-msg" class="auth-msg" hidden></div>
+    <div id="remote-devices" class="remote-devices"></div>
+    <p class="auth-alt"><a href="/account/"><span class="l-en">Back to account</span><span class="l-zh">返回账号</span></a></p>
+  </div>
+
+  <script>import '../scripts/remote.js';</script>
+</Account>
