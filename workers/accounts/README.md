@@ -61,7 +61,7 @@ Design notes:
 | GET    | `/me`                      | ✓    | the signed-in account (cookie or Bearer) |
 | PATCH  | `/me`                      | ✓    | `{ displayName?, bio?, avatarUrl?, handle? }` |
 | POST   | `/me/password`             | ✓    | `{ currentPassword, newPassword }`      |
-| GET    | `/me/devices`              | ✓    | registered remote devices               |
+| GET    | `/me/devices`              | ✓    | registered remote devices with live `online` state |
 | POST   | `/me/devices`              | ✓    | register/rotate a device credential     |
 | PATCH  | `/me/devices/:id`          | ✓    | rename an active device                 |
 | DELETE | `/me/devices/:id`          | ✓    | revoke a device                         |
@@ -77,7 +77,7 @@ Errors are `{ "error": { "code": "...", "message": "..." } }` with a matching HT
 ## Configuration
 
 `wrangler.toml` `[vars]` (non-secret): `APP_ORIGIN` (web frontend),
-`ACCOUNT_ORIGIN` (this Worker's canonical public origin), `ALLOWED_ORIGINS`,
+`ACCOUNT_ORIGIN` (this Worker's canonical public origin), `REMOTE_GATEWAY_ORIGIN`, `ALLOWED_ORIGINS`,
 `COOKIE_DOMAIN`, `EMAIL_PROVIDER` (`stub` | `resend`), `MAIL_FROM`, `ADMIN_EMAILS`.
 
 Secrets (`wrangler secret put NAME`): `SESSION_PEPPER` (any long random string),

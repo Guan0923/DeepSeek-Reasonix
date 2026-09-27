@@ -20,6 +20,7 @@ APP_ORIGIN = "https://reasonix.io"
 # Canonical public origin of this Worker — used for backend email actions.
 # Override with http://localhost:8787 in .dev.vars when exercising email flows locally.
 ACCOUNT_ORIGIN = "https://id.reasonix.io"
+REMOTE_GATEWAY_ORIGIN = "https://remote.reasonix.io"
 # Browsers that may call this API with credentials (comma-separated).
 ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io,https://studio.reasonix.io"
 # Cookie scope. ".reasonix.io" lets the apex + any subdomain (and the future CLI)

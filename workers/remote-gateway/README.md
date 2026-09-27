@@ -13,6 +13,11 @@ the Durable Objects Hibernation API.
 - `GET /v1/devices/:deviceId/connect` with `Authorization: Bearer <deviceCredential>`
 - `GET /v1/sessions/connect` with `Authorization: Bearer <oneTimeGrant>`
 
+The account service can also batch-check live device sockets through
+`POST /v1/devices/status`. This internal endpoint requires the shared gateway
+secret; browser clients never receive it. Registered devices are not treated as
+online merely because they connected in the past.
+
 Browser controllers use the requested subprotocols `reasonix.remote.v1` and
 `reasonix.auth.<oneTimeGrant>` because the WebSocket browser API cannot set an
 Authorization header. The gateway selects only `reasonix.remote.v1`; the ticket

@@ -34,6 +34,13 @@ export class RemoteSession {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
+    if (new URL(request.url).pathname === "/status") {
+      const online = this.state.getWebSockets("device").some((socket) => {
+        const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+        return socket.readyState === WebSocket.OPEN && attachment !== null && attachment.expiresAt > Date.now();
+      });
+      return Response.json({ online });
+    }
     if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
       return new Response("WebSocket upgrade required", { status: 426 });
     }

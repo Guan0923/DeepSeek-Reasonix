@@ -22,6 +22,7 @@ import {
   REMOTE_ATTACHMENT_TTL_MS,
   REMOTE_GRANT_TTL_MS,
 } from "../config";
+import { remoteDevicePresence } from "../remoteGateway";
 
 const me = new Hono<AppEnv>();
 
@@ -32,7 +33,13 @@ me.get("/", (c) => c.json({ user: currentUser(c) }));
 
 me.get("/devices", async (c) => {
   const user = currentUser(c);
-  return c.json({ devices: await repos(c.env).remoteDevices.listForUser(user.id) });
+  const devices = await repos(c.env).remoteDevices.listForUser(user.id);
+  const active = devices.filter((device) => !device.revokedAt);
+  const presence = await remoteDevicePresence(c.env, active.map((device) => device.id));
+  return c.json({
+    devices: devices.map((device) => ({ ...device, online: presence.onlineIds.has(device.id) })),
+    presenceAvailable: presence.available,
+  });
 });
 
 me.post("/devices", async (c) => {
@@ -72,7 +79,7 @@ me.post("/remote-grants", async (c) => {
     scopes,
     ttlMs: REMOTE_GRANT_TTL_MS,
   });
-  return c.json({ grant: { ...grant, targetDeviceId, scopes } }, 201);
+  return c.json({ grant: { ...grant, targetDeviceId, scopes }, device }, 201);
 });
 
 me.post("/remote-attachments", async (c) => {

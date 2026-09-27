@@ -7,6 +7,7 @@ function bindings(overrides: Partial<Bindings> = {}): Bindings {
     DB: {} as D1Database,
     APP_ORIGIN: "https://reasonix.io",
     ACCOUNT_ORIGIN: "https://id.reasonix.io",
+    REMOTE_GATEWAY_ORIGIN: "https://remote.reasonix.io",
     ALLOWED_ORIGINS: "https://reasonix.io",
     COOKIE_DOMAIN: ".reasonix.io",
     EMAIL_PROVIDER: "stub",
