@@ -147,4 +147,49 @@ describe("admin package approval", () => {
     expect(body.package).toMatchObject({ status: "active", latestVersion: "2.7.1" });
     expect(statements.some(({ sql }) => sql.startsWith("INSERT INTO events"))).toBe(true);
   });
+
+  it("refuses a reviewed digest that is not the installer's spelling", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ user: { id: 1, handle: "admin", role: "admin", emailVerified: true } }),
+      ),
+    );
+    const { db, statements } = approvalDB(oldRevision, null);
+    const response = await registryApp.fetch(
+      approvalRequest({
+        expectedVersion: oldRevision.latest_version,
+        expectedUpdatedAt: oldRevision.updated_at,
+        expectedStatus: oldRevision.status,
+        contentHash: "trust me",
+      }),
+      bindings(db),
+    );
+    expect(response.status).toBe(400);
+    expect(statements).toHaveLength(0);
+  });
+
+  it("binds the reviewer's digest to the approved version", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ user: { id: 1, handle: "admin", role: "admin", emailVerified: true } }),
+      ),
+    );
+    const approved = { ...oldRevision, status: "active", updated_at: "2026-07-22T01:00:00.000Z" };
+    const { db, statements } = approvalDB(oldRevision, approved);
+    const digest = "sha256:" + "0f".repeat(32);
+    const response = await registryApp.fetch(
+      approvalRequest({
+        expectedVersion: oldRevision.latest_version,
+        expectedUpdatedAt: oldRevision.updated_at,
+        expectedStatus: oldRevision.status,
+        contentHash: digest,
+      }),
+      bindings(db),
+    );
+    expect(response.status).toBe(200);
+    const pin = statements.find(({ sql }) => sql.includes("UPDATE package_versions SET content_hash"));
+    expect(pin?.values[0]).toBe(digest);
+  });
 });

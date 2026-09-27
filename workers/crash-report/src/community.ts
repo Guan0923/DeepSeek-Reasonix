@@ -11,14 +11,22 @@ const STATUS_TABS = [
   { key: "rejected", label: "Rejected" },
 ];
 
-function actionForm(pkg: PackageRow, action: string, label: string, cls: string, backStatus: string, confirm?: string): string {
+function actionForm(pkg: PackageRow, action: string, label: string, cls: string, backStatus: string, confirm?: string, fields = ""): string {
   const onsubmit = confirm ? ` onsubmit="return confirm('${esc(confirm)}')"` : "";
   return `<form method="post" action="/community/${esc(pkg.scope_handle)}/${esc(pkg.name)}/${action}" class="inline"${onsubmit}>
 <input type="hidden" name="status" value="${esc(backStatus)}">
 <input type="hidden" name="expectedVersion" value="${esc(pkg.latest_version)}">
 <input type="hidden" name="expectedUpdatedAt" value="${esc(pkg.updated_at)}">
-<input type="hidden" name="expectedStatus" value="${esc(pkg.status)}">
+<input type="hidden" name="expectedStatus" value="${esc(pkg.status)}">${fields}
 <button class="btn ${cls} sm" type="submit">${esc(label)}</button></form>`;
+}
+
+// Approving binds the digest the reviewer's own Reasonix plan printed
+// (contentDigest) to the reviewed version; Studio installs only against it.
+// Left empty, the version is published but not installable from Studio.
+function approveForm(pkg: PackageRow, backStatus: string): string {
+  const field = `<input type="text" name="contentHash" placeholder="sha256:… contentDigest" pattern="sha256:[0-9a-f]{64}" size="24" aria-label="Reviewed content digest">`;
+  return actionForm(pkg, "approve", "Approve", "", backStatus, undefined, field);
 }
 
 function rowActions(pkg: PackageRow, backStatus: string): string {
@@ -28,7 +36,7 @@ function rowActions(pkg: PackageRow, backStatus: string): string {
       : actionForm(pkg, "verify", "Verify", "ghost", backStatus);
     return `${verify}${actionForm(pkg, "hide", "Hide", "danger", backStatus, `Hide ${pkg.slug}?`)}`;
   }
-  const approve = actionForm(pkg, "approve", "Approve", "", backStatus);
+  const approve = approveForm(pkg, backStatus);
   const reject = pkg.status === "rejected" ? "" : actionForm(pkg, "reject", "Reject", "danger", backStatus, `Reject ${pkg.slug}?`);
   return `${approve}${reject}`;
 }

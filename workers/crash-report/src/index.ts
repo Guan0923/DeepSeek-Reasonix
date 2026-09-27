@@ -24,6 +24,7 @@ import type { Bindings as RegistryBindings } from "./registry/env";
 import { PackageRepo } from "./registry/db/packages";
 import { EventRepo } from "./registry/db/events";
 import { renderCommunity } from "./community";
+import { CONTENT_DIGEST } from "./registry/lib/validation";
 import {
   cliReleaseChannel,
   desktopReleaseChannel,
@@ -1623,6 +1624,12 @@ async function handleCommunityAction(
         status: 409,
       });
     }
+    const reviewedHash = (form.contentHash ?? "").trim();
+    if (reviewedHash && !CONTENT_DIGEST.test(reviewedHash)) {
+      return new Response("Content digest must be sha256:<64 lowercase hex>, as Reasonix prints it for the plan.", {
+        status: 400,
+      });
+    }
     const row = await repo.setStatusIfCurrent(
       slug,
       "active",
@@ -1630,6 +1637,7 @@ async function handleCommunityAction(
       form.expectedUpdatedAt,
       expectedStatus,
       now,
+      reviewedHash,
     );
     if (!row) {
       return new Response("Package changed since it was reviewed. Refresh and review the latest version.", {

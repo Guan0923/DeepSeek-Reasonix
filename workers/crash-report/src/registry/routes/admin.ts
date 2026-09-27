@@ -6,6 +6,7 @@ import { requireAdmin } from "../http/auth";
 import { writeRateLimit } from "../http/ratelimit";
 import { ApiError } from "../http/errors";
 import { z } from "zod";
+import { CONTENT_DIGEST } from "../lib/validation";
 
 const admin = new Hono<AppEnv>();
 
@@ -15,6 +16,7 @@ const ApprovalRevisionSchema = z.object({
   expectedVersion: z.string().min(1).max(64),
   expectedUpdatedAt: z.string().min(1).max(64),
   expectedStatus: z.enum(["pending", "hidden", "rejected"]),
+  contentHash: z.union([z.literal(""), z.string().regex(CONTENT_DIGEST)]).default(""),
 });
 
 admin.use("*", requireAdmin);
@@ -43,6 +45,7 @@ admin.post("/packages/:handle/:name/approve", writeRateLimit, async (c) => {
     revision.data.expectedUpdatedAt,
     revision.data.expectedStatus,
     approvedAt,
+    revision.data.contentHash,
   );
   if (!row) {
     const current = await repo.bySlug(slug);

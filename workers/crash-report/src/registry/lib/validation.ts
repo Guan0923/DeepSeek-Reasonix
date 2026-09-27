@@ -14,6 +14,11 @@ const slug = z
 
 const httpUrl = z.string().trim().url().max(500);
 
+// The installer's content digest (install_source contentDigest): the only
+// spelling a pin takes, so a free-form claim can never be read as one.
+export const CONTENT_DIGEST = /^sha256:[0-9a-f]{64}$/;
+const contentDigest = z.string().trim().regex(CONTENT_DIGEST, "contentHash must be sha256:<64 lowercase hex>");
+
 // A publishable install source. The registry stores only a pointer; the real
 // install runs client-side through install_source, so a source it cannot
 // classify is dead on arrival. These mirror internal/installsource/names.go
@@ -164,7 +169,7 @@ export const PublishSchema = z
     repoUrl: z.union([httpUrl, z.literal("")]).default(""),
     tags: z.array(z.string().trim().min(1).max(30)).max(8).default([]),
     manifest: z.string().max(16000).default(""),
-    contentHash: z.string().trim().max(128).default(""),
+    contentHash: z.union([z.literal(""), contentDigest]).default(""),
     riskLevel: z.string().trim().max(20).default(""),
   })
   .strict()

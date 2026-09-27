@@ -286,7 +286,20 @@ export class PackageRepo {
     expectedUpdatedAt: string,
     expectedStatus: string,
     now: string,
+    reviewedHash = "",
   ): Promise<PackageRow | null> {
+    // The pin a client installs against is the digest the reviewer computed,
+    // never the publisher's claim: it is written (or cleared) on the reviewed
+    // row while the package is still unpublished, under the same fence.
+    await this.db
+      .prepare(
+        `UPDATE package_versions SET content_hash = ?1
+         WHERE version = ?2 AND package_id = (
+           SELECT id FROM packages WHERE slug = ?3 AND latest_version = ?2 AND updated_at = ?4 AND status = ?5
+         )`,
+      )
+      .bind(reviewedHash, expectedVersion, slug, expectedUpdatedAt, expectedStatus)
+      .run();
     return this.db
       .prepare(
         `UPDATE packages SET status = ?1, updated_at = ?2

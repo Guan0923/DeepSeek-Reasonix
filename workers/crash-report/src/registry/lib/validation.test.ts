@@ -154,3 +154,13 @@ describe("ListQuerySchema kind", () => {
     expect(ListQuerySchema.parse({ kind: "plugin" }).kind).toBe("plugin");
   });
 });
+
+describe("PublishSchema contentHash", () => {
+  it("takes only the installer's digest spelling, or nothing", () => {
+    expect(parse({ contentHash: "" }).success).toBe(true);
+    expect(parse({ contentHash: "sha256:" + "a1".repeat(32) }).success).toBe(true);
+    for (const contentHash of ["abc", "sha256:XYZ", "sha256:" + "A1".repeat(32), "md5:" + "a".repeat(32)]) {
+      expect(parse({ contentHash }).success, contentHash).toBe(false);
+    }
+  });
+});
