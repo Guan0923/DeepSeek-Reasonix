@@ -947,6 +947,15 @@ async function withinTelemetryBudget(env: Env): Promise<boolean> {
   return (await env.TELEMETRY_BUDGET_LIMITER.limit({ key: "telemetry" })).success;
 }
 
+type TelemetryResult = "queued" | "stored" | "sampled" | "ignored";
+
+function telemetryAccepted(result: TelemetryResult): Response {
+  return new Response("ok", {
+    status: 202,
+    headers: { "x-reasonix-telemetry-result": result },
+  });
+}
+
 async function handlePing(request: Request, env: Env): Promise<Response> {
   const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
   const { success } = await env.PING_LIMITER.limit({ key: ip });
@@ -956,7 +965,7 @@ async function handlePing(request: Request, env: Env): Promise<Response> {
   if (raw instanceof Response) return raw;
   const parsed = Ping.safeParse(raw);
   if (!parsed.success) return new Response("bad request", { status: 400 });
-  if (!(await withinTelemetryBudget(env))) return new Response("ok", { status: 202 });
+  if (!(await withinTelemetryBudget(env))) return telemetryAccepted("sampled");
 
   try {
     if (queueEnabled(env)) await enqueueTelemetry(env, "ping", parsed.data);
@@ -964,7 +973,7 @@ async function handlePing(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     return storageUnavailable(queueEnabled(env) ? "ping queue" : "ping", err);
   }
-  return new Response("ok", { status: 202 });
+  return telemetryAccepted(queueEnabled(env) ? "queued" : "stored");
 }
 
 async function handleMetrics(request: Request, env: Env): Promise<Response> {
@@ -976,8 +985,8 @@ async function handleMetrics(request: Request, env: Env): Promise<Response> {
   if (raw instanceof Response) return raw;
   const parsed = Metrics.safeParse(raw);
   if (!parsed.success) return new Response("bad request", { status: 400 });
-  if (parsed.data.counters.length === 0) return new Response("ok", { status: 202 });
-  if (!(await withinTelemetryBudget(env))) return new Response("ok", { status: 202 });
+  if (parsed.data.counters.length === 0) return telemetryAccepted("ignored");
+  if (!(await withinTelemetryBudget(env))) return telemetryAccepted("sampled");
 
   try {
     if (queueEnabled(env)) await enqueueTelemetry(env, "metrics", parsed.data);
@@ -985,7 +994,7 @@ async function handleMetrics(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     return storageUnavailable(queueEnabled(env) ? "metrics queue" : "metrics", err);
   }
-  return new Response("ok", { status: 202 });
+  return telemetryAccepted(queueEnabled(env) ? "queued" : "stored");
 }
 
 const UserAction = z.object({
