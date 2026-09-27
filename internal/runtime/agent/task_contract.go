@@ -97,7 +97,13 @@ func (a *Agent) frozenResults(criteria []contract.Criterion) []verdict.Frozen {
 		return nil
 	}
 	ledger := a.task.ledger
-	at, changed := ledger.LatestProvenMutationIndex()
+	var checks []string
+	for _, c := range criteria {
+		if c.Verifier.Kind == contract.VerifierCommand {
+			checks = append(checks, c.Verifier.Identity)
+		}
+	}
+	at, changed := a.checkBaseline(checks)
 	owedTests := map[string]bool{}
 	for _, o := range evidence.BaselineTestObligations(a.baselineFacts(), a.mutationEpoch()) {
 		owedTests[o.ID] = true
@@ -132,6 +138,18 @@ const userPlanApproval = "user:plan_approval"
 // acceptance criteria. The user approved them with the plan, so they are the
 // plan's own verifiers rather than checks the model picked.
 func (a *Agent) planChecks() []string { return planChecksOf(a.PlanContract()) }
+
+// checkBaseline is where "passed after the latest change" is measured from for
+// these checks: the latest proven change, not counting what a run of exactly one
+// of them wrote — a check that imports a module writes its bytecode, and would
+// otherwise owe itself another run. A run that does more than the check counts.
+func (a *Agent) checkBaseline(checks []string) (int, bool) {
+	return a.task.ledger.LatestProvenMutationIndexFunc(func(r evidence.Receipt) bool {
+		return r.ToolName != "bash" || !slices.ContainsFunc(checks, func(c string) bool {
+			return evidence.CommandMatches(c, r.Command) && evidence.CommandMatches(r.Command, c)
+		})
+	})
+}
 
 func planChecksOf(plan *plancontract.Plan) []string {
 	if plan == nil {

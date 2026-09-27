@@ -126,7 +126,7 @@ func (a *Agent) outstandingPlanCriteria() []string {
 	if a == nil || plan == nil || a.task.ledger == nil {
 		return nil
 	}
-	at, changed := a.task.ledger.LatestProvenMutationIndex()
+	at, changed := a.checkBaseline(planCheckIdentities(plan))
 	if !changed {
 		at = -1
 	}
@@ -157,10 +157,11 @@ func (a *Agent) outstandingPlanCriteria() []string {
 // a restart brought in, which the ledger of this run cannot see.
 func (a *Agent) appendPlanDeliverableGap(out *finalReadinessCheck, missing []string, carried bool) []string {
 	ledger := a.task.ledger
-	if carried || !planChangesOf(a.PlanContract()) {
+	plan := a.PlanContract()
+	if carried || !planChangesOf(plan) {
 		return missing
 	}
-	if _, changed := ledger.LatestSuccessfulMutationIndex(); changed || ledger.HasBlockedConclusionAfter(-1) {
+	if _, changed := a.checkBaseline(planCheckIdentities(plan)); changed || ledger.HasBlockedConclusionAfter(-1) {
 		return missing
 	}
 	if _, gated := ledger.UserGateThisTurn(); gated {
@@ -170,6 +171,20 @@ func (a *Agent) appendPlanDeliverableGap(out *finalReadinessCheck, missing []str
 	out.missingAcceptanceCriteria++
 	return append(missing, "the approved plan names files to change and nothing has changed: make the planned change, "+
 		"or call conclude_blocked with what stops it, or await_user if it waits on them")
+}
+
+// planCheckIdentities lists every verification command the plan names, by
+// identity, whether or not a required criterion rests on it.
+func planCheckIdentities(plan *plancontract.Plan) []string {
+	var out []string
+	for _, step := range plan.Steps {
+		for _, v := range step.Verification {
+			if id := evidence.VerificationIdentity(strings.TrimSpace(v.Command)); id != "" {
+				out = append(out, id)
+			}
+		}
+	}
+	return out
 }
 
 // mutationEscapesPlan reports whether a pending write touches a path the
