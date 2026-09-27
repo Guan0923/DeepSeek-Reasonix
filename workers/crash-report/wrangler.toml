@@ -32,10 +32,10 @@ APP_ORIGIN = "https://reasonix.io"
 # Browsers allowed to call the folded registry API with credentials.
 ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io"
 TELEMETRY_QUEUE_ENABLED = "true"
-# Migration state: dual writes CLI/Studio to the legacy and isolated databases
-# while dashboards continue reading the legacy copy. Switch to `isolated` only
-# after the post-deploy backfill is verified.
-TELEMETRY_DB_MODE = "dual"
+# CLI/Studio reads and writes use the isolated telemetry database. `dual` and
+# `legacy` remain available as rollback modes; the verified legacy copy is kept
+# temporarily after cutover.
+TELEMETRY_DB_MODE = "isolated"
 
 [[d1_databases]]
 binding = "DB"

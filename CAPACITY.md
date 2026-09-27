@@ -43,7 +43,8 @@ must mirror production bindings and use isolated databases, queues, and R2.
 
 ## Current known gaps
 
-- CLI and Studio telemetry use an isolated D1 write plane. Legacy desktop
+- CLI and Studio telemetry use a verified isolated D1 read/write plane. The
+  legacy copy is retained temporarily as a rollback snapshot. Legacy desktop
   telemetry still shares the crash database because diagnostics attribution
   depends on it; that remaining dependency is the next database split.
 - The global telemetry budget is currently 1,000 events/minute. It protects the
