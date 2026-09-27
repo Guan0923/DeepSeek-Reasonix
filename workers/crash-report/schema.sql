@@ -240,6 +240,14 @@ CREATE TABLE IF NOT EXISTS cli_metrics (
   PRIMARY KEY (date, version, os, signal, bucket)
 );
 
+CREATE TABLE IF NOT EXISTS telemetry_receipts (
+  event_id TEXT PRIMARY KEY,
+  date TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS telemetry_receipts_date
+  ON telemetry_receipts (date);
+
 CREATE TABLE IF NOT EXISTS report_daily (
   date TEXT NOT NULL,
   fingerprint TEXT NOT NULL,

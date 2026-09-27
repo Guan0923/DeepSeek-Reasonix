@@ -31,6 +31,7 @@ ID_ORIGIN = "https://id.reasonix.io"
 APP_ORIGIN = "https://reasonix.io"
 # Browsers allowed to call the folded registry API with credentials.
 ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io"
+TELEMETRY_QUEUE_ENABLED = "true"
 
 [[d1_databases]]
 binding = "DB"
@@ -38,13 +39,29 @@ database_name = "reasonix-crash"
 database_id = "54825184-366f-4877-80fc-924efab0239b"
 
 # Skill/MCP registry data plane, folded in from the standalone worker. Before
-# merging (the crash worker auto-deploys on push to main-v2):
+# the first platform deployment:
 #   wrangler d1 create reasonix-registry   # paste the id below
 #   wrangler d1 execute reasonix-registry --remote --file=registry-schema.sql
 [[d1_databases]]
 binding = "REGISTRY_DB"
 database_name = "reasonix-registry"
 database_id = "83786761-5cc5-487d-8624-5cf565d1a57c"
+
+[[queues.producers]]
+binding = "TELEMETRY_QUEUE"
+queue = "reasonix-telemetry-ingest"
+
+[[queues.consumers]]
+queue = "reasonix-telemetry-ingest"
+max_batch_size = 100
+max_batch_timeout = 10
+max_retries = 2
+dead_letter_queue = "reasonix-telemetry-dlq"
+max_concurrency = 1
+
+[[r2_buckets]]
+binding = "TELEMETRY_RAW"
+bucket_name = "reasonix-telemetry-raw"
 
 [[unsafe.bindings]]
 name = "RATE_LIMITER"
@@ -66,6 +83,12 @@ name = "METRICS_LIMITER"
 type = "ratelimit"
 namespace_id = "1003"
 simple = { limit = 30, period = 60 }
+
+[[unsafe.bindings]]
+name = "TELEMETRY_BUDGET_LIMITER"
+type = "ratelimit"
+namespace_id = "1004"
+simple = { limit = 1000, period = 60 }
 
 # Per-IP throttle for registry writes (publish / install-ping / star).
 [[unsafe.bindings]]

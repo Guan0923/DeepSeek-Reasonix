@@ -54,6 +54,13 @@ import {
 } from "./report_classification";
 import { statsFilters, type StatsFilters } from "./stats_filters";
 import {
+  consumeTelemetryBatch,
+  enqueueTelemetry,
+  ensureTelemetryReceiptSchema,
+  queueEnabled,
+  type TelemetryEnvelope,
+} from "./telemetry_queue";
+import {
   acquireFirebaseGroupLease,
   claimFirebaseCrash,
   crashStorageMode,
@@ -803,20 +810,18 @@ async function handleReport(request: Request, env: Env): Promise<Response> {
   return new Response("ok", { status: 202 });
 }
 
-async function handlePing(request: Request, env: Env): Promise<Response> {
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-  const { success } = await env.PING_LIMITER.limit({ key: ip });
-  if (!success) return new Response("rate limited", { status: 429 });
+type TelemetryReceipt = { eventId: string; receivedAt: string };
 
-  const raw = await readJSON(request);
-  if (raw instanceof Response) return raw;
-  const parsed = Ping.safeParse(raw);
-  if (!parsed.success) return new Response("bad request", { status: 400 });
-  const p = parsed.data;
+async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: TelemetryReceipt): Promise<void> {
   const tables = telemetryTableNames(p.surface);
+  if (p.surface === "cli") await ensureCLITelemetrySchema(env);
+  const bindings = [
+    p.installId, p.version, p.os, p.arch, p.osVersion ?? "", p.osBuild ?? 0, p.osRevision ?? 0,
+    p.channel ?? "", p.distroId ?? "", p.distroVersion ?? "", p.kernelVersion ?? "",
+    p.sessionType ?? "", p.runtimeEngine ?? "", p.runtimeVersion ?? "", p.gpuMode ?? "",
+  ] as const;
 
-  try {
-    if (p.surface === "cli") await ensureCLITelemetrySchema(env);
+  if (!receipt) {
     await env.DB.prepare(
       `INSERT INTO ${tables.pings} (
          date, install_id, version, os, arch, os_version, os_build, os_revision, channel,
@@ -828,16 +833,86 @@ async function handlePing(request: Request, env: Env): Promise<Response> {
          channel = ?8, distro_id = ?9, distro_version = ?10, kernel_version = ?11,
          session_type = ?12, runtime_engine = ?13, runtime_version = ?14, gpu_mode = ?15`,
     )
-      .bind(
-        p.installId, p.version, p.os, p.arch, p.osVersion ?? "", p.osBuild ?? 0, p.osRevision ?? 0,
-        p.channel ?? "", p.distroId ?? "", p.distroVersion ?? "", p.kernelVersion ?? "",
-        p.sessionType ?? "", p.runtimeEngine ?? "", p.runtimeVersion ?? "", p.gpuMode ?? "",
-      )
+      .bind(...bindings)
       .run();
-  } catch (err) {
-    return storageUnavailable("ping", err);
+    return;
   }
 
+  await ensureTelemetryReceiptSchema(env);
+  const ping = env.DB.prepare(
+    `INSERT INTO ${tables.pings} (
+       date, install_id, version, os, arch, os_version, os_build, os_revision, channel,
+       distro_id, distro_version, kernel_version, session_type, runtime_engine, runtime_version, gpu_mode, opens
+     )
+     SELECT date(?16), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 1
+     WHERE NOT EXISTS (SELECT 1 FROM telemetry_receipts WHERE event_id = ?17)
+     ON CONFLICT (date, install_id) DO UPDATE SET
+       opens = opens + 1, version = ?2, os_version = ?5, os_build = ?6, os_revision = ?7,
+       channel = ?8, distro_id = ?9, distro_version = ?10, kernel_version = ?11,
+       session_type = ?12, runtime_engine = ?13, runtime_version = ?14, gpu_mode = ?15`,
+  ).bind(...bindings, receipt.receivedAt, receipt.eventId);
+  const mark = env.DB.prepare(
+    "INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))",
+  ).bind(receipt.eventId, receipt.receivedAt);
+  await env.DB.batch([ping, mark]);
+}
+
+async function persistMetrics(env: Env, m: z.infer<typeof Metrics>, receipt?: TelemetryReceipt): Promise<void> {
+  if (m.counters.length === 0) return;
+  const tables = telemetryTableNames(m.surface);
+  if (m.surface === "cli") await ensureCLITelemetrySchema(env);
+
+  if (!receipt) {
+    const direct = env.DB.prepare(
+      `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
+       VALUES (date('now'), ?1, ?2, ?3, ?4, ?5)
+       ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
+         count = count + ?5`,
+    );
+    await env.DB.batch(m.counters.map((c) => direct.bind(m.version, m.os, c.signal, c.bucket, c.count)));
+    return;
+  }
+
+  await ensureTelemetryReceiptSchema(env);
+  const upsert = env.DB.prepare(
+    `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
+     SELECT date(?6), ?1, ?2, ?3, ?4, ?5
+     WHERE NOT EXISTS (SELECT 1 FROM telemetry_receipts WHERE event_id = ?7)
+     ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
+       count = count + ?5`,
+  );
+  const statements = m.counters.map((c) =>
+    upsert.bind(m.version, m.os, c.signal, c.bucket, c.count, receipt.receivedAt, receipt.eventId),
+  );
+  statements.push(
+    env.DB.prepare("INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))")
+      .bind(receipt.eventId, receipt.receivedAt),
+  );
+  await env.DB.batch(statements);
+}
+
+async function withinTelemetryBudget(env: Env): Promise<boolean> {
+  if (!env.TELEMETRY_BUDGET_LIMITER) return true;
+  return (await env.TELEMETRY_BUDGET_LIMITER.limit({ key: "telemetry" })).success;
+}
+
+async function handlePing(request: Request, env: Env): Promise<Response> {
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const { success } = await env.PING_LIMITER.limit({ key: ip });
+  if (!success) return new Response("rate limited", { status: 429 });
+
+  const raw = await readJSON(request);
+  if (raw instanceof Response) return raw;
+  const parsed = Ping.safeParse(raw);
+  if (!parsed.success) return new Response("bad request", { status: 400 });
+  if (!(await withinTelemetryBudget(env))) return new Response("ok", { status: 202 });
+
+  try {
+    if (queueEnabled(env)) await enqueueTelemetry(env, "ping", parsed.data);
+    else await persistPing(env, parsed.data);
+  } catch (err) {
+    return storageUnavailable(queueEnabled(env) ? "ping queue" : "ping", err);
+  }
   return new Response("ok", { status: 202 });
 }
 
@@ -850,21 +925,14 @@ async function handleMetrics(request: Request, env: Env): Promise<Response> {
   if (raw instanceof Response) return raw;
   const parsed = Metrics.safeParse(raw);
   if (!parsed.success) return new Response("bad request", { status: 400 });
-  const m = parsed.data;
-  if (m.counters.length === 0) return new Response("ok", { status: 202 });
-  const tables = telemetryTableNames(m.surface);
+  if (parsed.data.counters.length === 0) return new Response("ok", { status: 202 });
+  if (!(await withinTelemetryBudget(env))) return new Response("ok", { status: 202 });
 
   try {
-    if (m.surface === "cli") await ensureCLITelemetrySchema(env);
-    const upsert = env.DB.prepare(
-      `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
-       VALUES (date('now'), ?1, ?2, ?3, ?4, ?5)
-       ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
-         count = count + ?5`,
-    );
-    await env.DB.batch(m.counters.map((c) => upsert.bind(m.version, m.os, c.signal, c.bucket, c.count)));
+    if (queueEnabled(env)) await enqueueTelemetry(env, "metrics", parsed.data);
+    else await persistMetrics(env, parsed.data);
   } catch (err) {
-    return storageUnavailable("metrics", err);
+    return storageUnavailable(queueEnabled(env) ? "metrics queue" : "metrics", err);
   }
   return new Response("ok", { status: 202 });
 }
@@ -1399,6 +1467,7 @@ const RETENTION = [
   { table: "metrics", keepDays: 60 },
   { table: "cli_pings", keepDays: 30 },
   { table: "cli_metrics", keepDays: 60 },
+  { table: "telemetry_receipts", keepDays: 8 },
 ] as const;
 // Deletes run in rowid chunks so a run never holds one giant transaction.
 // Steady state is one expired day per table; the chunk cap is a backstop that
@@ -1536,9 +1605,9 @@ async function runIngestSentinel(env: Env): Promise<void> {
 
 async function purgeExpiredStatsRows(env: Env): Promise<void> {
   try {
-    await ensureCLITelemetrySchema(env);
+    await Promise.all([ensureCLITelemetrySchema(env), ensureTelemetryReceiptSchema(env)]);
   } catch (err) {
-    console.error("retention: CLI telemetry schema unavailable", err);
+    console.error("retention: telemetry schema unavailable", err);
   }
   for (const { table, keepDays, ...options } of RETENTION) {
     // Keep exactly the newest `keepDays` dates: today plus keepDays-1 back,
@@ -1669,5 +1738,26 @@ export default {
       drainFirebaseCrashOutbox(env),
       crashStorageMode(env) === "d1" ? Promise.resolve() : runFirebaseCrashLifecycle(env),
     ]).then(() => undefined));
+  },
+
+  async queue(batch: MessageBatch<TelemetryEnvelope>, env: Env): Promise<void> {
+    await consumeTelemetryBatch(batch, env, async (envelope) => {
+      const receipt = { eventId: envelope.eventId, receivedAt: envelope.receivedAt };
+      if (envelope.kind === "ping") {
+        const parsed = Ping.safeParse(envelope.payload);
+        if (!parsed.success) {
+          console.error("telemetry queue discarded an invalid ping payload");
+          return;
+        }
+        await persistPing(env, parsed.data, receipt);
+        return;
+      }
+      const parsed = Metrics.safeParse(envelope.payload);
+      if (!parsed.success) {
+        console.error("telemetry queue discarded an invalid metrics payload");
+        return;
+      }
+      await persistMetrics(env, parsed.data, receipt);
+    });
   },
 };

@@ -11,7 +11,7 @@ describe("Firebase crash data migration workflow", () => {
     expect(workflow).toContain("- apply");
     expect(workflow).toContain("- verify-only");
     expect(workflow).toContain(
-      "if: github.event_name == 'push' || inputs.firebase_data_action == 'none'",
+      "if: github.ref == 'refs/heads/platform' && inputs.firebase_data_action == 'none'",
     );
     expect(workflow).toContain(
       "if: github.event_name == 'workflow_dispatch' && inputs.firebase_data_action != 'none'",
@@ -24,7 +24,7 @@ describe("Firebase crash data migration workflow", () => {
   it("requires the protected branch, environment approval, and all secrets", () => {
     const migrationJob = workflow.slice(workflow.indexOf("  migrate-firebase-data:"));
     expect(migrationJob).toContain("environment: canary");
-    expect(migrationJob).toContain('"refs/heads/main-v2"');
+    expect(migrationJob).toContain('"refs/heads/platform"');
     expect(migrationJob).toContain("CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}");
     expect(migrationJob).toContain("FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}");
     expect(migrationJob).toContain("FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}");

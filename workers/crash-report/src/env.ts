@@ -10,6 +10,10 @@ export interface Env {
   RATE_LIMITER: RateLimiter;
   PING_LIMITER: RateLimiter;
   METRICS_LIMITER: RateLimiter;
+  TELEMETRY_BUDGET_LIMITER?: RateLimiter;
+  TELEMETRY_QUEUE?: Queue<import("./telemetry_queue").TelemetryEnvelope>;
+  TELEMETRY_RAW?: R2Bucket;
+  TELEMETRY_QUEUE_ENABLED?: string;
   WRITE_LIMITER?: RateLimiter;
   ADMIN_EMAILS?: string;
   // Shared identity service (id.reasonix.io) and the site that hosts its login
