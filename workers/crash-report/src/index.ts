@@ -861,6 +861,61 @@ async function handleReport(request: Request, env: Env): Promise<Response> {
 
 type TelemetryReceipt = { eventId: string; receivedAt: string };
 
+function pingReceiptStatements(
+  env: Pick<Env, "DB">,
+  p: z.infer<typeof Ping>,
+  receipt: TelemetryReceipt,
+): D1PreparedStatement[] {
+  const tables = telemetryTableNames(p.surface);
+  const bindings = [
+    p.installId, p.version, p.os, p.arch, p.osVersion ?? "", p.osBuild ?? 0, p.osRevision ?? 0,
+    p.channel ?? "", p.distroId ?? "", p.distroVersion ?? "", p.kernelVersion ?? "",
+    p.sessionType ?? "", p.runtimeEngine ?? "", p.runtimeVersion ?? "", p.gpuMode ?? "",
+  ] as const;
+  return [
+    env.DB.prepare(
+      `INSERT INTO ${tables.pings} (
+         date, install_id, version, os, arch, os_version, os_build, os_revision, channel,
+         distro_id, distro_version, kernel_version, session_type, runtime_engine, runtime_version, gpu_mode, opens
+       )
+       SELECT date(?16), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 1
+       WHERE NOT EXISTS (SELECT 1 FROM telemetry_receipts WHERE event_id = ?17)
+       ON CONFLICT (date, install_id) DO UPDATE SET
+         opens = opens + 1, version = ?2, os_version = ?5, os_build = ?6, os_revision = ?7,
+         channel = ?8, distro_id = ?9, distro_version = ?10, kernel_version = ?11,
+         session_type = ?12, runtime_engine = ?13, runtime_version = ?14, gpu_mode = ?15`,
+    ).bind(...bindings, receipt.receivedAt, receipt.eventId),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))",
+    ).bind(receipt.eventId, receipt.receivedAt),
+  ];
+}
+
+function metricsReceiptStatements(
+  env: Pick<Env, "DB">,
+  m: z.infer<typeof Metrics>,
+  receipt: TelemetryReceipt,
+): D1PreparedStatement[] {
+  if (m.counters.length === 0) return [];
+  const tables = telemetryTableNames(m.surface);
+  return [
+    env.DB.prepare(
+      `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
+       SELECT date(?4), ?1, ?2,
+         json_extract(value, '$.signal'),
+         json_extract(value, '$.bucket'),
+         json_extract(value, '$.count')
+       FROM json_each(?3)
+       WHERE NOT EXISTS (SELECT 1 FROM telemetry_receipts WHERE event_id = ?5)
+       ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
+         count = count + excluded.count`,
+    ).bind(m.version, m.os, JSON.stringify(m.counters), receipt.receivedAt, receipt.eventId),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))",
+    ).bind(receipt.eventId, receipt.receivedAt),
+  ];
+}
+
 async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: TelemetryReceipt): Promise<void> {
   const tables = telemetryTableNames(p.surface);
   if (p.surface === "cli") await ensureCLITelemetrySchema(env);
@@ -889,22 +944,7 @@ async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: Telemetr
   }
 
   await ensureTelemetryReceiptSchema(env);
-  const ping = env.DB.prepare(
-    `INSERT INTO ${tables.pings} (
-       date, install_id, version, os, arch, os_version, os_build, os_revision, channel,
-       distro_id, distro_version, kernel_version, session_type, runtime_engine, runtime_version, gpu_mode, opens
-     )
-     SELECT date(?16), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 1
-     WHERE NOT EXISTS (SELECT 1 FROM telemetry_receipts WHERE event_id = ?17)
-     ON CONFLICT (date, install_id) DO UPDATE SET
-       opens = opens + 1, version = ?2, os_version = ?5, os_build = ?6, os_revision = ?7,
-       channel = ?8, distro_id = ?9, distro_version = ?10, kernel_version = ?11,
-       session_type = ?12, runtime_engine = ?13, runtime_version = ?14, gpu_mode = ?15`,
-  ).bind(...bindings, receipt.receivedAt, receipt.eventId);
-  const mark = env.DB.prepare(
-    "INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))",
-  ).bind(receipt.eventId, receipt.receivedAt);
-  await env.DB.batch([ping, mark]);
+  await env.DB.batch(pingReceiptStatements(env, p, receipt));
 }
 
 async function persistMetrics(env: Env, m: z.infer<typeof Metrics>, receipt?: TelemetryReceipt): Promise<void> {
@@ -925,19 +965,50 @@ async function persistMetrics(env: Env, m: z.infer<typeof Metrics>, receipt?: Te
   }
 
   await ensureTelemetryReceiptSchema(env);
-  const upsert = env.DB.prepare(
-    `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
-     SELECT date(?6), ?1, ?2, ?3, ?4, ?5
-     WHERE NOT EXISTS (SELECT 1 FROM telemetry_receipts WHERE event_id = ?7)
-     ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
-       count = count + ?5`,
-  );
-  const statements = m.counters.map((c) =>
-    upsert.bind(m.version, m.os, c.signal, c.bucket, c.count, receipt.receivedAt, receipt.eventId),
-  );
-  statements.push(
-    env.DB.prepare("INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))")
-      .bind(receipt.eventId, receipt.receivedAt),
+  await env.DB.batch(metricsReceiptStatements(env, m, receipt));
+}
+
+async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): Promise<void> {
+  const parsed: Array<
+    | { kind: "ping"; value: z.infer<typeof Ping>; receipt: TelemetryReceipt }
+    | { kind: "metrics"; value: z.infer<typeof Metrics>; receipt: TelemetryReceipt }
+  > = [];
+  let needsCLI = false;
+  let needsStudio = false;
+
+  for (const envelope of envelopes) {
+    const receipt = { eventId: envelope.eventId, receivedAt: envelope.receivedAt };
+    if (envelope.kind === "ping") {
+      const value = Ping.safeParse(envelope.payload);
+      if (!value.success) {
+        console.error("telemetry queue discarded an invalid ping payload");
+        continue;
+      }
+      parsed.push({ kind: "ping", value: value.data, receipt });
+      needsCLI ||= value.data.surface === "cli";
+      needsStudio ||= value.data.surface === "studio";
+      continue;
+    }
+    const value = Metrics.safeParse(envelope.payload);
+    if (!value.success) {
+      console.error("telemetry queue discarded an invalid metrics payload");
+      continue;
+    }
+    if (value.data.counters.length === 0) continue;
+    parsed.push({ kind: "metrics", value: value.data, receipt });
+    needsCLI ||= value.data.surface === "cli";
+    needsStudio ||= value.data.surface === "studio";
+  }
+
+  if (!parsed.length) return;
+  await ensureTelemetryReceiptSchema(env);
+  if (needsCLI) await ensureCLITelemetrySchema(env);
+  if (needsStudio) await ensureStudioTelemetrySchema(env);
+
+  const statements = parsed.flatMap((item) =>
+    item.kind === "ping"
+      ? pingReceiptStatements(env, item.value, item.receipt)
+      : metricsReceiptStatements(env, item.value, item.receipt),
   );
   await env.DB.batch(statements);
 }
@@ -1804,23 +1875,6 @@ export default {
   },
 
   async queue(batch: MessageBatch<TelemetryEnvelope>, env: Env): Promise<void> {
-    await consumeTelemetryBatch(batch, env, async (envelope) => {
-      const receipt = { eventId: envelope.eventId, receivedAt: envelope.receivedAt };
-      if (envelope.kind === "ping") {
-        const parsed = Ping.safeParse(envelope.payload);
-        if (!parsed.success) {
-          console.error("telemetry queue discarded an invalid ping payload");
-          return;
-        }
-        await persistPing(env, parsed.data, receipt);
-        return;
-      }
-      const parsed = Metrics.safeParse(envelope.payload);
-      if (!parsed.success) {
-        console.error("telemetry queue discarded an invalid metrics payload");
-        return;
-      }
-      await persistMetrics(env, parsed.data, receipt);
-    });
+    await consumeTelemetryBatch(batch, env, (envelopes) => persistTelemetryBatch(env, envelopes));
   },
 };

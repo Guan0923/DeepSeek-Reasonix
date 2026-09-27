@@ -47,9 +47,10 @@ must mirror production bindings and use isolated databases, queues, and R2.
   before growth approaches its database limit.
 - The global telemetry budget is currently 1,000 events/minute. It protects the
   database but cannot satisfy the 10,000/minute durable-intake target.
-- Queue consumption is deliberately serialized for D1, and each envelope is
-  currently persisted separately. Batch persistence must be measured and then
-  optimized before raising the global intake budget.
+- Queue consumption is deliberately serialized for D1. A delivery is persisted
+  as one atomic D1 batch with two statements per valid envelope (at most 200
+  statements for the configured 100-message queue batch). Drain throughput must
+  be measured before raising the global intake budget.
 - Read replication and the Sessions API have not yet been enabled for eligible
   read-heavy paths.
 

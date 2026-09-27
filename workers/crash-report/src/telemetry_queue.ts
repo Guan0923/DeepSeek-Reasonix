@@ -87,7 +87,7 @@ async function archiveBatch(env: Pick<Env, "TELEMETRY_RAW">, envelopes: Telemetr
 export async function consumeTelemetryBatch(
   batch: MessageBatch<TelemetryEnvelope>,
   env: Pick<Env, "TELEMETRY_RAW">,
-  persist: (envelope: TelemetryEnvelope) => Promise<void>,
+  persist: (envelopes: TelemetryEnvelope[]) => Promise<void>,
 ): Promise<void> {
   const valid: Array<{ message: Message<TelemetryEnvelope>; envelope: TelemetryEnvelope }> = [];
   for (const message of batch.messages) {
@@ -108,13 +108,11 @@ export async function consumeTelemetryBatch(
     return;
   }
 
-  for (const { message, envelope } of valid) {
-    try {
-      await persist(envelope);
-      message.ack();
-    } catch (err) {
-      console.error("telemetry persistence failed", err);
-      message.retry();
-    }
+  try {
+    await persist(valid.map(({ envelope }) => envelope));
+    for (const { message } of valid) message.ack();
+  } catch (err) {
+    console.error("telemetry batch persistence failed", err);
+    for (const { message } of valid) message.retry();
   }
 }
