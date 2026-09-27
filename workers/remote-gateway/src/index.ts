@@ -18,6 +18,16 @@ const ATTACHMENT_PATH = /^\/v1\/attachments\/([0-9a-f]{64})$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const DEVICE_ADMISSION_MS = 30 * 60 * 1000;
 const CONTROLLER_ADMISSION_MS = 15 * 60 * 1000;
+const MAX_PRESENCE_DEVICES = 50;
+
+function equalSecret(supplied: string, expected: string): boolean {
+  if (supplied.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < expected.length; index += 1) {
+    difference |= supplied.charCodeAt(index) ^ expected.charCodeAt(index);
+  }
+  return difference === 0;
+}
 
 function attachmentKey(objectId: string): string {
   return `encrypted/${objectId}`;
@@ -150,6 +160,35 @@ const worker: ExportedHandler<Env> = {
     }
     if (!originAllowed(request, env)) {
       return jsonError(403, "origin_rejected", "This website is not allowed to use the remote gateway.");
+    }
+    if (url.pathname === "/v1/devices/status" && request.method === "POST") {
+      const supplied = request.headers.get("x-reasonix-gateway-token") ?? "";
+      if (!env.REMOTE_GATEWAY_TOKEN || !equalSecret(supplied, env.REMOTE_GATEWAY_TOKEN)) {
+        return jsonError(401, "unauthorized_gateway", "Gateway authentication failed.");
+      }
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return jsonError(400, "invalid_request", "A JSON body is required.");
+      }
+      const candidate = body as { deviceIds?: unknown };
+      if (!Array.isArray(candidate.deviceIds) || candidate.deviceIds.length > MAX_PRESENCE_DEVICES ||
+          candidate.deviceIds.some((id) => typeof id !== "string" || !SHA256_PATTERN.test(id))) {
+        return jsonError(400, "invalid_devices", `Up to ${MAX_PRESENCE_DEVICES} valid device IDs are allowed.`);
+      }
+      const uniqueIds = [...new Set(candidate.deviceIds as string[])];
+      const devices = await Promise.all(uniqueIds.map(async (deviceId) => {
+        const id = env.REMOTE_SESSIONS.idFromName(deviceId);
+        try {
+          const response = await env.REMOTE_SESSIONS.get(id).fetch("https://session.internal/status");
+          const status = response.ok ? await response.json<{ online?: boolean }>() : null;
+          return { id: deviceId, online: status?.online === true };
+        } catch {
+          return { id: deviceId, online: false };
+        }
+      }));
+      return Response.json({ devices });
     }
     const attachmentMatch = ATTACHMENT_PATH.exec(url.pathname);
     if (attachmentMatch?.[1] && request.method === "OPTIONS") {

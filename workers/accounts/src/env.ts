@@ -12,6 +12,7 @@ export interface Bindings {
   // Plain vars (wrangler.toml [vars]).
   APP_ORIGIN: string;
   ACCOUNT_ORIGIN: string;
+  REMOTE_GATEWAY_ORIGIN: string;
   ALLOWED_ORIGINS: string;
   COOKIE_DOMAIN: string;
   EMAIL_PROVIDER: string;

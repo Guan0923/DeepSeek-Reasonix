@@ -66,6 +66,45 @@ describe("remote gateway admission", () => {
     await expect(response.json()).resolves.toEqual({ ok: true, service: "reasonix-remote-gateway" });
   });
 
+  it("reports live device presence only to the account service", async () => {
+    const forwarded: ForwardedRequest[] = [];
+    const first = "1".repeat(64);
+    const second = "2".repeat(64);
+    const env = environment(forwarded);
+    env.REMOTE_SESSIONS = {
+      idFromName(name: string) { return name as unknown as DurableObjectId; },
+      get(id: DurableObjectId) {
+        return {
+          fetch: vi.fn(async () => Response.json({ online: id as unknown as string === first })),
+        } as unknown as DurableObjectStub;
+      },
+    } as unknown as DurableObjectNamespace;
+
+    const response = await run(new Request("https://remote.reasonix.io/v1/devices/status", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-reasonix-gateway-token": "gateway-secret",
+      },
+      body: JSON.stringify({ deviceIds: [first, second] }),
+    }), env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ devices: [
+      { id: first, online: true },
+      { id: second, online: false },
+    ] });
+  });
+
+  it("does not expose device presence without the gateway secret", async () => {
+    const response = await run(new Request("https://remote.reasonix.io/v1/devices/status", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deviceIds: ["1".repeat(64)] }),
+    }), environment([]));
+    expect(response.status).toBe(401);
+  });
+
   it("authenticates a device and strips its credential before Durable Object admission", async () => {
     const forwarded: ForwardedRequest[] = [];
     const deviceId = "a".repeat(64);
