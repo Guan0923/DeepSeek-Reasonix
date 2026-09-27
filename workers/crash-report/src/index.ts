@@ -123,6 +123,24 @@ export function telemetryTableNames(surface: ClientSurfaceName): TelemetryTableN
   return TELEMETRY_TABLES[surface];
 }
 
+export function telemetryDatabase(
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
+  surface: ClientSurfaceName,
+): D1Database {
+  if (surface === "desktop" || env.TELEMETRY_DB_MODE !== "isolated") return env.DB;
+  return env.TELEMETRY_DB ?? env.DB;
+}
+
+function telemetryWriteDatabases(
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
+  surface: ClientSurfaceName,
+): D1Database[] {
+  if (surface === "desktop" || !env.TELEMETRY_DB) return [env.DB];
+  if (env.TELEMETRY_DB_MODE === "dual") return [env.DB, env.TELEMETRY_DB];
+  if (env.TELEMETRY_DB_MODE === "isolated") return [env.TELEMETRY_DB];
+  return [env.DB];
+}
+
 export const CLI_TELEMETRY_SCHEMA_SQL = [
   `CREATE TABLE IF NOT EXISTS cli_pings (
      date TEXT NOT NULL,
@@ -192,34 +210,39 @@ export const STUDIO_TELEMETRY_SCHEMA_SQL = [
 const cliTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
 const studioTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
 
-export function ensureCLITelemetrySchema(env: Pick<Env, "DB">): Promise<void> {
-  const key = env.DB as unknown as object;
-  const existing = cliTelemetrySchemaPromises.get(key);
+function ensureTelemetrySchema(
+  db: D1Database,
+  promises: WeakMap<object, Promise<void>>,
+  sql: readonly string[],
+): Promise<void> {
+  const key = db as unknown as object;
+  const existing = promises.get(key);
   if (existing) return existing;
-  const creation = env.DB
-    .batch(CLI_TELEMETRY_SCHEMA_SQL.map((sql) => env.DB.prepare(sql)))
+  const creation = db
+    .batch(sql.map((statement) => db.prepare(statement)))
     .then(() => undefined)
     .catch((err) => {
-      cliTelemetrySchemaPromises.delete(key);
+      promises.delete(key);
       throw err;
     });
-  cliTelemetrySchemaPromises.set(key, creation);
+  promises.set(key, creation);
   return creation;
 }
 
-export function ensureStudioTelemetrySchema(env: Pick<Env, "DB">): Promise<void> {
-  const key = env.DB as unknown as object;
-  const existing = studioTelemetrySchemaPromises.get(key);
-  if (existing) return existing;
-  const creation = env.DB
-    .batch(STUDIO_TELEMETRY_SCHEMA_SQL.map((sql) => env.DB.prepare(sql)))
-    .then(() => undefined)
-    .catch((err) => {
-      studioTelemetrySchemaPromises.delete(key);
-      throw err;
-    });
-  studioTelemetrySchemaPromises.set(key, creation);
-  return creation;
+export function ensureCLITelemetrySchema(
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
+): Promise<void> {
+  return Promise.all(telemetryWriteDatabases(env, "cli").map((db) =>
+    ensureTelemetrySchema(db, cliTelemetrySchemaPromises, CLI_TELEMETRY_SCHEMA_SQL)
+  )).then(() => undefined);
+}
+
+export function ensureStudioTelemetrySchema(
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
+): Promise<void> {
+  return Promise.all(telemetryWriteDatabases(env, "studio").map((db) =>
+    ensureTelemetrySchema(db, studioTelemetrySchemaPromises, STUDIO_TELEMETRY_SCHEMA_SQL)
+  )).then(() => undefined);
 }
 
 export const Ping = z.object({
@@ -862,7 +885,7 @@ async function handleReport(request: Request, env: Env): Promise<Response> {
 type TelemetryReceipt = { eventId: string; receivedAt: string };
 
 function pingReceiptStatements(
-  env: Pick<Env, "DB">,
+  db: D1Database,
   p: z.infer<typeof Ping>,
   receipt: TelemetryReceipt,
 ): D1PreparedStatement[] {
@@ -873,7 +896,7 @@ function pingReceiptStatements(
     p.sessionType ?? "", p.runtimeEngine ?? "", p.runtimeVersion ?? "", p.gpuMode ?? "",
   ] as const;
   return [
-    env.DB.prepare(
+    db.prepare(
       `INSERT INTO ${tables.pings} (
          date, install_id, version, os, arch, os_version, os_build, os_revision, channel,
          distro_id, distro_version, kernel_version, session_type, runtime_engine, runtime_version, gpu_mode, opens
@@ -885,21 +908,21 @@ function pingReceiptStatements(
          channel = ?8, distro_id = ?9, distro_version = ?10, kernel_version = ?11,
          session_type = ?12, runtime_engine = ?13, runtime_version = ?14, gpu_mode = ?15`,
     ).bind(...bindings, receipt.receivedAt, receipt.eventId),
-    env.DB.prepare(
+    db.prepare(
       "INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))",
     ).bind(receipt.eventId, receipt.receivedAt),
   ];
 }
 
 function metricsReceiptStatements(
-  env: Pick<Env, "DB">,
+  db: D1Database,
   m: z.infer<typeof Metrics>,
   receipt: TelemetryReceipt,
 ): D1PreparedStatement[] {
   if (m.counters.length === 0) return [];
   const tables = telemetryTableNames(m.surface);
   return [
-    env.DB.prepare(
+    db.prepare(
       `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
        SELECT date(?4), ?1, ?2,
          json_extract(value, '$.signal'),
@@ -910,7 +933,7 @@ function metricsReceiptStatements(
        ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
          count = count + excluded.count`,
     ).bind(m.version, m.os, JSON.stringify(m.counters), receipt.receivedAt, receipt.eventId),
-    env.DB.prepare(
+    db.prepare(
       "INSERT OR IGNORE INTO telemetry_receipts (event_id, date) VALUES (?1, date(?2))",
     ).bind(receipt.eventId, receipt.receivedAt),
   ];
@@ -918,6 +941,7 @@ function metricsReceiptStatements(
 
 async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: TelemetryReceipt): Promise<void> {
   const tables = telemetryTableNames(p.surface);
+  const databases = telemetryWriteDatabases(env, p.surface);
   if (p.surface === "cli") await ensureCLITelemetrySchema(env);
   if (p.surface === "studio") await ensureStudioTelemetrySchema(env);
   const bindings = [
@@ -927,7 +951,7 @@ async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: Telemetr
   ] as const;
 
   if (!receipt) {
-    await env.DB.prepare(
+    await Promise.all(databases.map((db) => db.prepare(
       `INSERT INTO ${tables.pings} (
          date, install_id, version, os, arch, os_version, os_build, os_revision, channel,
          distro_id, distro_version, kernel_version, session_type, runtime_engine, runtime_version, gpu_mode, opens
@@ -939,33 +963,40 @@ async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: Telemetr
          session_type = ?12, runtime_engine = ?13, runtime_version = ?14, gpu_mode = ?15`,
     )
       .bind(...bindings)
-      .run();
+      .run()));
     return;
   }
 
-  await ensureTelemetryReceiptSchema(env);
-  await env.DB.batch(pingReceiptStatements(env, p, receipt));
+  await Promise.all(databases.map(async (db) => {
+    await ensureTelemetryReceiptSchema({ DB: db });
+    await db.batch(pingReceiptStatements(db, p, receipt));
+  }));
 }
 
 async function persistMetrics(env: Env, m: z.infer<typeof Metrics>, receipt?: TelemetryReceipt): Promise<void> {
   if (m.counters.length === 0) return;
   const tables = telemetryTableNames(m.surface);
+  const databases = telemetryWriteDatabases(env, m.surface);
   if (m.surface === "cli") await ensureCLITelemetrySchema(env);
   if (m.surface === "studio") await ensureStudioTelemetrySchema(env);
 
   if (!receipt) {
-    const direct = env.DB.prepare(
-      `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
-       VALUES (date('now'), ?1, ?2, ?3, ?4, ?5)
-       ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
-         count = count + ?5`,
-    );
-    await env.DB.batch(m.counters.map((c) => direct.bind(m.version, m.os, c.signal, c.bucket, c.count)));
+    await Promise.all(databases.map(async (db) => {
+      const direct = db.prepare(
+        `INSERT INTO ${tables.metrics} (date, version, os, signal, bucket, count)
+         VALUES (date('now'), ?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT (date, version, os, signal, bucket) DO UPDATE SET
+           count = count + ?5`,
+      );
+      await db.batch(m.counters.map((c) => direct.bind(m.version, m.os, c.signal, c.bucket, c.count)));
+    }));
     return;
   }
 
-  await ensureTelemetryReceiptSchema(env);
-  await env.DB.batch(metricsReceiptStatements(env, m, receipt));
+  await Promise.all(databases.map(async (db) => {
+    await ensureTelemetryReceiptSchema({ DB: db });
+    await db.batch(metricsReceiptStatements(db, m, receipt));
+  }));
 }
 
 async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): Promise<void> {
@@ -1001,16 +1032,22 @@ async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): 
   }
 
   if (!parsed.length) return;
-  await ensureTelemetryReceiptSchema(env);
+  const databases = new Map<D1Database, D1PreparedStatement[]>();
+  const usedDatabases = new Set(parsed.flatMap((item) => telemetryWriteDatabases(env, item.value.surface)));
+  await Promise.all([...usedDatabases].map((db) => ensureTelemetryReceiptSchema({ DB: db })));
   if (needsCLI) await ensureCLITelemetrySchema(env);
   if (needsStudio) await ensureStudioTelemetrySchema(env);
 
-  const statements = parsed.flatMap((item) =>
-    item.kind === "ping"
-      ? pingReceiptStatements(env, item.value, item.receipt)
-      : metricsReceiptStatements(env, item.value, item.receipt),
-  );
-  await env.DB.batch(statements);
+  for (const item of parsed) {
+    for (const db of telemetryWriteDatabases(env, item.value.surface)) {
+      const statements = databases.get(db) ?? [];
+      statements.push(...(item.kind === "ping"
+        ? pingReceiptStatements(db, item.value, item.receipt)
+        : metricsReceiptStatements(db, item.value, item.receipt)));
+      databases.set(db, statements);
+    }
+  }
+  await Promise.all([...databases].map(([db, statements]) => db.batch(statements)));
 }
 
 async function withinTelemetryBudget(env: Env): Promise<boolean> {
@@ -1094,13 +1131,14 @@ async function formObject(request: Request): Promise<Record<string, string>> {
 
 async function latestObservedVersion(env: Env, surface: ClientSurfaceName): Promise<string> {
   const table = telemetryTableNames(surface).pings;
+  const db = telemetryDatabase(env, surface);
   // Require independent installations and use pings as the sole source of
   // release truth. A single synthetic diagnostic must never promote v9.9.9 (or
   // a prerelease) to "latest" for every report group.
   const sql = `SELECT version FROM ${table}
     WHERE date >= date('now', '-29 day') AND version <> ''
     GROUP BY version HAVING COUNT(DISTINCT install_id) >= 2`;
-  const rows = await env.DB.prepare(sql).all<{ version: string }>();
+  const rows = await db.prepare(sql).all<{ version: string }>();
   return newestReleaseVersion(rows.results.map((r) => r.version));
 }
 
@@ -1115,7 +1153,7 @@ type OverviewCounts = {
 async function latestAdoptionPct(env: Env, latestVersion: string, days: 7 | 30, surface: ClientSurfaceName): Promise<number | null> {
   if (!latestVersion) return null;
   const table = telemetryTableNames(surface).pings;
-  const row = await env.DB.prepare(
+  const row = await telemetryDatabase(env, surface).prepare(
     `SELECT
       COUNT(DISTINCT install_id) AS total_installs,
       COUNT(DISTINCT CASE WHEN version = ?1 THEN install_id END) AS latest_installs
@@ -1195,7 +1233,7 @@ async function metricRows(env: Env, days: 7 | 30, surface: ClientSurfaceName, pr
     ? `date >= date('now', '${previousWindowSince(days)}') AND date < date('now', '${previousWindowUntil(days)}')`
     : `date >= date('now', '${currentWindowSince(days)}')`;
   const table = telemetryTableNames(surface).metrics;
-  const rows = await env.DB.prepare(
+  const rows = await telemetryDatabase(env, surface).prepare(
     `SELECT signal, bucket, SUM(count) AS total FROM ${table} WHERE ${where} GROUP BY signal, bucket ORDER BY signal, total DESC`,
   ).all<{ signal: string; bucket: string; total: number }>();
   return rows.results;
@@ -1214,12 +1252,14 @@ async function handleStats(request: Request, env: Env, user: User, activeModule:
   if (activeModule === "diagnostics") filters.surface = "desktop";
   if (surface === "cli") await ensureCLITelemetrySchema(env);
   if (surface === "studio") await ensureStudioTelemetrySchema(env);
+  const telemetryDB = telemetryDatabase(env, surface);
   const pingsTable = telemetryTableNames(surface).pings;
-  const bars = (sql: string) => env.DB.prepare(sql).all<Bar>().then((r) => r.results);
+  const telemetryBars = (sql: string) => telemetryDB.prepare(sql).all<Bar>().then((r) => r.results);
+  const crashBars = (sql: string) => env.DB.prepare(sql).all<Bar>().then((r) => r.results);
   const pingVersions = () =>
-    bars(`SELECT version AS label, COUNT(DISTINCT install_id) AS users FROM ${pingsTable} WHERE date >= date('now', '${since}') GROUP BY label ORDER BY users DESC LIMIT 15`);
+    telemetryBars(`SELECT version AS label, COUNT(DISTINCT install_id) AS users FROM ${pingsTable} WHERE date >= date('now', '${since}') GROUP BY label ORDER BY users DESC LIMIT 15`);
   const pingPlatforms = () =>
-    bars(`SELECT os || ' ' || arch AS label, COUNT(DISTINCT install_id) AS users FROM ${pingsTable} WHERE date >= date('now', '${since}') GROUP BY label ORDER BY users DESC`);
+    telemetryBars(`SELECT os || ' ' || arch AS label, COUNT(DISTINCT install_id) AS users FROM ${pingsTable} WHERE date >= date('now', '${since}') GROUP BY label ORDER BY users DESC`);
 
   let daily: { date: string; users: number; opens: number }[] = [];
   let versions: Bar[] = [];
@@ -1249,7 +1289,7 @@ async function handleStats(request: Request, env: Env, user: User, activeModule:
   if (activeModule === "usage") {
     latestVersion = await latestObservedVersion(env, surface);
     const [dailyR, versionsR, platformsR, metricsR, overviewR] = await Promise.all([
-      env.DB.prepare(
+      telemetryDB.prepare(
         `SELECT date, COUNT(*) AS users, SUM(opens) AS opens FROM ${pingsTable} WHERE date >= date('now', '${since}') GROUP BY date`,
       ).all<{ date: string; users: number; opens: number }>(),
       pingVersions(),
@@ -1266,7 +1306,7 @@ async function handleStats(request: Request, env: Env, user: User, activeModule:
     latestVersion = await latestObservedVersion(env, "desktop");
     const [crashesR, sourcesR, facets, linkedSince, attributionSince] = await Promise.all([
       crashGroups(env, filters, latestVersion, statsQueryObserver("/stats/diagnostics")),
-      bars(`SELECT source AS label, COUNT(*) AS users FROM groups WHERE ${diagnosticWindowWhere(days)} GROUP BY source ORDER BY users DESC`),
+      crashBars(`SELECT source AS label, COUNT(*) AS users FROM groups WHERE ${diagnosticWindowWhere(days)} GROUP BY source ORDER BY users DESC`),
       loadDiagnosticFacets(env, days, statsQueryObserver("/stats/diagnostics")),
       env.DB.prepare("SELECT value FROM diagnostics_meta WHERE key = 'installation_linked_since'").first<{ value: string }>(),
       env.DB.prepare("SELECT value FROM diagnostics_meta WHERE key = 'structured_attribution_since'").first<{ value: string }>(),
@@ -1588,7 +1628,9 @@ async function handleCommunityAction(
 // grows until D1's size cap, at which point every ingest write starts
 // throwing (all of /v1/ping, /v1/metrics and /v1/report 500 while reads keep
 // working — exactly the 2026-07-03 stats blackout).
-const RETENTION = [
+type RetentionRule = { table: string; keepDays: number; dateColumn?: string };
+
+const CRASH_RETENTION: readonly RetentionRule[] = [
   { table: "report_daily", keepDays: 30 },
   { table: "report_installations", keepDays: 30 },
   { table: "report_event_dimensions", keepDays: 30 },
@@ -1597,6 +1639,10 @@ const RETENTION = [
   { table: "report_incidents", keepDays: 30 },
   { table: "pings", keepDays: 30 },
   { table: "metrics", keepDays: 60 },
+  { table: "telemetry_receipts", keepDays: 8 },
+] as const;
+
+const PRODUCT_TELEMETRY_RETENTION: readonly RetentionRule[] = [
   { table: "cli_pings", keepDays: 30 },
   { table: "cli_metrics", keepDays: 60 },
   { table: "studio_pings", keepDays: 30 },
@@ -1738,20 +1784,30 @@ async function runIngestSentinel(env: Env): Promise<void> {
 }
 
 async function purgeExpiredStatsRows(env: Env): Promise<void> {
+  const telemetryDatabases = telemetryWriteDatabases(env, "cli");
   try {
-    await Promise.all([ensureCLITelemetrySchema(env), ensureTelemetryReceiptSchema(env)]);
+    await Promise.all([
+      ensureCLITelemetrySchema(env),
+      ensureStudioTelemetrySchema(env),
+      ensureTelemetryReceiptSchema({ DB: env.DB }),
+      ...telemetryDatabases.map((db) => ensureTelemetryReceiptSchema({ DB: db })),
+    ]);
   } catch (err) {
     console.error("retention: telemetry schema unavailable", err);
   }
-  for (const { table, keepDays, ...options } of RETENTION) {
+  await purgeExpiredRows(env.DB, CRASH_RETENTION);
+  for (const db of telemetryDatabases) await purgeExpiredRows(db, PRODUCT_TELEMETRY_RETENTION);
+}
+
+async function purgeExpiredRows(db: D1Database, retention: readonly RetentionRule[]): Promise<void> {
+  for (const { table, keepDays, dateColumn = "date" } of retention) {
     // Keep exactly the newest `keepDays` dates: today plus keepDays-1 back,
     // matching the `date >= date('now', '-{keepDays-1} day')` reads.
     const cutoff = `-${keepDays - 1} day`;
-    const dateColumn = "dateColumn" in options ? options.dateColumn : "date";
     let purged = 0;
     try {
       for (let i = 0; i < RETENTION_MAX_CHUNKS; i++) {
-        const res = await env.DB.prepare(
+        const res = await db.prepare(
           `DELETE FROM ${table} WHERE rowid IN (
              SELECT rowid FROM ${table} WHERE date(${dateColumn}) < date('now', ?1) LIMIT ${RETENTION_CHUNK_ROWS}
            )`,

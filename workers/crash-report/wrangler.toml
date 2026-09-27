@@ -32,11 +32,23 @@ APP_ORIGIN = "https://reasonix.io"
 # Browsers allowed to call the folded registry API with credentials.
 ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io"
 TELEMETRY_QUEUE_ENABLED = "true"
+# Migration state: dual writes CLI/Studio to the legacy and isolated databases
+# while dashboards continue reading the legacy copy. Switch to `isolated` only
+# after the post-deploy backfill is verified.
+TELEMETRY_DB_MODE = "dual"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "reasonix-crash"
 database_id = "54825184-366f-4877-80fc-924efab0239b"
+
+# Independent write plane for CLI and Studio launch/aggregate telemetry. The
+# legacy desktop tables remain in DB because diagnostic attribution still joins
+# against them.
+[[d1_databases]]
+binding = "TELEMETRY_DB"
+database_name = "reasonix-telemetry"
+database_id = "59562e60-c106-4fee-974a-a1ac6b2c5a48"
 
 # Skill/MCP registry data plane, folded in from the standalone worker. Before
 # the first platform deployment:
