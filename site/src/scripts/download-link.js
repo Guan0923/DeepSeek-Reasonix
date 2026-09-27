@@ -1,4 +1,4 @@
-const DOWNLOAD_PANES = new Set(["npm", "brew", "desktop", "cli", "vscode"]);
+const DOWNLOAD_PANES = new Set(["npm", "brew", "desktop", "studio", "cli", "vscode"]);
 
 // Return the requested install pane only for the homepage download section.
 // Plain #start links keep the rendered default pane; query links opt into one.

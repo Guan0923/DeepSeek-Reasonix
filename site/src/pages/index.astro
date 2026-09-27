@@ -7,6 +7,7 @@ import { desktopDownloadVersion } from '../data/desktop-download.js';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const repo = 'https://github.com/esengine/DeepSeek-Reasonix';
 const repoReleases = `${repo}/releases`;
+const studioReleases = `${repoReleases}?q=studio-v`;
 const desktopStableFallback = desktopDownloadVersion
   ? `${repoReleases}/tag/desktop-${desktopDownloadVersion}` : repoReleases;
 const desktopVersionLabel = desktopDownloadVersion || 'latest';
@@ -63,9 +64,9 @@ const ld = {
       <div class="hero-install reveal" style="--d:0.18s" aria-label="Reasonix install options">
         <div class="install-option install-option--desktop">
           <canvas class="particle-canvas"></canvas>
-          <span class="install-kicker"><span class="l-en">Desktop app</span><span class="l-zh">桌面端</span></span>
-          <strong><span class="l-en">Visual workspace for sessions, settings, approvals, and updates.</span><span class="l-zh">可视化管理会话、设置、审批与自动更新。</span></strong>
-          <a class="btn btn-dark" data-os-dl data-goto="desktop" href="#start"><span class="l-en">Download desktop</span><span class="l-zh">下载桌面版</span></a>
+          <span class="install-kicker"><span class="l-en">Stable 1.x desktop</span><span class="l-zh">稳定版 1.x 桌面端</span></span>
+          <strong><span class="l-en">The mature line for sessions, settings, approvals, and updates.</span><span class="l-zh">成熟稳定的产品线，可视化管理会话、设置、审批与更新。</span></strong>
+          <a class="btn btn-dark" data-os-dl data-goto="desktop" href="#start"><span class="l-en">Download stable 1.x</span><span class="l-zh">下载稳定版 1.x</span></a>
         </div>
         <div class="install-option install-option--cli">
           <canvas class="particle-canvas"></canvas>
@@ -293,16 +294,28 @@ const ld = {
 
     <div class="dl reveal" style="--d:0.14s">
       <div class="dl-tabs" role="tablist" aria-label="Download method / 下载方式">
-        <button class="dl-tab active" id="download-tab-desktop" type="button" data-pane="desktop" role="tab" aria-controls="download-pane-desktop" aria-selected="true" tabindex="0"><span class="l-en">Desktop</span><span class="l-zh">桌面端</span></button>
+        <button class="dl-tab active" id="download-tab-desktop" type="button" data-pane="desktop" role="tab" aria-controls="download-pane-desktop" aria-selected="true" tabindex="0"><span class="l-en">Stable 1.x</span><span class="l-zh">稳定版 1.x</span></button>
+        <button class="dl-tab" id="download-tab-studio" type="button" data-pane="studio" role="tab" aria-controls="download-pane-studio" aria-selected="false" tabindex="-1">Studio 2.x</button>
         <button class="dl-tab" id="download-tab-cli" type="button" data-pane="cli" role="tab" aria-controls="download-pane-cli" aria-selected="false" tabindex="-1">CLI</button>
         <button class="dl-tab" id="download-tab-npm" type="button" data-pane="npm" role="tab" aria-controls="download-pane-npm" aria-selected="false" tabindex="-1">npm</button>
         <button class="dl-tab" id="download-tab-brew" type="button" data-pane="brew" role="tab" aria-controls="download-pane-brew" aria-selected="false" tabindex="-1">Homebrew</button>
         <button class="dl-tab" id="download-tab-vscode" type="button" data-pane="vscode" role="tab" aria-controls="download-pane-vscode" aria-selected="false" tabindex="-1"><span class="l-en">Editor extension</span><span class="l-zh">编辑器扩展</span></button>
       </div>
 
+      <div class="version-guide" aria-label="Reasonix version lines / Reasonix 版本选择">
+        <div>
+          <strong><span class="l-en">Stable 1.x</span><span class="l-zh">稳定版 1.x</span></strong>
+          <span><span class="l-en">Mature and maintained. Choose it when stability comes first.</span><span class="l-zh">成熟稳定，持续获得兼容、安全与问题修复。</span></span>
+        </div>
+        <div>
+          <strong>Studio 2.x <span class="version-guide-badge"><span class="l-en">preview</span><span class="l-zh">预览</span></span></strong>
+          <span><span class="l-en">The new architecture and newest features. Actively evolving.</span><span class="l-zh">新架构与最新功能，正在快速迭代中。</span></span>
+        </div>
+      </div>
+
       <div class="dl-pane active" id="download-pane-desktop" data-pane="desktop" role="tabpanel" aria-labelledby="download-tab-desktop">
         <div class="release-channel-summary" data-release-summary="desktop" aria-live="polite">
-          <span><span class="l-en">Desktop download <span data-release-version="desktop">{desktopVersionLabel}</span></span><span class="l-zh">桌面端下载 <span data-release-version="desktop">{desktopVersionLabel}</span></span></span>
+          <span><span class="l-en">Reasonix stable 1.x desktop · <span data-release-version="desktop">{desktopVersionLabel}</span></span><span class="l-zh">Reasonix 稳定版 1.x 桌面端 · <span data-release-version="desktop">{desktopVersionLabel}</span></span></span>
         </div>
         <div class="os-grid">
           <div class="os-card" data-os="mac">
@@ -345,6 +358,31 @@ const ld = {
           <strong><span class="l-en">Updating from 1.38.3 or earlier?</span><span class="l-zh">从 1.38.3 或更早版本升级?</span></strong>
           <span><span class="l-en">The in-app updater cannot cross the Electron shell change and reports <code>unsupported install_layout "electron-v1"</code>. Quit Reasonix, then install the full package above (Windows installer, macOS DMG, Linux .deb or tar.gz) over the current version. Configuration, sessions and history are kept.</span><span class="l-zh">应用内更新无法跨越 Electron 壳切换,会提示 <code>unsupported install_layout "electron-v1"</code>。请退出 Reasonix,然后用上方的完整安装包(Windows 安装程序、macOS DMG、Linux .deb 或 tar.gz)覆盖安装。配置、会话与历史记录原样保留。</span></span>
         </div>}
+      </div>
+
+      <div class="dl-pane" id="download-pane-studio" data-pane="studio" role="tabpanel" aria-labelledby="download-tab-studio" hidden>
+        <div class="release-channel-summary" data-release-summary="studio" aria-live="polite">
+          <span><span class="l-en">Reasonix Studio 2.x preview · <span data-release-version="studio">latest</span></span><span class="l-zh">Reasonix Studio 2.x 预览版 · <span data-release-version="studio">latest</span></span></span>
+        </div>
+        <div class="os-grid">
+          <div class="os-card" data-os="mac">
+            <h4>macOS</h4>
+            <span class="meta">Apple Silicon / Intel · DMG</span>
+            <a class="btn btn-light" href={studioReleases} data-studio-asset="ReasonixStudio-darwin-arm64.dmg"><span class="l-en">Apple Silicon · <span data-release-version="studio">latest</span></span><span class="l-zh">Apple Silicon · <span data-release-version="studio">latest</span></span></a>
+            <div class="os-options"><a href={studioReleases} data-studio-asset="ReasonixStudio-darwin-amd64.dmg">Intel DMG</a></div>
+          </div>
+          <div class="os-card" data-os="win">
+            <h4>Windows</h4>
+            <span class="meta"><span class="l-en">Windows 10+ · x64 installer</span><span class="l-zh">Windows 10+ · x64 安装器</span></span>
+            <a class="btn btn-light" href={studioReleases} data-studio-asset="ReasonixStudio-windows-amd64-installer.exe"><span class="l-en">Download · <span data-release-version="studio">latest</span></span><span class="l-zh">下载 · <span data-release-version="studio">latest</span></span></a>
+          </div>
+          <div class="os-card" data-os="linux">
+            <h4>Linux</h4>
+            <span class="meta"><span class="l-en">Debian / Ubuntu · amd64</span><span class="l-zh">Debian / Ubuntu · amd64</span></span>
+            <a class="btn btn-light" href={studioReleases} data-studio-asset="ReasonixStudio-linux-amd64.deb"><span class="l-en">Download .deb · <span data-release-version="studio">latest</span></span><span class="l-zh">下载 .deb · <span data-release-version="studio">latest</span></span></a>
+          </div>
+        </div>
+        <div class="dl-note"><span class="l-en">Studio is the dedicated visual product and follows its own release line · <a href={studioReleases} data-release-notes="studio">release details →</a> · <a href={studioReleases}>all Studio releases →</a></span><span class="l-zh">Studio 是独立的可视化产品，使用自己的发布版本线 · <a href={studioReleases} data-release-notes="studio">版本详情 →</a> · <a href={studioReleases}>全部 Studio 版本 →</a></span></div>
       </div>
 
       <div class="dl-pane" id="download-pane-cli" data-pane="cli" role="tabpanel" aria-labelledby="download-tab-cli" hidden>

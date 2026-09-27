@@ -10,9 +10,12 @@ import {
   desktopReleaseModel,
   fetchDesktopDownloadModel,
   fetchFirstJSON,
+  fetchStudioDownloadModel,
   releaseAssetMap,
   releaseVersionLabel,
   selectCLIRelease,
+  studioGitHubReleaseModel,
+  studioReleaseModel,
 } from "./release-channels.js";
 
 function cliAssets(tag, missing = []) {
@@ -25,6 +28,95 @@ function cliAssets(tag, missing = []) {
 }
 
 const desktopSHA256 = "a".repeat(64);
+
+function studioManifest(version = "v2.20.0") {
+  const base = `https://github.com/esengine/DeepSeek-Reasonix/releases/download/studio-${version}/`;
+  const asset = (name) => ({ url: base + name, sig: `${base}${name}.minisig`, size: 42, sha256: desktopSHA256 });
+  const releaseURL = `https://github.com/esengine/DeepSeek-Reasonix/releases/tag/studio-${version}`;
+  return {
+    version,
+    download_page: releaseURL,
+    release_notes_url: releaseURL,
+    downloads: {
+      "ReasonixStudio-darwin-arm64.dmg": asset("ReasonixStudio-darwin-arm64.dmg"),
+      "ReasonixStudio-darwin-amd64.dmg": asset("ReasonixStudio-darwin-amd64.dmg"),
+      "ReasonixStudio-windows-amd64-installer.exe": asset("ReasonixStudio-windows-amd64-installer.exe"),
+    },
+    native_packages: { "linux-amd64": asset("ReasonixStudio-linux-amd64.deb") },
+  };
+}
+
+function studioGitHubRelease(version = "v2.20.0") {
+  const tag = `studio-${version}`;
+  const names = [
+    "ReasonixStudio-darwin-arm64.dmg",
+    "ReasonixStudio-darwin-amd64.dmg",
+    "ReasonixStudio-windows-amd64-installer.exe",
+    "ReasonixStudio-linux-amd64.deb",
+  ];
+  return {
+    tag_name: tag,
+    draft: false,
+    prerelease: true,
+    assets: names.map((name) => ({
+      name,
+      browser_download_url: `https://github.com/esengine/DeepSeek-Reasonix/releases/download/${tag}/${name}`,
+      size: 42,
+    })),
+  };
+}
+
+test("Studio uses the signed latest catalog entry and exact official assets", async () => {
+  const calls = [];
+  const model = await fetchStudioDownloadModel(async (url) => {
+    calls.push(url);
+    return { ok: true, json: async () => url.endsWith("versions.json") ? {
+      schemaVersion: 1,
+      versions: [{ version: "v2.20.0", manifest: "https://dl.reasonix.io/studio-v2.20.0/latest.json" }],
+    } : studioManifest() };
+  });
+  assert.equal(model?.version, "v2.20.0");
+  assert.equal(model?.assets["ReasonixStudio-linux-amd64.deb"], "https://github.com/esengine/DeepSeek-Reasonix/releases/download/studio-v2.20.0/ReasonixStudio-linux-amd64.deb");
+  assert.deepEqual(calls, ["https://dl.reasonix.io/studio/versions.json", "https://dl.reasonix.io/studio-v2.20.0/latest.json"]);
+});
+
+test("Studio rejects hostile catalogs and incomplete manifests", async () => {
+  const hostile = await fetchStudioDownloadModel(async () => ({ ok: true, json: async () => ({
+    schemaVersion: 1,
+    versions: [{ version: "v2.20.0", manifest: "https://evil.invalid/latest.json" }],
+  }) }));
+  assert.equal(hostile, null);
+  const incomplete = studioManifest();
+  delete incomplete.downloads["ReasonixStudio-darwin-amd64.dmg"];
+  assert.equal(studioReleaseModel(incomplete), null);
+  const spoofed = studioManifest();
+  spoofed.downloads["ReasonixStudio-darwin-arm64.dmg"].url = "https://evil.invalid/app.dmg";
+  assert.equal(studioReleaseModel(spoofed), null);
+});
+
+test("Studio falls back to the newest complete official GitHub release when the catalog is not browser-readable", async () => {
+  const calls = [];
+  const model = await fetchStudioDownloadModel(async (url) => {
+    calls.push(url);
+    if (url.includes("dl.reasonix.io")) throw new Error("CORS blocked");
+    return { ok: true, json: async () => [studioGitHubRelease("v2.19.0"), studioGitHubRelease("v2.20.0")] };
+  });
+  assert.equal(model?.version, "v2.20.0");
+  assert.match(model?.assets["ReasonixStudio-darwin-arm64.dmg"], /studio-v2\.20\.0/);
+  assert.match(calls.at(-1), /api\.github\.com/);
+});
+
+test("Studio GitHub fallback rejects missing, duplicate, and spoofed assets", () => {
+  const missing = studioGitHubRelease();
+  missing.assets.pop();
+  assert.equal(studioGitHubReleaseModel(missing), null);
+  const duplicate = studioGitHubRelease();
+  duplicate.assets.push({ ...duplicate.assets[0] });
+  assert.equal(studioGitHubReleaseModel(duplicate), null);
+  const spoofed = studioGitHubRelease();
+  spoofed.assets[0].browser_download_url = "https://github.com.evil.invalid/app.dmg";
+  assert.equal(studioGitHubReleaseModel(spoofed), null);
+});
 
 // Every approved manual tag is probed. Selection must stay "newest that
 // actually resolves", so listing the next tag early cannot downgrade the page.
@@ -193,6 +285,11 @@ test("site placeholders do not render the synthetic version vlatest", async () =
   assert.doesNotMatch(home, /<a[^>]*data-cli-asset=[^>]*\sdownload(?:[ >])/);
   assert.match(home, /id="download-tab-desktop"[^>]+aria-controls="download-pane-desktop"/);
   assert.match(home, /id="download-pane-cli"[^>]+role="tabpanel"[^>]+hidden/);
+  assert.match(home, /id="download-tab-studio"[^>]+aria-controls="download-pane-studio"/);
+  assert.match(home, /data-studio-asset="ReasonixStudio-windows-amd64-installer\.exe"/);
+  assert.match(home, /Stable 1\.x/);
+  assert.match(home, /Studio 2\.x/);
+  assert.match(home, /新架构与最新功能，正在快速迭代中/);
   assert.doesNotMatch(home, /releases\/latest\/download/);
   assert.doesNotMatch(siteScript, /releases\/latest\/download/);
   assert.doesNotMatch(siteScript, /desktopPreviewBase/);

@@ -4,6 +4,7 @@ import {
   cliReleaseModel,
   cliUpgradeCommand,
   fetchDesktopDownloadModel,
+  fetchStudioDownloadModel,
   fetchFirstJSON,
   releaseVersionLabel,
 } from "./release-channels.js";
@@ -239,7 +240,7 @@ import { initMobileNav } from "./mobile-nav.js";
   });
 
   /* public official releases */
-  const releaseModels = { desktop: null, cli: null };
+  const releaseModels = { desktop: null, studio: null, cli: null };
   const releasesPage = "https://github.com/esengine/DeepSeek-Reasonix/releases";
   const reflectPaneURL = (surface) => {
     const nextURL = downloadURLForPane(window.location.href, surface, "");
@@ -260,9 +261,11 @@ import { initMobileNav } from "./mobile-nav.js";
   // Never synthesize public artifact URLs. If every required asset is not
   // attested by live release data, fall back to the release list instead of a
   // plausible-looking URL that may 404.
-  const fallbackReleaseURL = (surface) => surface === "desktop" && desktopDownloadVersion
-    ? releasesPage + "/tag/desktop-" + desktopDownloadVersion
-    : releasesPage;
+  const fallbackReleaseURL = (surface) => {
+    if (surface === "desktop" && desktopDownloadVersion) return releasesPage + "/tag/desktop-" + desktopDownloadVersion;
+    if (surface === "studio") return releasesPage + "?q=studio-v";
+    return releasesPage;
+  };
 
   const renderReleaseSurface = (surface) => {
     const model = releaseModels[surface];
@@ -271,6 +274,10 @@ import { initMobileNav } from "./mobile-nav.js";
         ? { version: desktopDownloadVersion } : null));
     });
     document.querySelectorAll('[data-release-notes="' + surface + '"]').forEach((link) => {
+      if (surface === "studio") {
+        link.href = model?.changelogURL || fallbackReleaseURL(surface);
+        return;
+      }
       const path = model?.changelogURL ? new URL(model.changelogURL).pathname
         : surface === "desktop" && desktopDownloadVersion ? "changelog/" + desktopDownloadVersion + "/" : "changelog/";
       link.href = new URL(path, window.location.origin + "/").href;
@@ -293,6 +300,7 @@ import { initMobileNav } from "./mobile-nav.js";
   };
 
   renderReleaseSurface("desktop");
+  renderReleaseSurface("studio");
   renderReleaseSurface("cli");
   if (requestedPane) reflectPaneURL(requestedPane);
 
@@ -301,6 +309,14 @@ import { initMobileNav } from "./mobile-nav.js";
       if (!model) return;
       releaseModels.desktop = model;
       renderReleaseSurface("desktop");
+    })
+    .catch(() => {});
+
+  fetchStudioDownloadModel(fetch)
+    .then((model) => {
+      if (!model) return;
+      releaseModels.studio = model;
+      renderReleaseSurface("studio");
     })
     .catch(() => {});
 

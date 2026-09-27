@@ -789,6 +789,22 @@ section { padding: 118px 0 0; }
 .dl-tab:hover { color: var(--ink); }
 .dl-tab.active { background: var(--card); color: var(--accent); box-shadow: var(--shadow-1); }
 
+.version-guide {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+  max-width: 760px; margin: 18px auto 0; text-align: left;
+}
+.version-guide > div {
+  display: grid; gap: 4px; padding: 13px 15px;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--bg-soft);
+}
+.version-guide strong { color: var(--ink); font-size: 13px; }
+.version-guide > div > span { color: var(--ink-3); font-size: 12px; line-height: 1.5; }
+.version-guide-badge {
+  display: inline-flex; margin-left: 5px; padding: 2px 6px; border-radius: 4px;
+  color: var(--accent); background: var(--accent-soft); font-size: 10px;
+  font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+}
+
 .dl-pane { display: none; margin-top: 36px; }
 .dl-pane.active { display: block; animation: pane-in 0.45s var(--ease); }
 @keyframes pane-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -1233,6 +1249,7 @@ footer { background: var(--bg); border-top: 1px solid var(--line); margin-top: 0
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%; max-width: 360px; border-radius: var(--radius-sm);
   }
+  .version-guide { grid-template-columns: 1fr; max-width: 360px; }
   .release-channel-switch { width: 100%; max-width: 360px; }
   .release-channel-switch button { min-width: 0; padding-inline: 12px; }
   .release-upgrade-command {
