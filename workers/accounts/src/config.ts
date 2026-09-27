@@ -21,3 +21,7 @@ export const PBKDF2_ITERATIONS = 100_000;
 
 export const MIN_PASSWORD = 8;
 export const MAX_PASSWORD = 200;
+
+// Encrypted configuration backups, per account.
+export const CONFIG_BACKUP_MAX_BYTES = 4 * 1024 * 1024;
+export const CONFIG_BACKUP_MAX_COUNT = 10;

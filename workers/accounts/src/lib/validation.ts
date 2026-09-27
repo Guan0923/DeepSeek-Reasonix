@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../env";
-import { MAX_PASSWORD, MIN_PASSWORD } from "../config";
+import { CONFIG_BACKUP_MAX_BYTES, MAX_PASSWORD, MIN_PASSWORD } from "../config";
 import { ApiError } from "../http/errors";
 
 const email = z.string().trim().toLowerCase().email().max(254);
@@ -120,3 +120,16 @@ export function parseQuery<S extends z.ZodTypeAny>(c: Context<AppEnv>, schema: S
   if (!result.success) throw new ApiError(422, "invalid_input", firstIssue(result.error));
   return result.data;
 }
+
+// The envelope is base64 so the body stays JSON like every other route; the
+// decoded size is checked again after decoding.
+export const ConfigBackupUploadSchema = z.object({
+  label: z.string().trim().max(80),
+  format: z.number().int().positive().max(1000),
+  appVersion: z.string().trim().max(64),
+  platform: z.string().trim().max(64),
+  categories: z.array(z.enum(["settings", "extensions", "memory", "automation", "secrets"])).min(1).max(5),
+  envelope: z.string().min(8).max(Math.ceil((CONFIG_BACKUP_MAX_BYTES * 4) / 3) + 4),
+}).strict();
+
+export const ConfigBackupIdSchema = z.string().regex(/^[0-9a-f]{64}$/);
