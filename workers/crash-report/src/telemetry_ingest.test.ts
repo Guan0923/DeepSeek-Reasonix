@@ -127,10 +127,11 @@ describe("telemetry queue database batching", () => {
 
     await worker.queue({ messages } as unknown as MessageBatch<(typeof queued)[number]>, bindings);
 
-    expect(dataBatches).toHaveLength(2);
+    expect(dataBatches).toHaveLength(3);
     expect(dataBatches[0]).toHaveLength(2); // idempotency schema guard
-    expect(dataBatches[1]).toHaveLength(4); // two statements per envelope
-    expect(JSON.stringify(dataBatches[1])).toContain("json_each");
+    expect(dataBatches[1]).toHaveLength(2); // desktop schema guard
+    expect(dataBatches[2]).toHaveLength(4); // two statements per envelope
+    expect(JSON.stringify(dataBatches[2])).toContain("json_each");
     for (const message of messages) {
       expect(message.ack).toHaveBeenCalledOnce();
       expect(message.retry).not.toHaveBeenCalled();
@@ -179,6 +180,45 @@ describe("telemetry queue database batching", () => {
     expect(isolated.batches.at(-1)).toHaveLength(2);
     expect(JSON.stringify(legacy.batches.at(-1))).toContain("studio_pings");
     expect(JSON.stringify(isolated.batches.at(-1))).toContain("studio_pings");
+    expect(message.ack).toHaveBeenCalledOnce();
+  });
+
+  it("dual-writes Desktop deliveries without changing the product cutover", async () => {
+    const makeDB = () => {
+      const batches: unknown[][] = [];
+      const db = {
+        prepare: (sql: string) => ({ sql, bind: (...bindings: unknown[]) => ({ sql, bindings }) }),
+        batch: async (statements: unknown[]) => { batches.push(statements); return []; },
+      } as unknown as D1Database;
+      return { db, batches };
+    };
+    const legacy = makeDB();
+    const isolated = makeDB();
+    const message = {
+      body: {
+        version: 1 as const,
+        eventId: crypto.randomUUID(),
+        receivedAt: "2026-09-27T07:00:00.000Z",
+        kind: "ping" as const,
+        payload: {
+          installId: "e".repeat(32), version: "v1.23.0", os: "linux", arch: "x64", surface: "desktop",
+        },
+      },
+      ack: vi.fn(),
+      retry: vi.fn(),
+    };
+    const bindings = {
+      DB: legacy.db,
+      TELEMETRY_DB: isolated.db,
+      TELEMETRY_DB_MODE: "isolated",
+      DESKTOP_TELEMETRY_DB_MODE: "dual",
+      TELEMETRY_RAW: { put: vi.fn().mockResolvedValue(undefined) },
+    } as unknown as Env;
+
+    await worker.queue({ messages: [message] } as unknown as MessageBatch<typeof message.body>, bindings);
+
+    expect(JSON.stringify(legacy.batches.at(-1))).toContain("INSERT INTO pings");
+    expect(JSON.stringify(isolated.batches.at(-1))).toContain("INSERT INTO pings");
     expect(message.ack).toHaveBeenCalledOnce();
   });
 });

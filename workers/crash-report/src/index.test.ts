@@ -6,6 +6,7 @@ import {
   Ping,
   Metrics,
   CLI_TELEMETRY_SCHEMA_SQL,
+  DESKTOP_TELEMETRY_SCHEMA_SQL,
   STUDIO_TELEMETRY_SCHEMA_SQL,
   ensureCLITelemetrySchema,
   ensureStudioTelemetrySchema,
@@ -151,7 +152,7 @@ describe("metrics compatibility", () => {
 });
 
 describe("telemetry deployment order compatibility", () => {
-  it("routes CLI and Studio to the isolated database with a rollback fallback", () => {
+  it("routes each surface by its independent migration mode", () => {
     const crash = {} as D1Database;
     const telemetry = {} as D1Database;
     const isolated = { DB: crash, TELEMETRY_DB: telemetry, TELEMETRY_DB_MODE: "isolated" };
@@ -159,14 +160,23 @@ describe("telemetry deployment order compatibility", () => {
     expect(telemetryDatabase(isolated, "cli")).toBe(telemetry);
     expect(telemetryDatabase(isolated, "studio")).toBe(telemetry);
     expect(telemetryDatabase({ DB: crash, TELEMETRY_DB: telemetry, TELEMETRY_DB_MODE: "dual" }, "studio")).toBe(crash);
+    expect(telemetryDatabase({
+      ...isolated,
+      DESKTOP_TELEMETRY_DB_MODE: "isolated",
+    }, "desktop")).toBe(telemetry);
+    expect(telemetryDatabase({
+      ...isolated,
+      DESKTOP_TELEMETRY_DB_MODE: "dual",
+    }, "desktop")).toBe(crash);
     expect(telemetryDatabase({ DB: crash }, "studio")).toBe(crash);
   });
 
   it("keeps the isolated database schema additive and idempotent", () => {
     expect(telemetrySchemaSQL).not.toMatch(/\b(?:DROP|ALTER|DELETE)\b/);
-    for (const table of ["cli_pings", "cli_metrics", "studio_pings", "studio_metrics", "telemetry_receipts"]) {
+    for (const table of ["pings", "metrics", "cli_pings", "cli_metrics", "studio_pings", "studio_metrics", "telemetry_receipts"]) {
       expect(telemetrySchemaSQL).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS\\s+${table}\\b`));
     }
+    expect(DESKTOP_TELEMETRY_SCHEMA_SQL.join("\n")).not.toMatch(/\b(?:DROP|ALTER|DELETE)\b/);
   });
 
   it("keeps the released Desktop tables unchanged and isolates newer surfaces", () => {

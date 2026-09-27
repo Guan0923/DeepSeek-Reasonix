@@ -492,10 +492,10 @@ describe("diagnostics v2 storage consistency", () => {
   });
 
   it("shares the unfiltered ping denominator across diagnostics metrics", async () => {
-    let querySQL = "";
+    const queries: string[] = [];
     const db = {
       prepare(sql: string) {
-        querySQL = sql;
+        queries.push(sql);
         return { async all() { return { results: [] }; } };
       },
     } as unknown as D1Database;
@@ -504,8 +504,50 @@ describe("diagnostics v2 storage consistency", () => {
       runtimeVersion: "", failureKind: "", failureReason: "", recovery: "", gpu: "",
       newLatest: false, regressed: false, windowDays: 30,
     }, "");
-    expect(querySQL.match(/FROM pings WHERE/g)).toHaveLength(1);
-    expect(querySQL).toContain("CROSS JOIN (SELECT COUNT(DISTINCT install_id) AS installs FROM pings");
+    const pingQueries = queries.filter((sql) => sql.includes("FROM pings WHERE"));
+    expect(pingQueries).toHaveLength(1);
+    expect(pingQueries[0]).toContain("COUNT(DISTINCT install_id) AS installs");
+    expect(queries.at(-1)).not.toContain("FROM pings");
+  });
+
+  it("loads diagnostic denominators from the isolated Desktop telemetry database", async () => {
+    const crashQueries: string[] = [];
+    const telemetryQueries: string[] = [];
+    const crashDB = {
+      prepare(sql: string) {
+        crashQueries.push(sql);
+        return { async all() { return { results: [{
+          fingerprint: "a".repeat(64), status: "open", severity: "medium", regressed_at: "",
+          first_version: "v1.23.0", count: 10, seen: "2026-09-27", title: "failure",
+          last_version: "v1.23.0", last_channel: "stable", affected_installs: 5,
+          window_events: 5, identified_events: 5, active_build_installs: 25,
+          dimension_base_installs: 25, dimension_covered_installs: 25, kind: "crash",
+          source: "desktop", label: "failure", error_type: "", top_frame: "",
+          last_os: "linux", last_arch: "x64",
+        }] }; } };
+      },
+    } as unknown as D1Database;
+    const telemetryDB = {
+      prepare(sql: string) {
+        telemetryQueries.push(sql);
+        return { async all() { return { results: [{ installs: 25 }] }; } };
+      },
+    } as unknown as D1Database;
+
+    const result = await crashGroups({
+      DB: crashDB,
+      TELEMETRY_DB: telemetryDB,
+      DESKTOP_TELEMETRY_DB_MODE: "isolated",
+    } as unknown as Env, {
+      status: "", source: "", version: "", os: "", platform: "", osBuild: "", arch: "", channel: "",
+      runtimeVersion: "", failureKind: "", failureReason: "", recovery: "", gpu: "",
+      newLatest: false, regressed: false, windowDays: 30,
+    }, "");
+
+    expect(telemetryQueries).toHaveLength(1);
+    expect(telemetryQueries[0]).toContain("FROM pings");
+    expect(crashQueries.at(-1)).not.toContain("FROM pings");
+    expect((result.results[0] as typeof result.results[0] & { impact_rate: number }).impact_rate).toBe(0.2);
   });
 
   it("caches diagnostic facets per D1 binding and reports query timing labels", async () => {

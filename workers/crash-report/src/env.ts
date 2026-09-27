@@ -8,6 +8,7 @@ export interface Env {
   // only for local tests and rolling back to a pre-split deployment.
   TELEMETRY_DB?: D1Database;
   TELEMETRY_DB_MODE?: string;
+  DESKTOP_TELEMETRY_DB_MODE?: string;
   // Skill/MCP registry database — the folded registry API + moderation console
   // read and write it; the crash tables stay in DB.
   REGISTRY_DB: D1Database;
