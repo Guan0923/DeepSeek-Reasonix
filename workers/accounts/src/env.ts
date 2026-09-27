@@ -8,6 +8,9 @@ export interface RateLimiter {
 export interface Bindings {
   DB: D1Database;
   AUTH_LIMITER?: RateLimiter;
+  // Encrypted configuration backups. Absent until the bucket is bound; the
+  // backup routes answer 503 rather than failing on a missing binding.
+  BACKUPS?: R2Bucket;
 
   // Plain vars (wrangler.toml [vars]).
   APP_ORIGIN: string;

@@ -41,6 +41,12 @@ database_name = "reasonix-accounts"
 database_id = "bae20011-a6fe-4fad-ae61-a3aaac605e0c"
 migrations_dir = "migrations"
 
+# Encrypted configuration backups (sealed on the client; this worker never sees
+# plaintext). Create once: wrangler r2 bucket create reasonix-config-backups
+[[r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "reasonix-config-backups"
+
 # Per-IP throttle for the sensitive auth endpoints (login/register/forgot/reset).
 [[unsafe.bindings]]
 name = "AUTH_LIMITER"

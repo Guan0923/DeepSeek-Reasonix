@@ -66,6 +66,10 @@ Design notes:
 | PATCH  | `/me/devices/:id`          | ✓    | rename an active device                 |
 | DELETE | `/me/devices/:id`          | ✓    | revoke a device                         |
 | POST   | `/me/remote-grants`        | ✓    | issue a 60-second, scoped connection ticket |
+| GET    | `/me/backups`              | ✓    | list encrypted config backups + `limits` |
+| POST   | `/me/backups`              | ✓    | `{ label, format, appVersion, platform, categories, envelope(base64) }`; ≤ 4 MiB, ≤ 10 per account |
+| GET    | `/me/backups/:id`          | ✓    | `{ backup, envelope }`                  |
+| DELETE | `/me/backups/:id`          | ✓    | delete one backup                       |
 | POST   | `/remote/devices/authenticate` | gateway | validate a device credential        |
 | POST   | `/remote/grants/consume`   | gateway | consume a connection ticket once     |
 | DELETE | `/me`                      | ✓    | soft-delete the account                 |
@@ -109,6 +113,7 @@ Register a user, then read the verification link from the `wrangler dev` console
 ```sh
 wrangler d1 create reasonix-accounts        # paste database_id into wrangler.toml
 wrangler d1 migrations apply reasonix-accounts --remote
+wrangler r2 bucket create reasonix-config-backups   # config backups (binding BACKUPS)
 wrangler secret put SESSION_PEPPER
 wrangler secret put RESEND_API_KEY          # if EMAIL_PROVIDER=resend
 wrangler deploy

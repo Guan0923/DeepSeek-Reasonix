@@ -23,6 +23,8 @@ import {
   REMOTE_GRANT_TTL_MS,
 } from "../config";
 import { remoteDevicePresence } from "../remoteGateway";
+import backups from "./backups";
+import { ConfigBackupRepo } from "../db/configBackups";
 
 const me = new Hono<AppEnv>();
 
@@ -30,6 +32,8 @@ const me = new Hono<AppEnv>();
 me.use("*", requireAuth);
 
 me.get("/", (c) => c.json({ user: currentUser(c) }));
+
+me.route("/backups", backups);
 
 me.get("/devices", async (c) => {
   const user = currentUser(c);
@@ -145,6 +149,7 @@ me.delete("/", async (c) => {
   await users.softDelete(user.id);
   await sessions.deleteAllForUser(user.id);
   await remoteDevices.revokeAllForUser(user.id);
+  if (c.env.BACKUPS) await new ConfigBackupRepo(c.env.DB, c.env.BACKUPS).removeAllForUser(user.id);
   clearSessionCookie(c);
   return c.json({ ok: true });
 });
