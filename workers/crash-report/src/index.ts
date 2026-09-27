@@ -61,6 +61,11 @@ import {
   type TelemetryEnvelope,
 } from "./telemetry_queue";
 import {
+  telemetryDatabase,
+  telemetryWriteDatabases,
+  type ClientSurfaceName,
+} from "./telemetry_db";
+import {
   acquireFirebaseGroupLease,
   claimFirebaseCrash,
   crashStorageMode,
@@ -102,11 +107,11 @@ import {
 } from "./firebase_crash_view";
 export { Report } from "./report_schema";
 export { diagnosticWindowWhere, effectiveGroupSeverity, isDevelopmentGroup } from "./diagnostics_v2";
+export { telemetryDatabase } from "./telemetry_db";
 const MAX_BODY_BYTES = 96 * 1024;
 const LATEST_SAMPLES_PER_GROUP = 5;
 
 const ClientSurface = z.enum(["desktop", "studio", "cli"]);
-type ClientSurfaceName = z.infer<typeof ClientSurface>;
 
 type TelemetryTableNames = {
   pings: "pings" | "studio_pings" | "cli_pings";
@@ -123,23 +128,37 @@ export function telemetryTableNames(surface: ClientSurfaceName): TelemetryTableN
   return TELEMETRY_TABLES[surface];
 }
 
-export function telemetryDatabase(
-  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
-  surface: ClientSurfaceName,
-): D1Database {
-  if (surface === "desktop" || env.TELEMETRY_DB_MODE !== "isolated") return env.DB;
-  return env.TELEMETRY_DB ?? env.DB;
-}
-
-function telemetryWriteDatabases(
-  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
-  surface: ClientSurfaceName,
-): D1Database[] {
-  if (surface === "desktop" || !env.TELEMETRY_DB) return [env.DB];
-  if (env.TELEMETRY_DB_MODE === "dual") return [env.DB, env.TELEMETRY_DB];
-  if (env.TELEMETRY_DB_MODE === "isolated") return [env.TELEMETRY_DB];
-  return [env.DB];
-}
+export const DESKTOP_TELEMETRY_SCHEMA_SQL = [
+  `CREATE TABLE IF NOT EXISTS pings (
+     date TEXT NOT NULL,
+     install_id TEXT NOT NULL,
+     version TEXT NOT NULL,
+     os TEXT NOT NULL,
+     arch TEXT NOT NULL,
+     os_version TEXT NOT NULL DEFAULT '',
+     os_build INTEGER NOT NULL DEFAULT 0,
+     os_revision INTEGER NOT NULL DEFAULT 0,
+     channel TEXT NOT NULL DEFAULT '',
+     distro_id TEXT NOT NULL DEFAULT '',
+     distro_version TEXT NOT NULL DEFAULT '',
+     kernel_version TEXT NOT NULL DEFAULT '',
+     session_type TEXT NOT NULL DEFAULT '',
+     runtime_engine TEXT NOT NULL DEFAULT '',
+     runtime_version TEXT NOT NULL DEFAULT '',
+     gpu_mode TEXT NOT NULL DEFAULT '',
+     opens INTEGER NOT NULL DEFAULT 1,
+     PRIMARY KEY (date, install_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS metrics (
+     date TEXT NOT NULL,
+     version TEXT NOT NULL,
+     os TEXT NOT NULL,
+     signal TEXT NOT NULL,
+     bucket TEXT NOT NULL,
+     count INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (date, version, os, signal, bucket)
+   )`,
+] as const;
 
 export const CLI_TELEMETRY_SCHEMA_SQL = [
   `CREATE TABLE IF NOT EXISTS cli_pings (
@@ -209,6 +228,7 @@ export const STUDIO_TELEMETRY_SCHEMA_SQL = [
 
 const cliTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
 const studioTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
+const desktopTelemetrySchemaPromises = new WeakMap<object, Promise<void>>();
 
 function ensureTelemetrySchema(
   db: D1Database,
@@ -230,7 +250,7 @@ function ensureTelemetrySchema(
 }
 
 export function ensureCLITelemetrySchema(
-  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE" | "DESKTOP_TELEMETRY_DB_MODE">,
 ): Promise<void> {
   return Promise.all(telemetryWriteDatabases(env, "cli").map((db) =>
     ensureTelemetrySchema(db, cliTelemetrySchemaPromises, CLI_TELEMETRY_SCHEMA_SQL)
@@ -238,10 +258,18 @@ export function ensureCLITelemetrySchema(
 }
 
 export function ensureStudioTelemetrySchema(
-  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE">,
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE" | "DESKTOP_TELEMETRY_DB_MODE">,
 ): Promise<void> {
   return Promise.all(telemetryWriteDatabases(env, "studio").map((db) =>
     ensureTelemetrySchema(db, studioTelemetrySchemaPromises, STUDIO_TELEMETRY_SCHEMA_SQL)
+  )).then(() => undefined);
+}
+
+export function ensureDesktopTelemetrySchema(
+  env: Pick<Env, "DB" | "TELEMETRY_DB" | "TELEMETRY_DB_MODE" | "DESKTOP_TELEMETRY_DB_MODE">,
+): Promise<void> {
+  return Promise.all(telemetryWriteDatabases(env, "desktop").map((db) =>
+    ensureTelemetrySchema(db, desktopTelemetrySchemaPromises, DESKTOP_TELEMETRY_SCHEMA_SQL)
   )).then(() => undefined);
 }
 
@@ -942,6 +970,7 @@ function metricsReceiptStatements(
 async function persistPing(env: Env, p: z.infer<typeof Ping>, receipt?: TelemetryReceipt): Promise<void> {
   const tables = telemetryTableNames(p.surface);
   const databases = telemetryWriteDatabases(env, p.surface);
+  if (p.surface === "desktop") await ensureDesktopTelemetrySchema(env);
   if (p.surface === "cli") await ensureCLITelemetrySchema(env);
   if (p.surface === "studio") await ensureStudioTelemetrySchema(env);
   const bindings = [
@@ -977,6 +1006,7 @@ async function persistMetrics(env: Env, m: z.infer<typeof Metrics>, receipt?: Te
   if (m.counters.length === 0) return;
   const tables = telemetryTableNames(m.surface);
   const databases = telemetryWriteDatabases(env, m.surface);
+  if (m.surface === "desktop") await ensureDesktopTelemetrySchema(env);
   if (m.surface === "cli") await ensureCLITelemetrySchema(env);
   if (m.surface === "studio") await ensureStudioTelemetrySchema(env);
 
@@ -1004,6 +1034,7 @@ async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): 
     | { kind: "ping"; value: z.infer<typeof Ping>; receipt: TelemetryReceipt }
     | { kind: "metrics"; value: z.infer<typeof Metrics>; receipt: TelemetryReceipt }
   > = [];
+  let needsDesktop = false;
   let needsCLI = false;
   let needsStudio = false;
 
@@ -1016,6 +1047,7 @@ async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): 
         continue;
       }
       parsed.push({ kind: "ping", value: value.data, receipt });
+      needsDesktop ||= value.data.surface === "desktop";
       needsCLI ||= value.data.surface === "cli";
       needsStudio ||= value.data.surface === "studio";
       continue;
@@ -1027,6 +1059,7 @@ async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): 
     }
     if (value.data.counters.length === 0) continue;
     parsed.push({ kind: "metrics", value: value.data, receipt });
+    needsDesktop ||= value.data.surface === "desktop";
     needsCLI ||= value.data.surface === "cli";
     needsStudio ||= value.data.surface === "studio";
   }
@@ -1035,6 +1068,7 @@ async function persistTelemetryBatch(env: Env, envelopes: TelemetryEnvelope[]): 
   const databases = new Map<D1Database, D1PreparedStatement[]>();
   const usedDatabases = new Set(parsed.flatMap((item) => telemetryWriteDatabases(env, item.value.surface)));
   await Promise.all([...usedDatabases].map((db) => ensureTelemetryReceiptSchema({ DB: db })));
+  if (needsDesktop) await ensureDesktopTelemetrySchema(env);
   if (needsCLI) await ensureCLITelemetrySchema(env);
   if (needsStudio) await ensureStudioTelemetrySchema(env);
 
@@ -1637,6 +1671,9 @@ const CRASH_RETENTION: readonly RetentionRule[] = [
   { table: "report_events", keepDays: 90, dateColumn: "received_at" },
   { table: "report_attribution_daily", keepDays: 30 },
   { table: "report_incidents", keepDays: 30 },
+] as const;
+
+const DESKTOP_TELEMETRY_RETENTION: readonly RetentionRule[] = [
   { table: "pings", keepDays: 30 },
   { table: "metrics", keepDays: 60 },
   { table: "telemetry_receipts", keepDays: 8 },
@@ -1696,6 +1733,7 @@ async function sendAlert(env: Env, text: string): Promise<void> {
 
 async function runIngestSentinel(env: Env): Promise<void> {
   const problems: string[] = [];
+  const desktopDB = telemetryDatabase(env, "desktop");
   if (crashStorageMode(env) !== "d1") {
     try {
       const storage = await firebaseStorageSummary(env);
@@ -1711,7 +1749,8 @@ async function runIngestSentinel(env: Env): Promise<void> {
     }
   }
   try {
-    await env.DB.prepare(
+    await ensureDesktopTelemetrySchema(env);
+    await desktopDB.prepare(
       `INSERT INTO pings (date, install_id, version, os, arch, opens)
        VALUES (date('now'), ?1, 'canary', 'canary', 'canary', 0)
        ON CONFLICT (date, install_id) DO NOTHING`,
@@ -1719,7 +1758,7 @@ async function runIngestSentinel(env: Env): Promise<void> {
       .bind(CANARY_INSTALL_ID)
       .run();
     // Also removes any leftover canary from a run that died mid-way.
-    await env.DB.prepare("DELETE FROM pings WHERE install_id = ?1").bind(CANARY_INSTALL_ID).run();
+    await desktopDB.prepare("DELETE FROM pings WHERE install_id = ?1").bind(CANARY_INSTALL_ID).run();
   } catch (err) {
     problems.push(`canary write failed: ${errText(err)}`);
   }
@@ -1735,7 +1774,7 @@ async function runIngestSentinel(env: Env): Promise<void> {
          checked_at TEXT NOT NULL
        )`,
     ).run();
-    const row = await env.DB.prepare(
+    const row = await desktopDB.prepare(
       `SELECT date('now') AS day,
               COUNT(*) AS ping_count,
               COALESCE(SUM(opens), 0) AS open_count
@@ -1784,19 +1823,22 @@ async function runIngestSentinel(env: Env): Promise<void> {
 }
 
 async function purgeExpiredStatsRows(env: Env): Promise<void> {
-  const telemetryDatabases = telemetryWriteDatabases(env, "cli");
+  const desktopDatabases = telemetryWriteDatabases(env, "desktop");
+  const productDatabases = telemetryWriteDatabases(env, "cli");
+  const telemetryDatabases = new Set([...desktopDatabases, ...productDatabases]);
   try {
     await Promise.all([
+      ensureDesktopTelemetrySchema(env),
       ensureCLITelemetrySchema(env),
       ensureStudioTelemetrySchema(env),
-      ensureTelemetryReceiptSchema({ DB: env.DB }),
-      ...telemetryDatabases.map((db) => ensureTelemetryReceiptSchema({ DB: db })),
+      ...[...telemetryDatabases].map((db) => ensureTelemetryReceiptSchema({ DB: db })),
     ]);
   } catch (err) {
     console.error("retention: telemetry schema unavailable", err);
   }
   await purgeExpiredRows(env.DB, CRASH_RETENTION);
-  for (const db of telemetryDatabases) await purgeExpiredRows(db, PRODUCT_TELEMETRY_RETENTION);
+  for (const db of desktopDatabases) await purgeExpiredRows(db, DESKTOP_TELEMETRY_RETENTION);
+  for (const db of productDatabases) await purgeExpiredRows(db, PRODUCT_TELEMETRY_RETENTION);
 }
 
 async function purgeExpiredRows(db: D1Database, retention: readonly RetentionRule[]): Promise<void> {

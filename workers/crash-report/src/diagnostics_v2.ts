@@ -1,4 +1,5 @@
 import type { Env } from "./env";
+import { telemetryDatabase } from "./telemetry_db";
 
 export const DEVELOPMENT_FINGERPRINT_PREFIX = "dev:";
 export const developmentGroupSQL = `groups.fingerprint LIKE 'dev:%'`;
@@ -258,16 +259,30 @@ export async function crashGroups(
   if (filters.runtimeVersion) { addPing("runtime_version", filters.runtimeVersion); dimensionKnown.push("runtime_version <> ''"); }
   if (filters.runtimeEngine) { addPing("runtime_engine", filters.runtimeEngine); dimensionKnown.push("runtime_engine <> ''"); }
   if (filters.gpu) { addPing("gpu_mode", filters.gpu); dimensionKnown.push("gpu_mode <> ''"); }
-  const activeInstalls = `(SELECT COUNT(DISTINCT install_id) FROM pings WHERE ${pingWhere.join(" AND ")})`;
-  const baseInstalls = `(SELECT COUNT(DISTINCT install_id) FROM pings WHERE ${pingBaseWhere.join(" AND ")})`;
-  const coveredInstalls = `(SELECT COUNT(DISTINCT install_id) FROM pings WHERE ${[...pingBaseWhere, ...dimensionKnown].join(" AND ")})`;
   const samePingWindow = pingWhere.length === 1 && pingBaseWhere.length === 1 && dimensionKnown.length === 0;
-  const pingStatsJoin = samePingWindow
-    ? `CROSS JOIN (SELECT COUNT(DISTINCT install_id) AS installs FROM pings WHERE ${pingWhere.join(" AND ")}) ping_stats`
-    : "";
-  const activeInstallExpr = samePingWindow ? "ping_stats.installs" : activeInstalls;
-  const baseInstallExpr = samePingWindow ? "ping_stats.installs" : baseInstalls;
-  const coveredInstallExpr = samePingWindow ? "ping_stats.installs" : coveredInstalls;
+  const pingDB = telemetryDatabase(env, "desktop");
+  const countInstalls = async (where: string[], queryBinds: unknown[], label: string): Promise<number> => {
+    const statement = pingDB.prepare(
+      `SELECT COUNT(DISTINCT install_id) AS installs FROM pings WHERE ${where.join(" AND ")}`,
+    );
+    const result = await observedAll<{ installs: number }>(
+      queryBinds.length ? statement.bind(...queryBinds) : statement,
+      label,
+      observe,
+    );
+    return Number(result.results[0]?.installs ?? 0);
+  };
+  const [activeInstallCount, baseInstallCount, coveredInstallCount] = samePingWindow
+    ? await countInstalls(pingWhere, pingBinds, "diagnostic_active_installs").then((count) => [count, count, count])
+    : await Promise.all([
+        countInstalls(pingWhere, pingBinds, "diagnostic_active_installs"),
+        countInstalls(pingBaseWhere, pingBaseBinds, "diagnostic_base_installs"),
+        countInstalls(
+          [...pingBaseWhere, ...dimensionKnown],
+          pingBaseBinds,
+          "diagnostic_covered_installs",
+        ),
+      ]);
   const diagnosticJoin = installWhere.length > 1
     ? `LEFT JOIN (
       SELECT fingerprint,
@@ -295,12 +310,11 @@ export async function crashGroups(
       COALESCE(diagnostics.affected_installs, 0) AS affected_installs,
       COALESCE(diagnostics.window_events, 0) AS window_events,
       COALESCE(diagnostics.identified_events, 0) AS identified_events,
-      ${activeInstallExpr} AS active_build_installs,
-      ${baseInstallExpr} AS dimension_base_installs,
-      ${coveredInstallExpr} AS dimension_covered_installs
+      ${activeInstallCount} AS active_build_installs,
+      ${baseInstallCount} AS dimension_base_installs,
+      ${coveredInstallCount} AS dimension_covered_installs
     FROM groups
     ${diagnosticJoin}
-    ${pingStatsJoin}
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY
       affected_installs DESC,
@@ -323,7 +337,7 @@ export async function crashGroups(
       count DESC,
       last_seen DESC
     LIMIT 50`;
-  const allBinds = [...pingBinds, ...pingBaseBinds, ...pingBaseBinds, ...installBinds, ...binds];
+  const allBinds = [...installBinds, ...binds];
   const stmt = env.DB.prepare(sql);
   const query = allBinds.length ? stmt.bind(...allBinds) : stmt;
   const started = performance.now();
