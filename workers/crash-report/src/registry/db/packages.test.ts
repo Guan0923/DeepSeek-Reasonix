@@ -210,6 +210,7 @@ describe("PackageRepo.publish", () => {
 describe("PackageRepo.setStatusIfCurrent", () => {
   it("approves only the exact package revision the admin reviewed", async () => {
     const approvedAt = "2026-07-22T01:00:00.000Z";
+    const reviewed = "sha256:" + "ab".repeat(32);
     const approved: PackageRow = { ...existing, status: "active", updated_at: approvedAt };
     const statements: { sql: string; values: unknown[] }[] = [];
     const db = {
@@ -224,6 +225,10 @@ describe("PackageRepo.setStatusIfCurrent", () => {
             statements.push({ sql, values });
             return approved as T;
           },
+          async run() {
+            statements.push({ sql, values });
+            return { meta: { changes: 1 } };
+          },
         };
         return statement;
       },
@@ -236,12 +241,18 @@ describe("PackageRepo.setStatusIfCurrent", () => {
       existing.updated_at,
       existing.status,
       approvedAt,
+      reviewed,
     );
 
     expect(row).toEqual(approved);
-    expect(statements[0].sql).toContain("latest_version = ?4 AND updated_at = ?5 AND status = ?6");
-    expect(statements[0].sql).toContain("RETURNING *");
-    expect(statements[0].values).toEqual([
+    // The reviewer's digest lands on the reviewed row before it goes public,
+    // fenced by the same revision the status change is.
+    expect(statements[0].sql).toContain("UPDATE package_versions SET content_hash = ?1");
+    expect(statements[0].sql).toContain("latest_version = ?2 AND updated_at = ?4 AND status = ?5");
+    expect(statements[0].values).toEqual([reviewed, existing.latest_version, existing.slug, existing.updated_at, existing.status]);
+    expect(statements[1].sql).toContain("latest_version = ?4 AND updated_at = ?5 AND status = ?6");
+    expect(statements[1].sql).toContain("RETURNING *");
+    expect(statements[1].values).toEqual([
       "active",
       approvedAt,
       existing.slug,
@@ -265,6 +276,10 @@ describe("PackageRepo.setStatusIfCurrent", () => {
             statements.push({ sql, values });
             return null as T | null;
           },
+          async run() {
+            statements.push({ sql, values });
+            return { meta: { changes: 0 } };
+          },
         };
         return statement;
       },
@@ -280,7 +295,9 @@ describe("PackageRepo.setStatusIfCurrent", () => {
     );
 
     expect(row).toBeNull();
-    expect(statements).toHaveLength(1);
+    // Without a reviewed digest the claimed one is cleared, never promoted.
+    expect(statements[0].values[0]).toBe("");
+    expect(statements).toHaveLength(2);
   });
 });
 
