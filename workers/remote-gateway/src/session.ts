@@ -9,6 +9,7 @@ import {
 
 const MAX_MESSAGE_BYTES = 64 * 1024;
 const MAX_CONTROLLERS = 4;
+const DEVICE_LEASE_MS = 30 * 60 * 1000;
 
 interface SocketAttachment {
   role: "device" | "controller";
@@ -37,7 +38,14 @@ export class RemoteSession {
     if (new URL(request.url).pathname === "/status") {
       const online = this.state.getWebSockets("device").some((socket) => {
         const attachment = socket.deserializeAttachment() as SocketAttachment | null;
-        return socket.readyState === WebSocket.OPEN && attachment !== null && attachment.expiresAt > Date.now();
+        if (socket.readyState !== WebSocket.OPEN || attachment === null) return false;
+        // The account service only asks about active devices owned by the
+        // signed-in user. Renew the still-authenticated live socket here so an
+        // idle desktop is not hidden merely because its original admission
+        // window elapsed before the user opened the chooser.
+        attachment.expiresAt = Date.now() + DEVICE_LEASE_MS;
+        socket.serializeAttachment(attachment);
+        return true;
       });
       return Response.json({ online });
     }
