@@ -5,7 +5,13 @@ const repo = 'https://github.com/esengine/DeepSeek-Reasonix';
 const { title, description, titleEn, titleZh, wide } = Astro.props;
 ---
 <Base title={title} description={description} titleEn={titleEn} titleZh={titleZh}>
-  <Fragment slot="head"><meta name="robots" content="noindex" /></Fragment>
+  <Fragment slot="head">
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://id.reasonix.io" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://studio.reasonix.io" crossorigin="anonymous" />
+    <link rel="dns-prefetch" href="//id.reasonix.io" />
+    <link rel="dns-prefetch" href="//studio.reasonix.io" />
+  </Fragment>
   <header class="nav auth-nav scrolled">
     <div class="nav-inner">
       <a class="brand" href={`${base}/`}><img src={`${base}/logo.svg`} alt="Reasonix logo" /><span>Reasonix</span></a>
