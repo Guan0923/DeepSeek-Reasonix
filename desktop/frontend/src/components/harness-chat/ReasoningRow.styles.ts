@@ -1,2 +1,0 @@
-// Harness CSS namespace adapter; original declarations are in the sibling stylesheet.
-export default {"chevron": "dsh-ReasoningRow-chevron", "leading": "dsh-ReasoningRow-leading", "root": "dsh-ReasoningRow-root", "row": "dsh-ReasoningRow-row", "separator": "dsh-ReasoningRow-separator", "summary": "dsh-ReasoningRow-summary", "summaryText": "dsh-ReasoningRow-summaryText", "thinkBody": "dsh-ReasoningRow-thinkBody", "title": "dsh-ReasoningRow-title"};

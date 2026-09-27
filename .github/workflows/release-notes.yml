@@ -2,18 +2,15 @@ name: Release notes
 
 on:
   pull_request:
+    branches: [website]
     paths:
-      - "release-notes/**"
-      - "scripts/generate-release-notes.mjs"
-      - "scripts/release-notes*.mjs"
-      - "scripts/release-event.mjs"
+      - "site/src/data/releases.json"
+      - "site/scripts/releases/**"
+      - "site/scripts/release-event.mjs"
       - "site/src/pages/changelog/**"
       - "site/src/components/ChangelogPage.astro"
       - "site/src/data/releases.ts"
       - "site/src/styles/changelog.css"
-      - "desktop/frontend/src/App.tsx"
-      - "desktop/frontend/src/components/SettingsPanel.tsx"
-      - "desktop/frontend/src/components/UpdateBanner.tsx"
 
 permissions:
   contents: read
@@ -26,5 +23,5 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22"
-      - run: node scripts/release-notes.mjs validate
-      - run: node --test scripts/release-notes.test.mjs
+      - run: node site/scripts/releases/release-notes.mjs validate
+      - run: node --test site/scripts/releases/release-notes.test.mjs

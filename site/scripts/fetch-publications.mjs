@@ -1,10 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { validateReleaseEvent } from "../../scripts/release-event.mjs";
+import { validateReleaseEvent } from "./release-event.mjs";
 
 const siteRoot = resolve(import.meta.dirname, "..");
-const repoRoot = resolve(siteRoot, "..");
-const catalog = JSON.parse(await readFile(resolve(repoRoot, "release-notes/releases.json"), "utf8"));
+const catalog = JSON.parse(await readFile(resolve(siteRoot, "src/data/releases.json"), "utf8"));
 const output = resolve(siteRoot, ".generated/publications.json");
 const headers = {
   Accept: "application/vnd.github+json",

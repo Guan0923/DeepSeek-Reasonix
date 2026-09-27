@@ -1,4 +1,4 @@
-import source from '../../../release-notes/releases.json';
+import source from './releases.json';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
