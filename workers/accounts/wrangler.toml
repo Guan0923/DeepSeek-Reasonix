@@ -21,7 +21,7 @@ APP_ORIGIN = "https://reasonix.io"
 # Override with http://localhost:8787 in .dev.vars when exercising email flows locally.
 ACCOUNT_ORIGIN = "https://id.reasonix.io"
 # Browsers that may call this API with credentials (comma-separated).
-ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io"
+ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io,https://studio.reasonix.io"
 # Cookie scope. ".reasonix.io" lets the apex + any subdomain (and the future CLI)
 # share the session. Leave empty for host-only (local dev).
 COOKIE_DOMAIN = ".reasonix.io"
