@@ -6,7 +6,7 @@ routes = [{ pattern = "remote.reasonix.io", custom_domain = true }]
 
 [vars]
 ACCOUNT_ORIGIN = "https://id.reasonix.io"
-ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io"
+ALLOWED_ORIGINS = "https://reasonix.io,https://www.reasonix.io,https://studio.reasonix.io"
 
 [[r2_buckets]]
 binding = "ATTACHMENTS"
