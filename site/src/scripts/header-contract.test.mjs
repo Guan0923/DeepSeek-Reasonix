@@ -22,7 +22,7 @@ test("primary site pages share the same header component", async () => {
 test("the shared header owns the complete global navigation", async () => {
   const header = await source("../components/SiteHeader.astro");
 
-  for (const id of ["features", "surfaces", "skills", "community", "docs", "changelog"]) {
+  for (const id of ["features", "surfaces", "studio", "skills", "community", "docs", "changelog"]) {
     assert.match(header, new RegExp(`id: '${id}'`));
   }
 
@@ -30,6 +30,7 @@ test("the shared header owns the complete global navigation", async () => {
   assert.equal((header.match(/#start/g) ?? []).length, 2);
   assert.match(header, /nav-sign-in/);
   assert.match(header, /nav-install/);
+  assert.match(header, /href: `\$\{base\}\/remote\/`/);
   assert.match(header, /class="nav-github"/);
   assert.match(header, /https:\/\/github[.]com\/esengine\/DeepSeek-Reasonix/);
   assert.match(header, /target="_blank"/);

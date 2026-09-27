@@ -1,5 +1,5 @@
 ---
-type ActiveItem = 'features' | 'surfaces' | 'skills' | 'community' | 'docs' | 'changelog';
+type ActiveItem = 'features' | 'surfaces' | 'studio' | 'skills' | 'community' | 'docs' | 'changelog';
 
 const {
   active,
@@ -22,6 +22,7 @@ const items: Array<{
 }> = [
   { id: 'features', href: `${base}/#features`, en: 'Features', zh: '特性' },
   { id: 'surfaces', href: `${base}/#surfaces`, en: 'Surfaces', zh: '使用形态', secondary: true },
+  { id: 'studio', href: `${base}/remote/`, en: 'Web Studio', zh: '网页版 Studio' },
   { id: 'skills', href: `${base}/skills/`, en: 'Skills', zh: '技能市场' },
   { id: 'community', href: `${base}/#community`, en: 'Community', zh: '社区', secondary: true },
   { id: 'docs', href: `${base}/docs/`, en: 'Docs', zh: '文档' },

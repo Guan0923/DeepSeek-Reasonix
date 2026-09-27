@@ -3,28 +3,37 @@ import Account from '../layouts/Account.astro';
 ---
 <Account
   wide
-  title="Remote devices — Reasonix"
-  titleEn="Remote devices — Reasonix"
-  titleZh="远程设备 — Reasonix"
-  description="Connect securely to your Reasonix Studio devices.">
+  title="Web Studio — Reasonix"
+  titleEn="Web Studio — Reasonix"
+  titleZh="网页版 Studio — Reasonix"
+  description="Choose an online computer and open the full Reasonix Studio in your browser.">
   <div id="remote-gate" class="auth-head">
     <p><span class="l-en">Checking your account…</span><span class="l-zh">正在检查账号…</span></p>
   </div>
 
   <div id="remote-view" hidden>
     <div class="auth-head">
-      <h1><span class="l-en">Your Studio devices</span><span class="l-zh">你的 Studio 设备</span></h1>
-      <p><span class="l-en">Connect through the Reasonix relay from this browser.</span><span class="l-zh">从当前浏览器通过 Reasonix 中转连接你的电脑。</span></p>
+      <span class="remote-eyebrow"><span class="l-en">Web Studio</span><span class="l-zh">网页版 Studio</span></span>
+      <h1><span class="l-en">Choose an online computer</span><span class="l-zh">选择一台在线电脑</span></h1>
+      <p><span class="l-en">The complete Studio interface will open in your browser. Conversations, tools, files, approvals, and terminal access stay in one place.</span><span class="l-zh">选择电脑后将在浏览器中打开完整 Studio。会话、工具、文件、审批和终端能力都在同一个界面中。</span></p>
     </div>
 
     <div class="remote-security">
       <span aria-hidden="true">⌁</span>
-      <p><span class="l-en">Messages are end-to-end encrypted. The relay routes ciphertext and cannot read your content.</span><span class="l-zh">消息采用端到端加密，中转服务只负责转发密文，无法读取内容。</span></p>
+      <p><span class="l-en"><strong>Before connecting:</strong> keep desktop Studio open and signed in to this same account. Remote traffic is end-to-end encrypted; the relay only routes ciphertext.</span><span class="l-zh"><strong>连接前：</strong>请保持电脑端 Studio 已打开，并登录当前同一账号。远程通信采用端到端加密，中转服务只转发密文。</span></p>
     </div>
 
+    <div class="remote-list-head">
+      <h2><span class="l-en">Online computers</span><span class="l-zh">在线电脑</span></h2>
+      <button id="remote-refresh" type="button" class="btn btn-ghost"><span class="l-en">Refresh</span><span class="l-zh">刷新</span></button>
+    </div>
     <div id="remote-msg" class="auth-msg" hidden></div>
     <div id="remote-devices" class="remote-devices"></div>
-    <p class="auth-alt"><a href="/account/"><span class="l-en">Back to account</span><span class="l-zh">返回账号</span></a></p>
+    <div class="remote-footer">
+      <a href="/?download=studio#start"><span class="l-en">Download desktop Studio</span><span class="l-zh">下载电脑端 Studio</span></a>
+      <span aria-hidden="true">·</span>
+      <a href="/account/"><span class="l-en">Account settings</span><span class="l-zh">账号设置</span></a>
+    </div>
   </div>
 
   <script>import '../scripts/remote.js';</script>
