@@ -115,7 +115,118 @@ function nextMessage(socket, timeout = 10000) {
   });
 }
 
-async function probe(device, button, result) {
+function commandClient(socket, channel) {
+  let queue = Promise.resolve();
+  return (type, value = {}) => {
+    const run = async () => {
+      const id = crypto.randomUUID();
+      const replyWire = nextMessage(socket, 15000);
+      socket.send(await channel.seal({ v: 1, type, id, ...value }));
+      const reply = await channel.open(await replyWire);
+      if (reply.id !== id) throw new Error(local("Studio response did not match the request.", "Studio 响应与请求不匹配。"));
+      if (reply.type === "error") throw new Error(reply.error || local("Studio refused the request.", "Studio 拒绝了请求。"));
+      return reply;
+    };
+    queue = queue.then(run, run);
+    return queue;
+  };
+}
+
+function renderMessages(container, messages) {
+  container.replaceChildren();
+  if (!messages?.length) {
+    const empty = document.createElement("p");
+    empty.className = "remote-empty";
+    empty.textContent = local("No messages in this conversation yet.", "这个会话还没有消息。");
+    container.append(empty);
+    return;
+  }
+  messages.forEach((message) => {
+    if (!message.content || message.role === "system") return;
+    const row = document.createElement("div");
+    row.className = `remote-message remote-message-${message.role}`;
+    const label = document.createElement("span");
+    label.textContent = message.role === "user" ? local("You", "你") : message.role === "assistant" ? "Reasonix" : local("Tool", "工具");
+    const content = document.createElement("div");
+    content.textContent = message.content;
+    row.append(label, content);
+    container.append(row);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+function taskWorkspace(card, socket, request, tasks) {
+  const workspace = document.createElement("section");
+  workspace.className = "remote-workspace";
+  const toolbar = document.createElement("div");
+  toolbar.className = "remote-toolbar";
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", local("Conversation", "会话"));
+  tasks.forEach((task) => {
+    const option = document.createElement("option");
+    option.value = task.id;
+    option.textContent = `${task.name || local("Conversation", "会话")}${task.running ? local(" · running", " · 运行中") : ""}`;
+    select.append(option);
+  });
+  const refresh = document.createElement("button");
+  refresh.type = "button";
+  refresh.className = "btn btn-ghost";
+  refresh.textContent = local("Refresh", "刷新");
+  toolbar.append(select, refresh);
+  const transcript = document.createElement("div");
+  transcript.className = "remote-transcript";
+  transcript.setAttribute("aria-live", "polite");
+  const form = document.createElement("form");
+  form.className = "remote-composer";
+  const input = document.createElement("textarea");
+  input.rows = 3;
+  input.maxLength = 32768;
+  input.placeholder = local("Tell Reasonix what to do on this computer…", "告诉 Reasonix 要在这台电脑上做什么…");
+  const send = document.createElement("button");
+  send.type = "submit";
+  send.className = "btn btn-dark";
+  send.textContent = local("Send", "发送");
+  const hint = document.createElement("p");
+  hint.textContent = local("Agent tools remain available. Direct terminal mode requires a separate device-side grant.", "Agent 工具仍可使用；直接终端模式需要电脑端另行授权。");
+  form.append(input, send, hint);
+  workspace.append(toolbar, transcript, form);
+  card.append(workspace);
+
+  let loading = false;
+  const load = async () => {
+    if (loading || socket.readyState !== WebSocket.OPEN || !select.value) return;
+    loading = true;
+    try {
+      const reply = await request("tasks.get", { taskId: select.value });
+      renderMessages(transcript, reply.snapshot?.messages || []);
+    } finally {
+      loading = false;
+    }
+  };
+  select.addEventListener("change", () => load().catch(() => {}));
+  refresh.addEventListener("click", () => load().catch(() => {}));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    send.disabled = true;
+    try {
+      await request("tasks.send", { taskId: select.value, text });
+      input.value = "";
+      await load();
+    } catch (error) {
+      hint.textContent = error instanceof Error ? error.message : String(error);
+      hint.dataset.state = "error";
+    } finally {
+      send.disabled = false;
+    }
+  });
+  load().catch(() => {});
+  const timer = window.setInterval(() => load().catch(() => {}), 2000);
+  socket.addEventListener("close", () => window.clearInterval(timer), { once: true });
+}
+
+async function connect(device, card, button, result) {
   button.disabled = true;
   result.dataset.state = "busy";
   result.textContent = local("Connecting…", "正在连接…");
@@ -133,6 +244,7 @@ async function probe(device, button, result) {
     const channel = await encryptedChannel(device, socket);
     const ready = await channel.open(await readyWire);
     if (ready.type !== "ready" || ready.deviceId !== device.id) throw new Error(local("Studio identity did not match.", "Studio 身份校验不一致。"));
+    const request = commandClient(socket, channel);
     const id = crypto.randomUUID();
     const started = performance.now();
     const pongWire = nextMessage(socket);
@@ -145,12 +257,21 @@ async function probe(device, button, result) {
       `Connected securely · ${ready.platform} · Studio ${ready.version} · ${latency} ms`,
       `已安全连接 · ${ready.platform} · Studio ${ready.version} · ${latency} 毫秒`,
     );
+    const listed = await request("tasks.list");
+    const tasks = listed.tasks || [];
+    if (tasks.length === 0) {
+      result.textContent += local(" · Open a conversation in Studio first.", " · 请先在 Studio 中打开一个会话。");
+    } else {
+      button.textContent = local("Connected", "已连接");
+      taskWorkspace(card, socket, request, tasks);
+      socket = null;
+    }
   } catch (error) {
     result.dataset.state = "error";
     result.textContent = error instanceof Error ? error.message : String(error);
   } finally {
     socket?.close();
-    button.disabled = false;
+    if (button.textContent !== local("Connected", "已连接")) button.disabled = false;
   }
 }
 
@@ -169,13 +290,13 @@ function deviceCard(device) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "btn btn-dark";
-  button.textContent = local("Test secure connection", "测试安全连接");
+  button.textContent = local("Open remote session", "打开远程会话");
   head.append(identity, button);
   const result = document.createElement("p");
   result.className = "remote-result";
   result.setAttribute("role", "status");
   card.append(head, result);
-  button.addEventListener("click", () => probe(device, button, result));
+  button.addEventListener("click", () => connect(device, card, button, result));
   return card;
 }
 

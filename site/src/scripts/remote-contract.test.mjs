@@ -17,3 +17,10 @@ test("remote probe uses X25519, HKDF, and authenticated encryption", () => {
   assert.match(script, /type: "ping"/);
   assert.match(page, /端到端加密/);
 });
+
+test("connected remote devices expose only the typed task protocol", () => {
+  assert.match(script, /request\("tasks\.list"\)/);
+  assert.match(script, /request\("tasks\.get", \{ taskId:/);
+  assert.match(script, /request\("tasks\.send", \{ taskId: select\.value, text \}\)/);
+  assert.doesNotMatch(script, /request\("shell\./);
+});
