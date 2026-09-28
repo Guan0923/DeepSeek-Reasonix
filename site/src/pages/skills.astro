@@ -12,7 +12,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
   titleZh="Reasonix — 技能、插件与 MCP 市场"
   description={desc}>
 
-  <SiteHeader active="skills" accountSlot />
+  <SiteHeader active="skills" />
 
   <main>
   <section class="reg-head">
@@ -61,7 +61,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
         <div id="reg-offline" class="reg-state" hidden>
           <h3><span class="l-en">Registry is launching soon.</span><span class="l-zh">市场即将上线。</span></h3>
           <p><span class="l-en">The registry service isn't reachable yet. Sign in to get a handle ready — your packages will be namespaced to it.</span><span class="l-zh">市场服务暂时还连不上。先登录占好你的 handle——你的包会以它作命名空间。</span></p>
-          <a class="btn btn-dark" href="https://id.reasonix.io"><span class="l-en">Sign in at id.reasonix.io</span><span class="l-zh">前往 id.reasonix.io 登录</span></a>
+          <a class="btn btn-dark" href="/login/?next=%2Fskills%2F"><span class="l-en">Sign in</span><span class="l-zh">登录</span></a>
         </div>
       </div>
 
@@ -144,7 +144,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
         <a href={repo}>GitHub</a>
         <a href={`${base}/`}><span class="l-en">Home</span><span class="l-zh">首页</span></a>
         <a href={`${base}/docs/`}><span class="l-en">Docs</span><span class="l-zh">文档</span></a>
-        <a href="https://id.reasonix.io"><span class="l-en">Sign in</span><span class="l-zh">登录</span></a>
+        <a href="/login/?next=%2Fskills%2F"><span class="l-en">Sign in</span><span class="l-zh">登录</span></a>
       </nav>
     </div>
   </footer>
@@ -241,13 +241,6 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
     .feed-item .ico { font-family: var(--font-mono); }
     .feed-empty { font-size: 13px; color: var(--ink-3); line-height: 1.5; }
 
-    .nav-acct { display: inline-flex; align-items: center; }
-    .acct { display: inline-flex; align-items: center; gap: 10px; }
-    .acct-name { font-size: 14px; font-weight: 600; color: var(--ink); text-decoration: none; }
-    .acct-name:hover { color: var(--accent); }
-    .acct-logout { font-family: var(--font-sans); font-size: 13px; font-weight: 500; color: var(--ink-2); background: var(--bg-soft); border: none; cursor: pointer; padding: 8px 14px; border-radius: 999px; transition: background .2s, color .2s; }
-    .acct-logout:hover { color: var(--ink); background: var(--line); }
-    .acct-warn { font-size: 11px; font-weight: 600; color: oklch(0.52 0.15 60); background: color-mix(in oklch, oklch(0.7 0.16 60) 16%, var(--card)); padding: 3px 9px; border-radius: 999px; text-decoration: none; }
     .reg-review { padding: 8px 0 40px; }
     .review-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
     .review-count { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -307,7 +300,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
   </style>
 
   <script>
-    import { currentAccount, accountLogout } from '../scripts/auth.js';
+    import { accountSession } from '../scripts/account-nav.js';
     const REGISTRY = import.meta.env.PUBLIC_REGISTRY_ORIGIN || 'https://crash.reasonix.io';
     const state = { kind: 'all', sort: 'new', q: '' };
     let currentUser = null;
@@ -544,27 +537,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
       }
     });
 
-    // Nav account state, via the site's shared account client. Signed out → a
-    // sign-in link; signed in → the handle (linking to /account) + a log-out control.
-    async function mountAccount() {
-      const slots = [...document.querySelectorAll('[data-account-slot]')];
-      const user = await currentAccount();
-      if (!slots.length) return null;
-      if (!user) {
-        slots.forEach((slot) => {
-          slot.innerHTML = `<a class="btn btn-ghost" href="/login/?next=${encodeURIComponent('/skills/')}"><span class="l-en">Sign in</span><span class="l-zh">登录</span></a>`;
-        });
-        return null;
-      }
-      const warn = user.emailVerified ? '' : `<a class="acct-warn" href="/account/"><span class="l-en">unverified</span><span class="l-zh">未验证</span></a>`;
-      slots.forEach((slot) => {
-        slot.innerHTML = `<span class="acct">${warn}<a class="acct-name" href="/account/">@${esc(user.handle)}</a><button type="button" class="acct-logout"><span class="l-en">Log out</span><span class="l-zh">退出</span></button></span>`;
-        slot.querySelector('.acct-logout').addEventListener('click', async () => { await accountLogout(); location.reload(); });
-      });
-      return user;
-    }
-
-    mountAccount().then((user) => {
+    accountSession().then((user) => {
       currentUser = user;
       if (user && user.role === 'admin') { reviewSection.hidden = false; loadReview(); }
     });
