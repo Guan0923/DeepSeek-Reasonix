@@ -1898,7 +1898,12 @@ export default {
     // Skill/MCP registry API — the folded Hono app handles its own auth, CORS
     // and rate limiting against the registry database (public reads + publish,
     // plus the JSON /v1/admin the site's moderation panel calls).
-    if (path.startsWith("/v1/packages") || path === "/v1/activity" || path.startsWith("/v1/admin")) {
+    if (
+      path.startsWith("/v1/packages") ||
+      path === "/v1/activity" ||
+      path.startsWith("/v1/admin") ||
+      path.startsWith("/v1/me/")
+    ) {
       return registryApp.fetch(request, registryBindings(env));
     }
 

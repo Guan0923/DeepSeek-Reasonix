@@ -15,9 +15,20 @@ async function fetchAccountUser(c: Context<AppEnv>): Promise<RegistryUser | null
   if (cookie) headers["cookie"] = cookie;
   if (authz) headers["authorization"] = authz;
 
-  const res = await fetch(`${c.env.ACCOUNTS_ORIGIN}/me`, { headers });
-  if (!res.ok) return null;
-  const body = (await res.json()) as {
+  // Never follow a redirect: the forwarded credentials belong to the accounts
+  // origin alone. Only a 401/403 means "not signed in"; any other failure is
+  // the identity service's, and saying "sign in" would misname it.
+  let res: Response;
+  try {
+    res = await fetch(`${c.env.ACCOUNTS_ORIGIN}/me`, { headers, redirect: "manual" });
+  } catch {
+    throw accountsUnavailable();
+  }
+  if (res.status === 401 || res.status === 403) return null;
+  if (!res.ok) throw accountsUnavailable();
+  const body = (await res.json().catch(() => {
+    throw accountsUnavailable();
+  })) as {
     user?: { id?: number; handle?: string; role?: string; emailVerified?: boolean };
   };
   const u = body.user;
@@ -30,10 +41,14 @@ async function fetchAccountUser(c: Context<AppEnv>): Promise<RegistryUser | null
   };
 }
 
+function accountsUnavailable(): ApiError {
+  return new ApiError(503, "accounts_unavailable", "The identity service could not be reached. Try again shortly.");
+}
+
 // Gate for write routes. Public reads never call this, so list/detail never pay
 // the account round-trip.
 export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
-  const user = await fetchAccountUser(c).catch(() => null);
+  const user = await fetchAccountUser(c);
   if (!user) throw new ApiError(401, "unauthorized", "Sign in at id.reasonix.io to publish.");
   c.set("user", user);
   await next();
@@ -41,7 +56,7 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 // Gate for moderation routes: a resolved account with the admin role.
 export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
-  const user = await fetchAccountUser(c).catch(() => null);
+  const user = await fetchAccountUser(c);
   if (!user) throw new ApiError(401, "unauthorized", "Sign in at id.reasonix.io.");
   if (user.role !== "admin") throw new ApiError(403, "forbidden", "Admins only.");
   c.set("user", user);

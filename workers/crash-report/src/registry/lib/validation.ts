@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../env";
 import { ApiError } from "../http/errors";
+import { installerFor } from "../types";
 
 // A capability slug: lowercase, 1–64 chars of [a-z0-9._-], starting and ending
 // with an alphanumeric. Matches the skill-name rules install_source enforces.
@@ -158,7 +159,7 @@ function isWholeGitHubRepoSource(source: string): boolean {
 
 export const PublishSchema = z
   .object({
-    kind: z.enum(["skill", "plugin", "mcp"]),
+    kind: z.enum(["skill", "plugin", "mcp", "theme"]),
     name: slug,
     summary: z.string().trim().max(200).default(""),
     description: z.string().trim().max(8000).default(""),
@@ -195,19 +196,19 @@ export const PublishSchema = z
     }
     // Explicit plugin installs clone a GitHub package repository/path; they do
     // not use the generic URL or npm-package MCP fallbacks.
-    if (val.kind === "plugin" && !isGitHubRepoSource(val.source)) {
+    if (installerFor(val.kind) === "plugin" && !isGitHubRepoSource(val.source)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["source"],
         message:
-          "a plugin source must point at a GitHub repository or path containing reasonix-plugin.json, .codex-plugin/plugin.json, .claude-plugin/plugin.json, or a supported .claude-plugin/marketplace.json.",
+          "a plugin or theme source must point at a GitHub repository or path containing reasonix-plugin.json, .codex-plugin/plugin.json, .claude-plugin/plugin.json, or a supported .claude-plugin/marketplace.json.",
       });
     }
-    if (val.installKind !== "auto" && val.installKind !== val.kind) {
+    if (val.installKind !== "auto" && val.installKind !== installerFor(val.kind)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["installKind"],
-        message: "installKind must match kind (or be omitted).",
+        message: "installKind must match kind (a theme installs as a plugin), or be omitted.",
       });
     }
   })
@@ -216,13 +217,13 @@ export const PublishSchema = z
     // The registry's public kind is also the installer's capability boundary.
     // Never persist `auto`: the client planner probes plugins first for auto
     // sources, which could otherwise install more than the publisher declared.
-    installKind: val.installKind === "auto" ? val.kind : val.installKind,
+    installKind: val.installKind === "auto" ? installerFor(val.kind) : val.installKind,
   }));
 
 export type PublishInput = z.infer<typeof PublishSchema>;
 
 export const ListQuerySchema = z.object({
-  kind: z.enum(["skill", "plugin", "mcp", "all"]).default("all"),
+  kind: z.enum(["skill", "plugin", "mcp", "theme", "all"]).default("all"),
   q: z.string().trim().max(100).default(""),
   sort: z.enum(["new", "trending", "installs"]).default("new"),
   limit: z.coerce.number().int().min(1).max(100).default(24),

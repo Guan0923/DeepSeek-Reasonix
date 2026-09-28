@@ -7,7 +7,7 @@
 -- client-side through the install_source tool (SSRF-guarded, risk-rated).
 CREATE TABLE IF NOT EXISTS packages (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
-  kind           TEXT    NOT NULL,                    -- skill | plugin | mcp
+  kind           TEXT    NOT NULL,                    -- skill | plugin | mcp | theme
   scope_handle   TEXT    NOT NULL,                    -- publisher handle (namespace)
   name           TEXT    NOT NULL,                    -- capability slug within the scope
   slug           TEXT    NOT NULL UNIQUE,             -- '<handle>/<name>' canonical id

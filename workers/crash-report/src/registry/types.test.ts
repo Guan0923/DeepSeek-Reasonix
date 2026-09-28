@@ -32,4 +32,11 @@ describe("toPackageDTO", () => {
     expect(toPackageDTO({ ...row, kind: "mcp", install_kind: "mcp" }).installKind).toBe("mcp");
     expect(toPackageDTO({ ...row, kind: "plugin", install_kind: "plugin" }).installKind).toBe("plugin");
   });
+
+  it("serves a theme as its own kind that installs through the plugin installer", () => {
+    const dto = toPackageDTO({ ...row, kind: "theme", install_kind: "plugin" });
+    expect(dto.kind).toBe("theme");
+    expect(dto.installKind).toBe("plugin");
+    expect(toPackageDTO({ ...row, kind: "theme", install_kind: "auto" }).installKind).toBe("plugin");
+  });
 });

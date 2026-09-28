@@ -6,6 +6,7 @@ import health from "./routes/health";
 import packages from "./routes/packages";
 import activity from "./routes/activity";
 import admin from "./routes/admin";
+import me from "./routes/me";
 
 const app = new Hono<AppEnv>();
 
@@ -18,5 +19,6 @@ app.route("/", health);
 app.route("/v1/packages", packages);
 app.route("/v1/activity", activity);
 app.route("/v1/admin", admin);
+app.route("/v1/me", me);
 
 export default app;
