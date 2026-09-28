@@ -193,3 +193,123 @@ describe("admin package approval", () => {
     expect(pin?.values[0]).toBe(digest);
   });
 });
+
+describe("admin digest pin", () => {
+  const live: PackageRow = { ...oldRevision, status: "active" };
+  const digest = "sha256:" + "0f".repeat(32);
+
+  function pinDB(currentHash: string | null, changes = 1) {
+    const statements: { sql: string; values: unknown[] }[] = [];
+    const db = {
+      prepare(sql: string) {
+        let values: unknown[] = [];
+        const statement = {
+          bind(...bound: unknown[]) {
+            values = bound;
+            return statement;
+          },
+          async first<T>() {
+            statements.push({ sql, values });
+            if (sql.includes("SELECT v.content_hash")) return (currentHash === null ? null : { content_hash: currentHash }) as T;
+            if (sql.startsWith("SELECT * FROM packages")) return live as T;
+            return null;
+          },
+          async run() {
+            statements.push({ sql, values });
+            return { meta: { changes } };
+          },
+        };
+        return statement;
+      },
+    };
+    return { db: db as unknown as D1Database, statements };
+  }
+
+  function pinRequest(body: object): Request {
+    return new Request("https://registry.reasonix.test/v1/admin/packages/publisher/devkit/pin", {
+      method: "POST",
+      headers: { cookie: "rxid=test", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  const liveRevision = {
+    expectedVersion: live.latest_version,
+    expectedUpdatedAt: live.updated_at,
+    expectedStatus: "active",
+  };
+
+  function asAdmin() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ user: { id: 1, handle: "admin", role: "admin", emailVerified: true } })),
+    );
+  }
+
+  it("is for admins only", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ user: { id: 2, handle: "member", role: "member", emailVerified: true } })),
+    );
+    const { db, statements } = pinDB("");
+    const response = await registryApp.fetch(pinRequest({ ...liveRevision, contentHash: digest }), bindings(db));
+    expect(response.status).toBe(403);
+    expect(statements).toHaveLength(0);
+  });
+
+  it("accepts only the installer's digest spelling on a live revision", async () => {
+    asAdmin();
+    for (const body of [
+      { ...liveRevision, contentHash: "" },
+      { ...liveRevision, contentHash: "sha256:" + "0F".repeat(32) },
+      { ...liveRevision, contentHash: "trust me" },
+      { ...liveRevision, expectedStatus: "pending", contentHash: digest },
+      { expectedStatus: "active", contentHash: digest },
+    ]) {
+      const { db, statements } = pinDB("");
+      const response = await registryApp.fetch(pinRequest(body), bindings(db));
+      expect(response.status, JSON.stringify(body)).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({ error: { code: "invalid_pin" } });
+      expect(statements).toHaveLength(0);
+    }
+  });
+
+  it("binds the digest to the live version and logs the change", async () => {
+    asAdmin();
+    const { db, statements } = pinDB("");
+    const response = await registryApp.fetch(pinRequest({ ...liveRevision, contentHash: digest }), bindings(db));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      package: { status: "active", latestVersion: "2.7.1" },
+      previousContentHash: "",
+      contentHash: digest,
+    });
+    const pin = statements.find(({ sql }) => sql.includes("UPDATE package_versions SET content_hash"));
+    expect(pin?.sql).toContain("status = 'active'");
+    expect(pin?.values).toEqual([digest, live.latest_version, "", live.slug, live.updated_at]);
+    expect(statements.some(({ sql }) => sql.startsWith("UPDATE packages"))).toBe(false);
+    const event = statements.find(({ sql }) => sql.startsWith("INSERT INTO events"));
+    expect(event?.values.slice(0, 4)).toEqual(["pin", live.id, "admin", `2.7.1 unpinned -> ${digest}`]);
+  });
+
+  it("refuses a stale revision without logging", async () => {
+    asAdmin();
+    const { db, statements } = pinDB(null);
+    const response = await registryApp.fetch(pinRequest({ ...liveRevision, contentHash: digest }), bindings(db));
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "stale_review" } });
+    expect(statements.some(({ sql }) => sql.includes("UPDATE package_versions"))).toBe(false);
+    expect(statements.some(({ sql }) => sql.startsWith("INSERT INTO events"))).toBe(false);
+  });
+
+  it("refuses when the digest moved between read and write", async () => {
+    asAdmin();
+    const { db, statements } = pinDB("", 0);
+    const response = await registryApp.fetch(pinRequest({ ...liveRevision, contentHash: digest }), bindings(db));
+
+    expect(response.status).toBe(409);
+    expect(statements.some(({ sql }) => sql.startsWith("INSERT INTO events"))).toBe(false);
+  });
+});
