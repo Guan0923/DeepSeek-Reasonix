@@ -123,6 +123,9 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
               <input name="tags" placeholder="testing, go, review" />
             </label>
           </div>
+          <label class="pub-private"><input type="checkbox" name="private" />
+            <span><span class="l-en">Only me — skip review; in the registry only your account can see and install it (from Reasonix Studio; moderators can still see it). Submit it for review later from Studio's My packages.</span><span class="l-zh">仅自己可见——不提交审核，市场中只有你的账号能看到并安装(在 Reasonix Studio 中；管理员仍能看到)。之后可在 Studio 的「我的发布」里提交审核。</span></span>
+          </label>
           <div class="pub-actions">
             <button type="submit" class="btn btn-dark"><span class="l-en">Publish</span><span class="l-zh">发布</span></button>
             <span id="pub-msg" class="pub-msg" role="status"></span>
@@ -280,6 +283,8 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
       padding: 11px 14px; outline: none; transition: border-color .2s, background .2s;
     }
     .pub-form input:focus, .pub-form select:focus { background: var(--card); border-color: var(--accent); }
+    .pub-form label.pub-private { flex-direction: row; align-items: flex-start; gap: 8px; font-weight: 400; }
+    .pub-form .pub-private input { padding: 0; margin-top: 2px; }
     .pub-actions { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
     .pub-msg { font-size: 13.5px; color: var(--ink-2); }
     .pub-msg.err { color: oklch(0.55 0.18 25); }
@@ -456,6 +461,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
         kind: f.get('kind'), name: f.get('name'), summary: f.get('summary') || '',
         source: f.get('source'), installKind: installerFor(f.get('kind')), version: f.get('version') || '',
         repoUrl: f.get('repoUrl') || '', tags,
+        ...(f.get('private') ? { visibility: 'private' } : {}),
       };
       setMsg('Publishing…');
       try {
@@ -466,8 +472,10 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
         const data = await r.json().catch(() => ({}));
         if (r.status === 401) return loginNext();
         if (!r.ok) { setMsg(data?.error?.message || 'Publish failed.', 'err'); return; }
-        const pending = data.package?.status === 'pending';
-        setMsg(pending
+        const status = data.package?.status;
+        setMsg(status === 'private'
+          ? `Saved ${data.package.slug}@${data.version} as private — only you can see and install it.`
+          : status === 'pending'
           ? `Submitted ${data.package.slug} for review — an admin approves it before it goes live.`
           : `Published ${data.package.slug}@${data.version}.`, 'ok');
         ev.target.reset();
