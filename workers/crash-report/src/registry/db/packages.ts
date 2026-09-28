@@ -1,4 +1,4 @@
-import type { PackageKind, PackageRow, VersionRow, RegistryUser } from "../types";
+import type { PackageKind, PackageRow, ReviewRow, VersionRow, RegistryUser } from "../types";
 import type { PublishInput } from "../lib/validation";
 import { ApiError } from "../http/errors";
 
@@ -317,6 +317,51 @@ export class PackageRepo {
       )
       .bind(status, now, slug, expectedVersion, expectedUpdatedAt, expectedStatus)
       .first<PackageRow>();
+  }
+
+  // Admin: bind a reviewed digest to the live version. Fenced like approval and
+  // compare-and-set on the digest read here, so `previous` is exactly the value
+  // replaced. The package's status and updated_at are left untouched.
+  async repinIfCurrent(
+    slug: string,
+    expectedVersion: string,
+    expectedUpdatedAt: string,
+    contentHash: string,
+  ): Promise<{ row: PackageRow; previous: string } | null> {
+    const current = await this.db
+      .prepare(
+        `SELECT v.content_hash AS content_hash FROM package_versions v
+         JOIN packages p ON p.id = v.package_id
+         WHERE p.slug = ?1 AND v.version = ?2 AND p.latest_version = ?2 AND p.updated_at = ?3 AND p.status = 'active'`,
+      )
+      .bind(slug, expectedVersion, expectedUpdatedAt)
+      .first<{ content_hash: string }>();
+    if (!current) return null;
+    const res = await this.db
+      .prepare(
+        `UPDATE package_versions SET content_hash = ?1
+         WHERE version = ?2 AND content_hash = ?3 AND package_id = (
+           SELECT id FROM packages WHERE slug = ?4 AND latest_version = ?2 AND updated_at = ?5 AND status = 'active'
+         )`,
+      )
+      .bind(contentHash, expectedVersion, current.content_hash, slug, expectedUpdatedAt)
+      .run();
+    if ((res.meta.changes ?? 0) === 0) return null;
+    const row = await this.bySlug(slug);
+    return row ? { row, previous: current.content_hash } : null;
+  }
+
+  // Admin console: the review queue with each package's current-version digest.
+  async listForReview(status: string, limit: number): Promise<ReviewRow[]> {
+    const res = await this.db
+      .prepare(
+        `SELECT p.*, COALESCE(v.content_hash, '') AS content_hash FROM packages p
+         LEFT JOIN package_versions v ON v.package_id = p.id AND v.version = p.latest_version
+         WHERE p.status = ?1 ORDER BY p.created_at DESC LIMIT ?2`,
+      )
+      .bind(status, limit)
+      .all<ReviewRow>();
+    return res.results ?? [];
   }
 
   // Admin: grant or revoke the verified trust badge.

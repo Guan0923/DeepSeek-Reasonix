@@ -2,11 +2,12 @@ import { Hono } from "hono";
 import type { AppEnv } from "../env";
 import { toPackageDTO } from "../types";
 import { repos } from "../db";
-import { requireAdmin } from "../http/auth";
+import { currentUser, requireAdmin } from "../http/auth";
 import { writeRateLimit } from "../http/ratelimit";
 import { ApiError } from "../http/errors";
 import { z } from "zod";
 import { CONTENT_DIGEST } from "../lib/validation";
+import { repinReviewedDigest } from "../pin";
 
 const admin = new Hono<AppEnv>();
 
@@ -17,6 +18,13 @@ const ApprovalRevisionSchema = z.object({
   expectedUpdatedAt: z.string().min(1).max(64),
   expectedStatus: z.enum(["pending", "hidden", "rejected"]),
   contentHash: z.union([z.literal(""), z.string().regex(CONTENT_DIGEST)]).default(""),
+});
+
+const PinRevisionSchema = z.object({
+  expectedVersion: z.string().min(1).max(64),
+  expectedUpdatedAt: z.string().min(1).max(64),
+  expectedStatus: z.literal("active"),
+  contentHash: z.string().regex(CONTENT_DIGEST),
 });
 
 admin.use("*", requireAdmin);
@@ -64,6 +72,42 @@ admin.post("/packages/:handle/:name/approve", writeRateLimit, async (c) => {
     now: approvedAt,
   });
   return c.json({ package: toPackageDTO(row) });
+});
+
+// Bind (or replace) the reviewed digest on a live package's current version,
+// for packages approved before a digest could be recorded. Status is unchanged.
+admin.post("/packages/:handle/:name/pin", writeRateLimit, async (c) => {
+  const slug = `${c.req.param("handle")}/${c.req.param("name")}`;
+  const revision = PinRevisionSchema.safeParse(await c.req.json().catch(() => null));
+  if (!revision.success) {
+    throw new ApiError(
+      400,
+      "invalid_pin",
+      "Pinning requires the live package revision and a sha256:<64 lowercase hex> content digest.",
+    );
+  }
+  const result = await repinReviewedDigest(c.env.DB, {
+    slug,
+    expectedVersion: revision.data.expectedVersion,
+    expectedUpdatedAt: revision.data.expectedUpdatedAt,
+    contentHash: revision.data.contentHash,
+    actor: currentUser(c).handle,
+    now: now(),
+  });
+  if (!result) {
+    const current = await repos(c.env).packages.bySlug(slug);
+    if (!current) throw new ApiError(404, "not_found", "No such package.");
+    throw new ApiError(
+      409,
+      "stale_review",
+      "Package changed since it was reviewed. Refresh and review the latest version.",
+    );
+  }
+  return c.json({
+    package: toPackageDTO(result.row),
+    previousContentHash: result.previous,
+    contentHash: revision.data.contentHash,
+  });
 });
 
 admin.post("/packages/:handle/:name/reject", writeRateLimit, async (c) => {

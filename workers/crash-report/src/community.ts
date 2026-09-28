@@ -2,7 +2,7 @@
 // dashboard admin role; reads and writes the registry database.
 import { esc, page } from "./shell";
 import { type User, userNav } from "./auth";
-import type { PackageRow } from "./registry/types";
+import type { PackageRow, ReviewRow } from "./registry/types";
 
 const STATUS_TABS = [
   { key: "pending", label: "Pending" },
@@ -29,12 +29,23 @@ function approveForm(pkg: PackageRow, backStatus: string): string {
   return actionForm(pkg, "approve", "Approve", "", backStatus, undefined, field);
 }
 
-function rowActions(pkg: PackageRow, backStatus: string): string {
+// A live version approved without a digest is listed but not installable from
+// Studio; pinning binds the digest to that same version without moving it.
+function pinForm(pkg: ReviewRow, backStatus: string): string {
+  const current = pkg.content_hash
+    ? `<code class="muted" title="Current content digest">${esc(pkg.content_hash)}</code>`
+    : `<span class="muted">unpinned</span>`;
+  const field = `<input type="text" name="contentHash" required placeholder="sha256:… contentDigest" pattern="sha256:[0-9a-f]{64}" size="24" aria-label="Reviewed content digest">`;
+  const label = pkg.content_hash ? "Re-pin" : "Pin digest";
+  return `${current}${actionForm(pkg, "pin", label, "ghost", backStatus, undefined, field)}`;
+}
+
+function rowActions(pkg: ReviewRow, backStatus: string): string {
   if (pkg.status === "active") {
     const verify = pkg.verified
       ? actionForm(pkg, "unverify", "Unverify", "ghost", backStatus)
       : actionForm(pkg, "verify", "Verify", "ghost", backStatus);
-    return `${verify}${actionForm(pkg, "hide", "Hide", "danger", backStatus, `Hide ${pkg.slug}?`)}`;
+    return `${pinForm(pkg, backStatus)}${verify}${actionForm(pkg, "hide", "Hide", "danger", backStatus, `Hide ${pkg.slug}?`)}`;
   }
   const approve = approveForm(pkg, backStatus);
   const reject = pkg.status === "rejected" ? "" : actionForm(pkg, "reject", "Reject", "danger", backStatus, `Reject ${pkg.slug}?`);
@@ -75,7 +86,7 @@ function copyButton(pkg: PackageRow): string {
   return `<button type="button" class="btn ghost sm copy-btn" data-copy="${esc(reviewBlob(pkg))}"><span class="copy-label">Copy for review</span></button>`;
 }
 
-export function renderCommunity(viewer: User, packages: PackageRow[], status: string): string {
+export function renderCommunity(viewer: User, packages: ReviewRow[], status: string): string {
   const tabs = STATUS_TABS.map(
     (t) => `<a class="filter-tab${t.key === status ? " active" : ""}" href="/community?status=${t.key}">${t.label}</a>`,
   ).join("");

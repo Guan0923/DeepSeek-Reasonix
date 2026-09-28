@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { User } from "./auth";
 import { renderCommunity } from "./community";
-import type { PackageRow } from "./registry/types";
+import type { ReviewRow } from "./registry/types";
 
 const admin: User = {
   id: 1,
@@ -11,7 +11,7 @@ const admin: User = {
   approved_at: "2026-07-22T00:00:00.000Z",
 };
 
-const pending: PackageRow = {
+const pending: ReviewRow = {
   id: 42,
   kind: "plugin",
   scope_handle: "publisher",
@@ -32,6 +32,7 @@ const pending: PackageRow = {
   publisher_id: 7,
   created_at: "2026-07-22T00:00:00.000Z",
   updated_at: "2026-07-22T00:30:00.000Z",
+  content_hash: "",
 };
 
 describe("renderCommunity", () => {
@@ -41,5 +42,30 @@ describe("renderCommunity", () => {
     expect(html).toContain('name="expectedVersion" value="2.7.1"');
     expect(html).toContain('name="expectedUpdatedAt" value="2026-07-22T00:30:00.000Z"');
     expect(html).toContain('name="expectedStatus" value="pending"');
+  });
+
+  it("offers a live, unpinned package a digest bound to its revision", () => {
+    const live = { ...pending, status: "active" };
+    const html = renderCommunity(admin, [live], "active");
+    const form = html.slice(html.indexOf('action="/community/publisher/devkit/pin"'));
+
+    expect(html).toContain("unpinned");
+    expect(form).toContain('name="expectedStatus" value="active"');
+    expect(form).toContain('name="expectedVersion" value="2.7.1"');
+    expect(form).toContain('pattern="sha256:[0-9a-f]{64}"');
+    expect(form).toContain("Pin digest");
+  });
+
+  it("shows the digest a live package is pinned to and offers a re-pin", () => {
+    const digest = "sha256:" + "ab".repeat(32);
+    const html = renderCommunity(admin, [{ ...pending, status: "active", content_hash: digest }], "active");
+
+    expect(html).toContain(digest);
+    expect(html).toContain("Re-pin");
+  });
+
+  it("does not offer a pin before approval", () => {
+    const html = renderCommunity(admin, [pending], "pending");
+    expect(html).not.toContain("/pin");
   });
 });

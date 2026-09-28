@@ -1,6 +1,11 @@
 import type { EventRow } from "../types";
 
-export type EventType = "publish" | "update" | "install" | "star" | "milestone";
+export type EventType = "publish" | "update" | "install" | "star" | "milestone" | "pin";
+
+// A pin event's summary: the version and the digest change, both in full.
+export function pinSummary(version: string, previous: string, next: string): string {
+  return `${version} ${previous || "unpinned"} -> ${next}`;
+}
 
 export interface NewEvent {
   type: EventType;

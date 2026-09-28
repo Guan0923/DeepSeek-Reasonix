@@ -22,7 +22,8 @@ import {
 import registryApp from "./registry/app";
 import type { Bindings as RegistryBindings } from "./registry/env";
 import { PackageRepo } from "./registry/db/packages";
-import { EventRepo } from "./registry/db/events";
+import { EventRepo, pinSummary } from "./registry/db/events";
+import { repinReviewedDigest } from "./registry/pin";
 import { renderCommunity } from "./community";
 import { CONTENT_DIGEST } from "./registry/lib/validation";
 import {
@@ -1590,7 +1591,7 @@ function communityStatus(url: URL): string {
 }
 
 async function handleCommunityList(env: Env, admin: User, status: string): Promise<Response> {
-  const rows = await new PackageRepo(env.REGISTRY_DB).listByStatus(status, 200);
+  const rows = await new PackageRepo(env.REGISTRY_DB).listForReview(status, 200);
   return html(renderCommunity(admin, rows, status));
 }
 
@@ -1613,6 +1614,34 @@ async function handleCommunityAction(
   if (action === "verify" || action === "unverify") {
     await repo.setVerified(slug, action === "verify", now);
     await logAction(env, admin, `pkg_${action}`, slug);
+    return back;
+  }
+  if (action === "pin") {
+    if (form.expectedStatus !== "active" || !form.expectedVersion || !form.expectedUpdatedAt) {
+      return new Response("Package review revision is missing. Refresh the review page and try again.", {
+        status: 409,
+      });
+    }
+    const contentHash = (form.contentHash ?? "").trim();
+    if (!CONTENT_DIGEST.test(contentHash)) {
+      return new Response("Content digest must be sha256:<64 lowercase hex>, as Reasonix prints it for the plan.", {
+        status: 400,
+      });
+    }
+    const pinned = await repinReviewedDigest(env.REGISTRY_DB, {
+      slug,
+      expectedVersion: form.expectedVersion,
+      expectedUpdatedAt: form.expectedUpdatedAt,
+      contentHash,
+      actor: admin.email,
+      now,
+    });
+    if (!pinned) {
+      return new Response("Package changed since it was reviewed. Refresh and review the latest version.", {
+        status: 409,
+      });
+    }
+    await logAction(env, admin, "pkg_pin", slug, pinSummary(form.expectedVersion, pinned.previous, contentHash));
     return back;
   }
   if (action === "approve") {
@@ -1946,7 +1975,7 @@ export default {
       if (!user) return redirect(login);
       return user.role === "admin" ? handleCommunityList(env, user, communityStatus(url)) : redirect("/account");
     }
-    const pkgActionMatch = path.match(/^\/community\/([^/]+)\/([^/]+)\/(approve|reject|hide|verify|unverify)$/);
+    const pkgActionMatch = path.match(/^\/community\/([^/]+)\/([^/]+)\/(approve|reject|hide|verify|unverify|pin)$/);
     if (pkgActionMatch && method === "POST") {
       if (user?.role !== "admin") return new Response("forbidden", { status: 403 });
       return handleCommunityAction(request, env, user, pkgActionMatch[1], pkgActionMatch[2], pkgActionMatch[3]);

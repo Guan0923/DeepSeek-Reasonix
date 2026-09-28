@@ -71,6 +71,9 @@ export interface VersionRow {
   created_at: string;
 }
 
+// A review-queue row: the package plus its current version's reviewed digest.
+export type ReviewRow = PackageRow & { content_hash: string };
+
 export interface EventRow {
   type: string;
   slug: string | null;

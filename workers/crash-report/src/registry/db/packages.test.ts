@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { PackageRow, RegistryUser } from "../types";
 import { PublishSchema } from "../lib/validation";
 import { PackageRepo } from "./packages";
+import { repinReviewedDigest } from "../pin";
 import registrySchema from "../../../registry-schema.sql?raw";
 
 const now = "2026-07-22T00:00:00.000Z";
@@ -386,6 +387,96 @@ describe("PackageRepo.recordInstall", () => {
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM events WHERE type = 'install'").get()).toEqual({ count: 0 });
     } finally {
       sqlite.close();
+    }
+  });
+});
+
+function sqliteD1(sqlite: any): D1Database {
+  return {
+    prepare(sql: string) {
+      const statement = sqlite.prepare(sql);
+      const wrapper: any = {
+        bind(...values: unknown[]) { wrapper.values = values; return wrapper; },
+        values: [] as unknown[],
+        async first() { return statement.get(...wrapper.values) ?? null; },
+        async all() { return { results: statement.all(...wrapper.values) }; },
+        async run() { return { meta: { changes: Number(statement.run(...wrapper.values).changes) } }; },
+      };
+      return wrapper;
+    },
+  } as unknown as D1Database;
+}
+
+describe("repinReviewedDigest", () => {
+  const liveAt = "2026-07-22T00:30:00.000Z";
+  const digest = "sha256:" + "0f".repeat(32);
+
+  function seed(status = "active") {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(registrySchema);
+    sqlite.prepare(
+      `INSERT INTO packages (kind, scope_handle, name, slug, source, latest_version, status, publisher_id, created_at, updated_at)
+       VALUES ('skill', 'publisher', 'devkit', 'publisher/devkit', 'https://github.com/o/r', '0.2.0', ?1, 7, ?2, ?3)`,
+    ).run(status, now, liveAt);
+    for (const version of ["0.1.0", "0.2.0"]) {
+      sqlite.prepare(
+        `INSERT INTO package_versions (package_id, version, source, manifest, content_hash, risk_level, created_at)
+         VALUES (1, ?1, 'https://github.com/o/r', '', '', '', ?2)`,
+      ).run(version, now);
+    }
+    return sqlite;
+  }
+
+  const request = (over: Partial<Parameters<typeof repinReviewedDigest>[1]> = {}) => ({
+    slug: "publisher/devkit",
+    expectedVersion: "0.2.0",
+    expectedUpdatedAt: liveAt,
+    contentHash: digest,
+    actor: "admin",
+    now: "2026-07-23T00:00:00.000Z",
+    ...over,
+  });
+
+  it("binds the digest to the live version and logs who changed it from what", async () => {
+    const sqlite = seed();
+    try {
+      const result = await repinReviewedDigest(sqliteD1(sqlite), request());
+      expect(result?.previous).toBe("");
+      expect(sqlite.prepare("SELECT version, content_hash FROM package_versions ORDER BY version").all()).toEqual([
+        { version: "0.1.0", content_hash: "" },
+        { version: "0.2.0", content_hash: digest },
+      ]);
+      expect(sqlite.prepare("SELECT status, updated_at FROM packages").get()).toEqual({ status: "active", updated_at: liveAt });
+      expect(sqlite.prepare("SELECT type, package_id, actor_handle, summary, created_at FROM events").all()).toEqual([
+        { type: "pin", package_id: 1, actor_handle: "admin", summary: `0.2.0 unpinned -> ${digest}`, created_at: "2026-07-23T00:00:00.000Z" },
+      ]);
+
+      const next = "sha256:" + "1e".repeat(32);
+      const repinned = await repinReviewedDigest(sqliteD1(sqlite), request({ contentHash: next }));
+      expect(repinned?.previous).toBe(digest);
+      expect(sqlite.prepare("SELECT summary FROM events ORDER BY id DESC LIMIT 1").get()).toEqual({
+        summary: `0.2.0 ${digest} -> ${next}`,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("refuses a revision the admin did not see, and a package that is not live", async () => {
+    for (const [status, over] of [
+      ["active", { expectedUpdatedAt: "2026-07-22T00:45:00.000Z" }],
+      ["active", { expectedVersion: "0.1.0" }],
+      ["pending", {}],
+      ["hidden", {}],
+    ] as const) {
+      const sqlite = seed(status);
+      try {
+        expect(await repinReviewedDigest(sqliteD1(sqlite), request(over))).toBeNull();
+        expect(sqlite.prepare("SELECT COUNT(*) AS n FROM package_versions WHERE content_hash != ''").get()).toEqual({ n: 0 });
+        expect(sqlite.prepare("SELECT COUNT(*) AS n FROM events").get()).toEqual({ n: 0 });
+      } finally {
+        sqlite.close();
+      }
     }
   });
 });
