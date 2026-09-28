@@ -53,7 +53,7 @@ describe("renderCommunity", () => {
     expect(form).toContain('name="expectedStatus" value="active"');
     expect(form).toContain('name="expectedVersion" value="2.7.1"');
     expect(form).toContain('pattern="sha256:[0-9a-f]{64}"');
-    expect(form).toContain("Pin digest");
+    expect(html).toContain("Pin digest");
   });
 
   it("shows the digest a live package is pinned to and offers a re-pin", () => {
