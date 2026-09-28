@@ -181,6 +181,15 @@ describe("PublishSchema theme", () => {
   });
 });
 
+describe("ListQuerySchema pinned", () => {
+  it("defaults off and accepts only 0 or 1", () => {
+    expect(ListQuerySchema.parse({}).pinned).toBe(false);
+    expect(ListQuerySchema.parse({ pinned: "1" }).pinned).toBe(true);
+    expect(ListQuerySchema.parse({ pinned: "0" }).pinned).toBe(false);
+    expect(ListQuerySchema.safeParse({ pinned: "yes" }).success).toBe(false);
+  });
+});
+
 describe("ListQuerySchema kind", () => {
   it("accepts theme as its own listing category", () => {
     expect(ListQuerySchema.parse({ kind: "theme" }).kind).toBe("theme");

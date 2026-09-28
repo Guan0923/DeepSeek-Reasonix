@@ -38,6 +38,8 @@ export interface PackageRow {
   publisher_id: number;
   created_at: string;
   updated_at: string;
+  // Only the listing query computes it; see PackageRepo.list.
+  pinned?: number;
 }
 
 // The public, camel-cased view served by the API.
@@ -60,6 +62,16 @@ export interface PackageDTO {
   status: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// A listing row also says whether its latest version can be installed from the
+// market, so a client can filter without fetching every detail.
+export interface ListedPackageDTO extends PackageDTO {
+  pinned: boolean;
+}
+
+export function toListedPackageDTO(row: PackageRow): ListedPackageDTO {
+  return { ...toPackageDTO(row), pinned: row.pinned === 1 };
 }
 
 export interface VersionRow {
