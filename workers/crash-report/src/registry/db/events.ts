@@ -39,6 +39,7 @@ export class EventRepo {
          FROM events e
          LEFT JOIN packages p ON p.id = e.package_id
          WHERE e.type IN ('publish', 'update', 'star', 'milestone')
+           AND (p.id IS NULL OR p.status != 'private')
          ORDER BY e.created_at DESC
          LIMIT ?1`,
       )

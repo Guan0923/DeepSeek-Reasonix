@@ -123,7 +123,8 @@ export class PackageRepo {
   }
 
   // Create a new package or append a version to an owned one. New packages and
-  // updates from non-admins land as 'pending' (hidden until an admin approves).
+  // updates from non-admins land as 'pending' (hidden until an admin approves);
+  // visibility 'private' lands as 'private', outside the review queue entirely.
   // Every accepted update appends an immutable version, so its source, manifest,
   // metadata, and capability kind must all cross the same moderation boundary.
   // Republishing an existing version is refused (409).
@@ -139,7 +140,8 @@ export class PackageRepo {
       // when its public kind stays the same. Only trusted admin updates bypass
       // re-review; publisher updates always lose verification until approved.
       const publisherNeedsReview = user.role !== "admin";
-      const status = publisherNeedsReview ? "pending" : existing.status;
+      const keepsStatus = !publisherNeedsReview && existing.status !== "private";
+      const status = input.visibility === "private" ? "private" : keepsStatus ? existing.status : "pending";
       const verified = publisherNeedsReview ? 0 : existing.verified;
       const version = input.version || nextPatch(existing.latest_version);
       await this.insertVersion(existing.id, version, input, now);
@@ -172,7 +174,7 @@ export class PackageRepo {
     }
 
     const version = input.version || "0.1.0";
-    const status = user.role === "admin" ? "active" : "pending";
+    const status = input.visibility === "private" ? "private" : user.role === "admin" ? "active" : "pending";
     const inserted = await this.db
       .prepare(
         `INSERT INTO packages
@@ -277,6 +279,27 @@ export class PackageRepo {
     return res.results ?? [];
   }
 
+  // One publisher's own package in any state. Anyone else gets null, the same
+  // answer as a slug that does not exist, so ownership never reveals existence.
+  async ownedBySlug(slug: string, publisherId: number): Promise<PackageRow | null> {
+    return this.db
+      .prepare("SELECT * FROM packages WHERE slug = ?1 AND publisher_id = ?2")
+      .bind(slug, publisherId)
+      .first<PackageRow>();
+  }
+
+  // A private package enters the review queue only when its owner asks.
+  async submitPrivate(slug: string, publisherId: number, now: string): Promise<PackageRow | null> {
+    return this.db
+      .prepare(
+        `UPDATE packages SET status = 'pending', updated_at = ?1
+         WHERE slug = ?2 AND publisher_id = ?3 AND status = 'private'
+         RETURNING *`,
+      )
+      .bind(now, slug, publisherId)
+      .first<PackageRow>();
+  }
+
   // Admin: packages awaiting (or past) review, newest first.
   async listByStatus(status: string, limit: number): Promise<PackageRow[]> {
     const res = await this.db
@@ -286,10 +309,11 @@ export class PackageRepo {
     return res.results ?? [];
   }
 
-  // Admin: move a package between statuses (approve → active, reject, hide).
+  // Admin: move a package between statuses (reject, hide). A private package is
+  // left alone: moving it would make it approvable without its owner's consent.
   async setStatus(slug: string, status: string, now: string): Promise<PackageRow | null> {
     const res = await this.db
-      .prepare("UPDATE packages SET status = ?1, updated_at = ?2 WHERE slug = ?3")
+      .prepare("UPDATE packages SET status = ?1, updated_at = ?2 WHERE slug = ?3 AND status != 'private'")
       .bind(status, now, slug)
       .run();
     if ((res.meta.changes ?? 0) === 0) return null;
@@ -379,7 +403,7 @@ export class PackageRepo {
   // Admin: grant or revoke the verified trust badge.
   async setVerified(slug: string, verified: boolean, now: string): Promise<PackageRow | null> {
     const res = await this.db
-      .prepare("UPDATE packages SET verified = ?1, updated_at = ?2 WHERE slug = ?3")
+      .prepare("UPDATE packages SET verified = ?1, updated_at = ?2 WHERE slug = ?3 AND status != 'private'")
       .bind(verified ? 1 : 0, now, slug)
       .run();
     if ((res.meta.changes ?? 0) === 0) return null;

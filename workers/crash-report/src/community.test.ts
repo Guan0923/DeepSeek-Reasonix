@@ -64,6 +64,14 @@ describe("renderCommunity", () => {
     expect(html).toContain("Re-pin");
   });
 
+  it("lists private packages read-only, since only their owner can submit them", () => {
+    const html = renderCommunity(admin, [{ ...pending, status: "private" }], "private");
+    expect(html).toContain('href="/community?status=private"');
+    expect(html).toContain("Not submitted for review");
+    expect(html).not.toContain("/approve");
+    expect(html).not.toContain("/reject");
+  });
+
   it("does not offer a pin before approval", () => {
     const html = renderCommunity(admin, [pending], "pending");
     expect(html).not.toContain("/pin");

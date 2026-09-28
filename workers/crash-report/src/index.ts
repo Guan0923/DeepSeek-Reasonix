@@ -1587,7 +1587,7 @@ function registryBindings(env: Env): RegistryBindings {
 
 function communityStatus(url: URL): string {
   const s = url.searchParams.get("status") ?? "pending";
-  return ["pending", "active", "hidden", "rejected"].includes(s) ? s : "pending";
+  return ["pending", "active", "hidden", "rejected", "private"].includes(s) ? s : "pending";
 }
 
 async function handleCommunityList(env: Env, admin: User, status: string): Promise<Response> {
@@ -1605,7 +1605,7 @@ async function handleCommunityAction(
 ): Promise<Response> {
   if (!sameOrigin(request)) return new Response("forbidden", { status: 403 });
   const form = await formObject(request);
-  const backStatus = ["pending", "active", "hidden", "rejected"].includes(form.status) ? form.status : "pending";
+  const backStatus = ["pending", "active", "hidden", "rejected", "private"].includes(form.status) ? form.status : "pending";
   const back = redirect(`/community?status=${backStatus}`);
   const slug = `${handle}/${name}`;
   const repo = new PackageRepo(env.REGISTRY_DB);
