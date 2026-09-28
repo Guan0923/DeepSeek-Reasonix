@@ -54,3 +54,11 @@ test("admin approval is bound to the package revision shown in the review queue"
   assert.match(page, /expectedStatus: row\.dataset\.status/);
   assert.match(page, /if \(r\.status === 409\) loadReview\(\)/);
 });
+
+test("a publisher can keep a package private instead of sending it to review", async () => {
+  const page = await source();
+
+  assert.match(page, /<input type="checkbox" name="private" \/>/);
+  assert.match(page, /\.\.\.\(f\.get\('private'\) \? \{ visibility: 'private' \} : \{\}\)/);
+  assert.match(page, /status === 'private'/);
+});
