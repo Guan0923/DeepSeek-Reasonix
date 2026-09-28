@@ -4,6 +4,8 @@ import {
   desktopReleaseChannel,
   handleCLIRelease,
   handleDesktopReleaseManifest,
+  isLegacyShellUpdater,
+  LEGACY_SHELL_GUIDANCE,
 } from "./desktop_release";
 import worker from "./index";
 
@@ -360,6 +362,108 @@ describe("desktop Stable GitHub fallback", () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("legacy desktop shell guidance", () => {
+  const env = {} as Parameters<typeof worker.fetch>[1];
+  const updaterUA = (version: string) =>
+    `Reasonix-Updater/${version} (windows/amd64; build=stable; update=stable)`;
+
+  async function fetchStable(userAgent?: string, method = "GET") {
+    const fetchMock = vi.fn(async (_url: string) =>
+      new Response(desktopManifestText("v1.39.4"), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const headers: Record<string, string> = {};
+    if (userAgent !== undefined) headers["user-agent"] = userAgent;
+    const response = await worker.fetch(
+      new Request("https://crash.reasonix.io/v1/desktop/releases/stable/latest.json", { method, headers }),
+      env,
+    );
+    return { response, fetchMock };
+  }
+
+  it("classifies only strict Reasonix-Updater vX.Y.Z at or below v1.38.3 as legacy", () => {
+    for (const v of ["v1.38.3", "v1.38.0", "v1.20.0", "v1.18.0", "v0.9.99", "v1.9.100"]) {
+      expect(isLegacyShellUpdater(updaterUA(v))).toBe(true);
+    }
+    for (const v of ["v1.38.4", "v1.39.0", "v1.39.4", "v2.0.0", "v1.38.10"]) {
+      expect(isLegacyShellUpdater(updaterUA(v))).toBe(false);
+    }
+    for (const ua of [
+      null,
+      undefined,
+      "",
+      "Mozilla/5.0",
+      "Reasonix-Updater/1.38.3 (windows/amd64; build=stable; update=stable)",
+      "Reasonix-Updater/v1.38.3-preview.1 (windows/amd64; build=preview; update=preview)",
+      "Reasonix-Updater/v01.38.3 (windows/amd64; build=stable; update=stable)",
+      "Reasonix-Updater/dev (windows/amd64; build=stable; update=stable)",
+      "Reasonix-Updater/v1.38.3",
+      "x Reasonix-Updater/v1.38.3 (windows/amd64)",
+    ]) {
+      expect(isLegacyShellUpdater(ua)).toBe(false);
+    }
+  });
+
+  it("keeps the guidance short, single-line, and classified as manual by old shells", () => {
+    expect(LEGACY_SHELL_GUIDANCE).not.toMatch(/[\r\n<>&"]/);
+    expect(LEGACY_SHELL_GUIDANCE.length).toBeLessThanOrEqual(200);
+    const low = LEGACY_SHELL_GUIDANCE.toLowerCase();
+    expect(low).toContain("manual update required");
+    expect(low).not.toMatch(
+      /pending update already exists|could not safely finish the previous update|handoff backup|awaiting startup health|discard the previous update|previous update is still completing/,
+    );
+  });
+
+  it.each(["v1.38.3", "v1.31.4", "v1.20.0"])("serves %s the guidance manifest without touching upstream", async (v) => {
+    const { response, fetchMock } = await fetchStable(updaterUA(v));
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")).toBe("User-Agent");
+    expect(response.headers.get("x-reasonix-release-source")).toBe("legacy-shell-guidance");
+    const body = await response.json() as Record<string, unknown>;
+    expect(body.version).toBe(LEGACY_SHELL_GUIDANCE);
+    expect(body.download_page).toBe("https://reasonix.io/?download=desktop#start");
+    expect(body.platforms).toEqual({});
+  });
+
+  it.each([
+    ["v1.38.4", updaterUA("v1.38.4")],
+    ["v1.39.4", updaterUA("v1.39.4")],
+    ["no user agent", undefined],
+    ["malformed user agent", "Reasonix-Updater/1.2 (garbage"],
+  ])("forwards the real manifest for %s", async (_name, ua) => {
+    const { response, fetchMock } = await fetchStable(ua);
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=300, stale-if-error=86400");
+    expect(response.headers.get("vary")).toBe("User-Agent");
+    expect(response.headers.get("x-reasonix-release-source")).toBe("r2-stable");
+    expect((await response.json() as { version: string }).version).toBe("v1.39.4");
+  });
+
+  it("varies the upstream-unavailable answer on User-Agent too", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 503 })));
+
+    const response = await handleDesktopReleaseManifest("stable", updaterUA("v1.39.4"));
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get("vary")).toBe("User-Agent");
+  });
+
+  it("answers HEAD from a legacy shell with the guidance headers and no body", async () => {
+    const { response, fetchMock } = await fetchStable(updaterUA("v1.38.3"), "HEAD");
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")).toBe("User-Agent");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

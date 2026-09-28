@@ -1919,7 +1919,8 @@ export default {
 
     const desktopRelease = desktopReleaseChannel(path);
     if (desktopRelease) {
-      return handleReleaseGatewayRequest(method, () => handleDesktopReleaseManifest(desktopRelease));
+      return handleReleaseGatewayRequest(method, () =>
+        handleDesktopReleaseManifest(desktopRelease, request.headers.get("user-agent")));
     }
     const cliRelease = cliReleaseChannel(path);
     if (cliRelease) {

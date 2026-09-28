@@ -67,6 +67,49 @@ function gatewayHeaders(source: string): Record<string, string> {
   };
 }
 
+const LEGACY_SHELL_LAST_VERSION = [1, 38, 3] as const;
+const UPDATER_USER_AGENT = /^Reasonix-Updater\/v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*) \(/;
+
+// Old updaters quote the manifest version verbatim into the check error, and their
+// frontend files any error containing "manual update required" under manual update.
+export const LEGACY_SHELL_GUIDANCE =
+  "请手动下载安装新版 Reasonix（旧版无法自动升级到新外壳，装一次后恢复自动更新）：" +
+  `${DESKTOP_DOWNLOAD_PAGE} — manual update required: download the new Reasonix once from reasonix.io`;
+
+export function isLegacyShellUpdater(userAgent: string | null | undefined): boolean {
+  const match = userAgent?.match(UPDATER_USER_AGENT);
+  if (!match) return false;
+  for (let i = 0; i < LEGACY_SHELL_LAST_VERSION.length; i++) {
+    const part = Number(match[i + 1]);
+    if (part !== LEGACY_SHELL_LAST_VERSION[i]) return part < LEGACY_SHELL_LAST_VERSION[i];
+  }
+  return true;
+}
+
+function legacyShellGuidanceManifest(): Response {
+  const manifest = {
+    version: LEGACY_SHELL_GUIDANCE,
+    notes: "",
+    pub_date: "",
+    download_page: DESKTOP_DOWNLOAD_PAGE,
+    platforms: {},
+  };
+  return new Response(JSON.stringify(manifest) + "\n", {
+    status: 200,
+    headers: {
+      ...gatewayHeaders("legacy-shell-guidance"),
+      "cache-control": "private, no-store",
+      vary: "User-Agent",
+    },
+  });
+}
+
+function varyOnUserAgent(response: Response): Response {
+  const varied = new Response(response.body, response);
+  varied.headers.set("vary", "User-Agent");
+  return varied;
+}
+
 export async function handleReleaseGatewayRequest(
   method: string,
   load: () => Promise<Response>,
@@ -381,7 +424,17 @@ async function fetchLatestDesktopManifestFromGitHub(): Promise<Response | null> 
   }
 }
 
-export async function handleDesktopReleaseManifest(channel: ReleaseChannel): Promise<Response> {
+// Shells up to v1.38.3 reject the electron-v1 layout every current manifest carries,
+// so they can only be told to reinstall once by hand.
+export async function handleDesktopReleaseManifest(
+  channel: ReleaseChannel,
+  userAgent?: string | null,
+): Promise<Response> {
+  if (isLegacyShellUpdater(userAgent)) return legacyShellGuidanceManifest();
+  return varyOnUserAgent(await loadDesktopReleaseManifest(channel));
+}
+
+async function loadDesktopReleaseManifest(channel: ReleaseChannel): Promise<Response> {
   const publicChannel = channel === "stable" ? "stable" : "preview";
   const r2 = await fetchManifestText(manifestPointer(channel), `r2-${channel}`, publicChannel);
   if (r2) return r2;
