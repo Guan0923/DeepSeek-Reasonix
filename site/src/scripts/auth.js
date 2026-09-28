@@ -1,4 +1,5 @@
 import { safeNext } from "./safe-next.js";
+import { signedInDestination } from "./account-slot.js";
 
 // Client for the reasonix-accounts API (id.reasonix.io). Cookie-based session,
 // so every call sends credentials; the API base is build-time configurable.
@@ -24,12 +25,9 @@ async function api(path, { method = "GET", body } = {}) {
 
 // Reusable helpers for account-aware pages (nav state, gated actions). Importing
 // this module also runs the form auto-wiring below, but each block is guarded by
-// element presence, so pages without auth forms just get these two helpers.
+// element presence, so pages without auth forms just get this helper.
 export async function currentAccount() {
   try { return (await api("/me")).user; } catch { return null; }
-}
-export async function accountLogout() {
-  try { await api("/auth/logout", { method: "POST" }); } catch {}
 }
 
 const $ = (id) => document.getElementById(id);
@@ -60,6 +58,15 @@ function busy(btn, on) {
   if (!btn) return;
   btn.disabled = on;
   btn.classList.toggle("loading", on);
+}
+
+// login and register are for visitors without a session; one who already has
+// it continues to where a successful sign-in would have taken them.
+if ($("login-form") || $("register-form")) {
+  currentAccount().then((user) => {
+    const to = signedInDestination(user, qp.get("next"), location.origin, withBase("/account/"));
+    if (to) location.replace(to);
+  });
 }
 
 // login — POST /auth/login, then continue to ?next or /account.
