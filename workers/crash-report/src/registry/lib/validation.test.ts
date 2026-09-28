@@ -149,7 +149,43 @@ describe("PublishSchema source", () => {
   });
 });
 
+describe("PublishSchema theme", () => {
+  it("accepts a GitHub plugin package and stores the plugin installer", () => {
+    for (const installKind of [undefined, "auto", "plugin"] as const) {
+      const result = parse({ kind: "theme", source: "https://github.com/o/themes/tree/main/dusk", ...(installKind ? { installKind } : {}) });
+      expect(result.success, installKind ?? "omitted").toBe(true);
+      if (result.success) {
+        expect(result.data.kind).toBe("theme");
+        expect(result.data.installKind).toBe("plugin");
+      }
+    }
+  });
+
+  it("holds a theme to the plugin source rules", () => {
+    for (const source of [
+      "my-theme",
+      "@scope/theme",
+      "https://example.com/theme.json",
+      "https://github.com/o/r/blob/main/reasonix-plugin.json",
+      "https://github.com/o/r/tree/main/../evil",
+      "https://user@github.com/o/r",
+    ]) {
+      expect(parse({ kind: "theme", source }).success, source).toBe(false);
+    }
+  });
+
+  it("refuses a theme hidden behind another installer", () => {
+    for (const installKind of ["skill", "mcp"]) {
+      expect(parse({ kind: "theme", installKind, source: "https://github.com/o/r" }).success, installKind).toBe(false);
+    }
+  });
+});
+
 describe("ListQuerySchema kind", () => {
+  it("accepts theme as its own listing category", () => {
+    expect(ListQuerySchema.parse({ kind: "theme" }).kind).toBe("theme");
+  });
+
   it("accepts plugin as a first-class registry filter", () => {
     expect(ListQuerySchema.parse({ kind: "plugin" }).kind).toBe("plugin");
   });

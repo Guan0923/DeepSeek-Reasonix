@@ -256,6 +256,15 @@ export class PackageRepo {
     return { starred: false, count: Math.max(0, pkg.star_count - 1) };
   }
 
+  // Everything one publisher has submitted, in every review state, newest first.
+  async listByPublisher(publisherId: number, limit: number): Promise<PackageRow[]> {
+    const res = await this.db
+      .prepare("SELECT * FROM packages WHERE publisher_id = ?1 ORDER BY updated_at DESC, id DESC LIMIT ?2")
+      .bind(publisherId, limit)
+      .all<PackageRow>();
+    return res.results ?? [];
+  }
+
   // Admin: packages awaiting (or past) review, newest first.
   async listByStatus(status: string, limit: number): Promise<PackageRow[]> {
     const res = await this.db

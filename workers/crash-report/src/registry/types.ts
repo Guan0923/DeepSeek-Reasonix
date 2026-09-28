@@ -6,8 +6,15 @@ export interface RegistryUser {
   emailVerified: boolean;
 }
 
-export type PackageKind = "skill" | "plugin" | "mcp";
-export type InstallKind = "auto" | PackageKind;
+export type PackageKind = "skill" | "plugin" | "mcp" | "theme";
+// What install_source is asked to run. A theme ships inside a plugin package,
+// so it is its own listing category but never its own installer.
+export type InstallerKind = "skill" | "plugin" | "mcp";
+export type InstallKind = "auto" | InstallerKind;
+
+export function installerFor(kind: PackageKind): InstallerKind {
+  return kind === "theme" ? "plugin" : kind;
+}
 
 // A `packages` row as stored in D1.
 export interface PackageRow {
@@ -42,7 +49,7 @@ export interface PackageDTO {
   summary: string;
   description: string;
   source: string;
-  installKind: PackageKind;
+  installKind: InstallerKind;
   homepage: string;
   repoUrl: string;
   tags: string[];
@@ -90,7 +97,7 @@ export function toPackageDTO(row: PackageRow): PackageDTO {
     source: row.source,
     // Legacy rows may contain `auto` or a mismatched explicit installer. The
     // declared public kind is authoritative for every API consumer.
-    installKind: row.kind,
+    installKind: installerFor(row.kind),
     homepage: row.homepage,
     repoUrl: row.repo_url,
     tags: splitTags(row.tags),
