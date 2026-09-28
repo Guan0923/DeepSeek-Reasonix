@@ -25,19 +25,25 @@ function actionForm(pkg: PackageRow, action: string, label: string, cls: string,
 // (contentDigest) to the reviewed version; Studio installs only against it.
 // Left empty, the version is published but not installable from Studio.
 function approveForm(pkg: PackageRow, backStatus: string): string {
-  const field = `<input type="text" name="contentHash" placeholder="sha256:… contentDigest" pattern="sha256:[0-9a-f]{64}" size="24" aria-label="Reviewed content digest">`;
-  return actionForm(pkg, "approve", "Approve", "", backStatus, undefined, field);
+  const id = `approve-${pkg.id}`;
+  const field = `<input form="${id}" class="digest-field" type="text" name="contentHash" placeholder="digest (optional)" pattern="sha256:[0-9a-f]{64}" aria-label="Reviewed content digest">`;
+  return field + actionForm(pkg, "approve", "Approve", "", backStatus).replace("<form ", `<form id="${id}" `);
 }
 
 // A live version approved without a digest is listed but not installable from
 // Studio; pinning binds the digest to that same version without moving it.
 function pinForm(pkg: ReviewRow, backStatus: string): string {
-  const current = pkg.content_hash
-    ? `<code class="muted" title="Current content digest">${esc(pkg.content_hash)}</code>`
-    : `<span class="muted">unpinned</span>`;
-  const field = `<input type="text" name="contentHash" required placeholder="sha256:… contentDigest" pattern="sha256:[0-9a-f]{64}" size="24" aria-label="Reviewed content digest">`;
+  const field = `<input class="digest-field" type="text" name="contentHash" required placeholder="sha256:… contentDigest" pattern="sha256:[0-9a-f]{64}" aria-label="Reviewed content digest">`;
   const label = pkg.content_hash ? "Re-pin" : "Pin digest";
-  return `${current}${actionForm(pkg, "pin", label, "ghost", backStatus, undefined, field)}`;
+  const form = actionForm(pkg, "pin", "Save digest", "", backStatus, undefined, field).replace('class="inline"', 'class="digest-form"');
+  return `<details class="pin"><summary>${label}</summary>${form}</details>`;
+}
+
+function digestLine(pkg: ReviewRow): string {
+  if (pkg.status !== "active") return "";
+  return pkg.content_hash
+    ? `<small class="digest" title="${esc(pkg.content_hash)}">pinned ${esc(pkg.content_hash.slice(7, 19))}…</small>`
+    : `<small class="digest unpinned">unpinned · not installable from Studio</small>`;
 }
 
 function rowActions(pkg: ReviewRow, backStatus: string): string {
@@ -45,7 +51,7 @@ function rowActions(pkg: ReviewRow, backStatus: string): string {
     const verify = pkg.verified
       ? actionForm(pkg, "unverify", "Unverify", "ghost", backStatus)
       : actionForm(pkg, "verify", "Verify", "ghost", backStatus);
-    return `${pinForm(pkg, backStatus)}${verify}${actionForm(pkg, "hide", "Hide", "danger", backStatus, `Hide ${pkg.slug}?`)}`;
+    return `${verify}${actionForm(pkg, "hide", "Hide", "danger", backStatus, `Hide ${pkg.slug}?`)}${pinForm(pkg, backStatus)}`;
   }
   const approve = approveForm(pkg, backStatus);
   const reject = pkg.status === "rejected" ? "" : actionForm(pkg, "reject", "Reject", "danger", backStatus, `Reject ${pkg.slug}?`);
@@ -96,7 +102,7 @@ export function renderCommunity(viewer: User, packages: ReviewRow[], status: str
           const verified = p.verified ? ` <span class="badge admin">verified</span>` : "";
           const links = sourceLinks(p);
           return `<tr>
-<td><div class="crash-summary"><span>${esc(p.slug)}${verified}</span><small>${esc(p.summary || "—")}</small></div></td>
+<td><div class="crash-summary"><span>${esc(p.slug)}${verified}</span><small>${esc(p.summary || "—")}</small>${digestLine(p)}</div></td>
 <td><span class="pill">${esc(p.kind)}</span></td>
 <td>@${esc(p.scope_handle)}</td>
 <td class="n">${esc(p.latest_version || "—")} · ${p.install_count} inst · ${p.star_count}★</td>

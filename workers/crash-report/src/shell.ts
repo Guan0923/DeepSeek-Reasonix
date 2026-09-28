@@ -292,6 +292,16 @@ form.inline{display:inline}
 .alt{margin-top:18px;font-size:13.5px;color:var(--ink-3);text-align:center}
 .alt a{color:var(--accent);text-decoration:none}
 .actions{display:flex;gap:8px;align-items:center}
+.actions{flex-wrap:wrap}
+.digest-form{display:flex;flex-direction:column;align-items:flex-start;gap:6px;flex-basis:100%;min-width:0}
+.digest-field{box-sizing:border-box;width:100%;flex-basis:100%;min-width:0;padding:6px 9px;border:1px solid var(--line);border-radius:9px;background:var(--bg-soft);color:var(--ink);font-family:var(--mono);font-size:11.5px}
+.digest-field:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+details.pin{flex-basis:100%;min-width:0}
+details.pin summary{display:inline-flex;align-items:center;min-height:28px;padding:4px 9px;border:1px dashed var(--line);border-radius:9px;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;list-style:none}
+details.pin summary::-webkit-details-marker{display:none}
+details.pin[open] summary{margin-bottom:6px}
+.crash-summary small.digest{color:var(--ink-3)}
+.crash-summary small.digest.unpinned{color:oklch(0.55 0.15 60)}
 td select{width:auto;padding:6px 10px;border-radius:10px}
 .note-edit{margin-top:12px;display:flex;gap:8px;max-width:560px}
 .note-edit input{flex:1}
