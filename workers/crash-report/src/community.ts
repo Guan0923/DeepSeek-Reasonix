@@ -9,6 +9,7 @@ const STATUS_TABS = [
   { key: "active", label: "Active" },
   { key: "hidden", label: "Hidden" },
   { key: "rejected", label: "Rejected" },
+  { key: "private", label: "Private" },
 ];
 
 function actionForm(pkg: PackageRow, action: string, label: string, cls: string, backStatus: string, confirm?: string, fields = ""): string {
@@ -41,6 +42,8 @@ function pinForm(pkg: ReviewRow, backStatus: string): string {
 }
 
 function rowActions(pkg: ReviewRow, backStatus: string): string {
+  // Approval needs the owner's consent; submitting moves a private package to pending.
+  if (pkg.status === "private") return `<span class="muted">Not submitted for review</span>`;
   if (pkg.status === "active") {
     const verify = pkg.verified
       ? actionForm(pkg, "unverify", "Unverify", "ghost", backStatus)

@@ -172,6 +172,7 @@ export const PublishSchema = z
     manifest: z.string().max(16000).default(""),
     contentHash: z.union([z.literal(""), contentDigest]).default(""),
     riskLevel: z.string().trim().max(20).default(""),
+    visibility: z.enum(["public", "private"]).default("public"),
   })
   .strict()
   .superRefine((val, ctx) => {
