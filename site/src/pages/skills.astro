@@ -26,13 +26,14 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
       <div class="reg-toolbar">
         <div class="reg-search">
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8.5 3a5.5 5.5 0 1 0 3.4 9.8l3.6 3.7 1.4-1.4-3.7-3.6A5.5 5.5 0 0 0 8.5 3Zm0 2a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z"/></svg>
-          <input id="reg-q" type="search" autocomplete="off" placeholder="Search skills, plugins, MCP servers, tags…" aria-label="Search the registry" />
+          <input id="reg-q" type="search" autocomplete="off" placeholder="Search skills, plugins, MCP servers, themes, tags…" aria-label="Search the registry" />
         </div>
         <div class="reg-tabs" data-group="kind" role="tablist">
           <button class="active" data-kind="all" role="tab"><span class="l-en">All</span><span class="l-zh">全部</span></button>
           <button data-kind="skill" role="tab">Skills</button>
           <button data-kind="plugin" role="tab">Plugins</button>
           <button data-kind="mcp" role="tab">MCP</button>
+          <button data-kind="theme" role="tab">Themes</button>
         </div>
         <div class="reg-tabs" data-group="sort" role="tablist">
           <button class="active" data-sort="new" role="tab"><span class="l-en">New</span><span class="l-zh">最新</span></button>
@@ -98,7 +99,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
         <form id="pub-form" class="pub-form" autocomplete="off">
           <div class="pub-row">
             <label><span class="l-en">Kind</span><span class="l-zh">类型</span>
-              <select name="kind"><option value="skill">skill</option><option value="plugin">plugin</option><option value="mcp">mcp</option></select>
+              <select name="kind"><option value="skill">skill</option><option value="plugin">plugin</option><option value="mcp">mcp</option><option value="theme">theme</option></select>
             </label>
             <label><span class="l-en">Name</span><span class="l-zh">名称</span>
               <input name="name" required placeholder="my-package" pattern="[a-z0-9][a-z0-9._-]*" />
@@ -112,7 +113,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
           </label>
           <label><span class="l-en">Source</span><span class="l-zh">来源</span>
             <input name="source" required pattern="(https?://[^ ]+|git:github[.]com/[^ ]+|@?[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)?)" title="A URL (SKILL.md, a Reasonix/Codex/Claude plugin repository, .mcp.json, repository path), a git:github.com/… shorthand, or an MCP package name — not free text or a local path." placeholder="https://… SKILL.md · plugin repo · .mcp.json · MCP package" />
-            <small class="pub-hint"><span class="l-en">Plugins must point to a GitHub repository or path containing <code>reasonix-plugin.json</code>, <code>.codex-plugin/plugin.json</code>, <code>.claude-plugin/plugin.json</code>, or a supported <code>.claude-plugin/marketplace.json</code>.</span><span class="l-zh">插件必须指向包含 <code>reasonix-plugin.json</code>、<code>.codex-plugin/plugin.json</code>、<code>.claude-plugin/plugin.json</code>，或受支持的 <code>.claude-plugin/marketplace.json</code> 的 GitHub 仓库或路径。</span></small>
+            <small class="pub-hint"><span class="l-en">Plugins and themes must point to a GitHub repository or path containing <code>reasonix-plugin.json</code>, <code>.codex-plugin/plugin.json</code>, <code>.claude-plugin/plugin.json</code>, or a supported <code>.claude-plugin/marketplace.json</code>.</span><span class="l-zh">插件和主题必须指向包含 <code>reasonix-plugin.json</code>、<code>.codex-plugin/plugin.json</code>、<code>.claude-plugin/plugin.json</code>，或受支持的 <code>.claude-plugin/marketplace.json</code> 的 GitHub 仓库或路径。</span></small>
           </label>
           <div class="pub-row">
             <label><span class="l-en">Repo (optional)</span><span class="l-zh">仓库(可选)</span>
@@ -187,6 +188,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
     .pkg-kind { font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); background: var(--accent-soft); padding: 4px 9px; border-radius: 999px; }
     .pkg-kind.plugin { color: oklch(0.52 0.14 55); background: color-mix(in oklch, oklch(0.52 0.14 55) 10%, var(--card)); }
     .pkg-kind.mcp { color: oklch(0.5 0.16 300); background: color-mix(in oklch, oklch(0.5 0.16 300) 9%, var(--card)); }
+    .pkg-kind.theme { color: oklch(0.52 0.13 200); background: color-mix(in oklch, oklch(0.52 0.13 200) 9%, var(--card)); }
     .pkg-badge { font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 999px; }
     .pkg-badge.verified { color: oklch(0.5 0.13 155); background: color-mix(in oklch, oklch(0.5 0.13 155) 10%, var(--card)); }
     .pkg-badge.community { color: var(--ink-3); background: var(--bg-soft); }
@@ -314,9 +316,11 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
     ));
-    const kindClass = (kind) => `pkg-kind${kind === 'plugin' ? ' plugin' : kind === 'mcp' ? ' mcp' : ''}`;
+    const kindClass = (kind) => `pkg-kind${kind === 'plugin' ? ' plugin' : kind === 'mcp' ? ' mcp' : kind === 'theme' ? ' theme' : ''}`;
+    // A theme is listed on its own but installs as a plugin package.
+    const installerFor = (kind) => (kind === 'theme' ? 'plugin' : kind);
     const installRequest = (p) =>
-      `Install this Reasonix ${p.kind} package from ${p.source}. Use install_source with kind="${p.kind}".`;
+      `Install this Reasonix ${p.kind} package from ${p.source}. Use install_source with kind="${installerFor(p.kind)}".`;
 
     function show(el, on) { if (el) el.hidden = !on; }
 
@@ -450,7 +454,7 @@ const desc = "Browse, publish, and install community skills, plugins, and MCP se
       const tags = String(f.get('tags') || '').split(',').map((t) => t.trim()).filter(Boolean);
       const body = {
         kind: f.get('kind'), name: f.get('name'), summary: f.get('summary') || '',
-        source: f.get('source'), installKind: f.get('kind'), version: f.get('version') || '',
+        source: f.get('source'), installKind: installerFor(f.get('kind')), version: f.get('version') || '',
         repoUrl: f.get('repoUrl') || '', tags,
       };
       setMsg('Publishing…');

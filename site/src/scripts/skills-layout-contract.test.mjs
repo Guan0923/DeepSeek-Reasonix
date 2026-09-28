@@ -17,8 +17,8 @@ test("the registry exposes plugins as a first-class package kind", async () => {
 
   assert.match(page, /<button data-kind="plugin" role="tab">Plugins<\/button>/);
   assert.match(page, /<option value="plugin">plugin<\/option>/);
-  assert.match(page, /installKind: f\.get\('kind'\)/);
-  assert.match(page, /Plugins must point to a GitHub repository or path containing/);
+  assert.match(page, /installKind: installerFor\(f\.get\('kind'\)\)/);
+  assert.match(page, /Plugins and themes must point to a GitHub repository or path containing/);
   assert.match(page, /reasonix-plugin\.json/);
   assert.match(page, /\.codex-plugin\/plugin\.json/);
   assert.match(page, /\.claude-plugin\/plugin\.json/);
@@ -26,11 +26,19 @@ test("the registry exposes plugins as a first-class package kind", async () => {
   assert.match(page, /pattern="\(https\?:\/\/\[\^ \]\+\|git:github\[\.\]com\/\[\^ \]\+/);
 });
 
+test("themes are their own category and install through the plugin installer", async () => {
+  const page = await source();
+
+  assert.match(page, /<button data-kind="theme" role="tab">Themes<\/button>/);
+  assert.match(page, /<option value="theme">theme<\/option>/);
+  assert.match(page, /const installerFor = \(kind\) => \(kind === 'theme' \? 'plugin' : kind\);/);
+});
+
 test("registry copy requests preserve the reviewed package kind", async () => {
   const page = await source();
 
   assert.match(page, /Install this Reasonix \$\{p\.kind\} package from \$\{p\.source\}/);
-  assert.match(page, /Use install_source with kind="\$\{p\.kind\}"/);
+  assert.match(page, /Use install_source with kind="\$\{installerFor\(p\.kind\)\}"/);
   assert.match(page, /data-copy="\$\{esc\(installRequest\(p\)\)\}"/);
   assert.doesNotMatch(page, /data-copy="\$\{esc\(p\.source\)\}"/);
 });
