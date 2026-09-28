@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
-import { toPackageDTO } from "../types";
+import { toListedPackageDTO, toPackageDTO } from "../types";
 import { repos } from "../db";
 import { requireAuth, currentUser } from "../http/auth";
 import { writeRateLimit } from "../http/ratelimit";
@@ -18,7 +18,7 @@ const isMilestone = (n: number) => MILESTONES.has(n) || (n >= 1000 && n % 1000 =
 packages.get("/", async (c) => {
   const q = parseQuery(c, ListQuerySchema);
   const rows = await repos(c.env).packages.list({ ...q, now: now() });
-  return c.json({ packages: rows.map(toPackageDTO), limit: q.limit, offset: q.offset });
+  return c.json({ packages: rows.map(toListedPackageDTO), limit: q.limit, offset: q.offset });
 });
 
 packages.get("/:handle/:name", async (c) => {

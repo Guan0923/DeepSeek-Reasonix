@@ -226,6 +226,7 @@ export const ListQuerySchema = z.object({
   kind: z.enum(["skill", "plugin", "mcp", "theme", "all"]).default("all"),
   q: z.string().trim().max(100).default(""),
   sort: z.enum(["new", "trending", "installs"]).default("new"),
+  pinned: z.enum(["0", "1"]).default("0").transform((v) => v === "1"),
   limit: z.coerce.number().int().min(1).max(100).default(24),
   offset: z.coerce.number().int().min(0).max(10000).default(0),
 });

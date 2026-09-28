@@ -6,6 +6,7 @@ export interface ListParams {
   kind: PackageKind | "all";
   q: string;
   sort: "new" | "trending" | "installs";
+  pinned: boolean;
   limit: number;
   offset: number;
   now: string;
@@ -39,6 +40,16 @@ export interface VersionListResult {
   };
 }
 
+// Mirrors CONTENT_DIGEST: the listed version has a reviewer-bound digest a
+// client can install against. GLOB is case-sensitive, so uppercase hex fails as
+// the regex does.
+const PINNED_SQL = `EXISTS (
+  SELECT 1 FROM package_versions v
+  WHERE v.package_id = p.id AND v.version = p.latest_version
+    AND length(v.content_hash) = 71 AND substr(v.content_hash, 1, 7) = 'sha256:'
+    AND substr(v.content_hash, 8) NOT GLOB '*[^0-9a-f]*'
+)`;
+
 export class PackageRepo {
   constructor(private readonly db: D1Database) {}
 
@@ -56,11 +67,12 @@ export class PackageRepo {
       where.push(`(lower(p.name) LIKE ?${a} OR lower(p.summary) LIKE ?${a + 1} OR lower(p.tags) LIKE ?${a + 2})`);
       binds.push(like, like, like);
     }
+    if (p.pinned) where.push(PINNED_SQL);
 
-    let select = "SELECT p.* FROM packages p";
+    let select = `SELECT p.*, ${PINNED_SQL} AS pinned FROM packages p`;
     let order: string;
     if (p.sort === "trending") {
-      select = `SELECT p.*, COALESCE(e.c, 0) AS trend FROM packages p
+      select = `SELECT p.*, ${PINNED_SQL} AS pinned, COALESCE(e.c, 0) AS trend FROM packages p
         LEFT JOIN (
           SELECT package_id, SUM(count) AS c FROM package_install_daily
           WHERE date >= date(?${binds.length + 1}, '-6 day')

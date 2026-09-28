@@ -340,10 +340,69 @@ describe("PackageRepo.list", () => {
         return statement;
       },
     } as unknown as D1Database;
-    await new PackageRepo(db).list({ kind: "all", q: "", sort: "trending", limit: 24, offset: 0, now });
+    await new PackageRepo(db).list({ kind: "all", q: "", sort: "trending", pinned: false, limit: 24, offset: 0, now });
     expect(sql).toContain("FROM package_install_daily");
     expect(sql).not.toContain("FROM events");
     expect(sql).toContain("SUM(count)");
+  });
+});
+
+describe("PackageRepo.list pinned", () => {
+  const digest = `sha256:${"a".repeat(64)}`;
+  function seeded() {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(registrySchema);
+    const pkg = sqlite.prepare(
+      `INSERT INTO packages (kind, scope_handle, name, slug, source, latest_version, status, publisher_id, created_at, updated_at)
+       VALUES ('skill', 'pub', ?1, 'pub/' || ?1, 'https://github.com/o/r', '1.0.0', 'active', 7, ?2, ?2) RETURNING id`,
+    );
+    const ver = sqlite.prepare(
+      `INSERT INTO package_versions (package_id, version, content_hash, created_at) VALUES (?1, ?2, ?3, ?4)`,
+    );
+    const add = (name: string, at: string, versions: [string, string][]) => {
+      const { id } = pkg.get(name, at) as { id: number };
+      for (const [v, hash] of versions) ver.run(id, v, hash, at);
+    };
+    add("pinned", "2026-07-01T00:00:00.000Z", [["1.0.0", digest]]);
+    add("empty", "2026-07-02T00:00:00.000Z", [["1.0.0", ""]]);
+    add("upper", "2026-07-03T00:00:00.000Z", [["1.0.0", digest.toUpperCase().replace("SHA256", "sha256")]]);
+    add("stale", "2026-07-04T00:00:00.000Z", [["0.9.0", digest], ["1.0.0", ""]]);
+    const db = {
+      prepare(sql: string) {
+        const statement = sqlite.prepare(sql);
+        const wrapper: any = {
+          values: [] as unknown[],
+          bind(...values: unknown[]) { wrapper.values = values; return wrapper; },
+          async all() { return { results: statement.all(...wrapper.values) }; },
+        };
+        return wrapper;
+      },
+    } as unknown as D1Database;
+    return { sqlite, repo: new PackageRepo(db) };
+  }
+
+  it("marks only a latest version holding a lowercase sha256 digest", async () => {
+    const { sqlite, repo } = seeded();
+    try {
+      const rows = await repo.list({ kind: "all", q: "", sort: "new", pinned: false, limit: 24, offset: 0, now });
+      expect(Object.fromEntries(rows.map((r) => [r.name, r.pinned]))).toEqual({ pinned: 1, empty: 0, upper: 0, stale: 0 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("filters in the query so a page holds only pinned packages", async () => {
+    const { sqlite, repo } = seeded();
+    try {
+      for (const sort of ["new", "installs", "trending"] as const) {
+        const rows = await repo.list({ kind: "all", q: "", sort, pinned: true, limit: 1, offset: 0, now });
+        expect(rows.map((r) => r.name)).toEqual(["pinned"]);
+      }
+      const next = await repo.list({ kind: "all", q: "", sort: "new", pinned: true, limit: 1, offset: 1, now });
+      expect(next).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 
