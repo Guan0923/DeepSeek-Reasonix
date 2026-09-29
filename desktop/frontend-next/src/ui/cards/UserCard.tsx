@@ -1,28 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import type { Checkpoint, RewindPlan, RewindResult, RewindScope } from "../../port/port";
+import type { Checkpoint } from "../../port/port";
 import type { Item } from "../../state/session";
-import { RewindControl } from "./RewindControl";
 import { reason } from "../../i18n/kernel";
 import { t } from "../../i18n";
+import { CopyButton } from "../CopyButton";
 import { StudioIcon } from "../StudioIcon";
 import { messageSource } from "../source";
 import { useViewer } from "../../state/viewer";
-import { useLabelFit } from "../labelfit";
 
 export function UserCard({
   item,
   cp,
   onResend,
-  onPrepareRewind,
-  onCommitRewind,
-  onUndoRewind,
 }: {
   item: Extract<Item, { t: "user" }>;
   cp?: Checkpoint;
   onResend?: (turn: number, text: string) => Promise<void>;
-  onPrepareRewind?: (turn: number, scope: RewindScope) => Promise<RewindPlan>;
-  onCommitRewind?: (planId: string) => Promise<RewindResult>;
-  onUndoRewind?: (transactionId: string) => Promise<void>;
 }) {
   // A rewind needs a turn the kernel claimed, and a queued line has not
   // happened yet — there is nothing behind it to take back.
@@ -32,10 +25,6 @@ export function UserCard({
   const [failed, setFailed] = useState("");
   const box = useRef<HTMLTextAreaElement>(null);
   const source = messageSource(item.via, useViewer());
-  const row = useRef<HTMLDivElement>(null);
-  const reopen = editable && draft === null;
-  const rewind = !!(cp && onPrepareRewind && onCommitRewind && onUndoRewind);
-  const compact = useLabelFit(row, [item.steer ? t("插话") : "", source, reopen ? t("改写") : "", rewind ? t("回到这里") : ""].join("\n"));
 
   useEffect(() => {
     const el = box.current;
@@ -62,32 +51,22 @@ export function UserCard({
         <span className="line" />
       </div>
       <div className="c">
-        <div className="hl user-hl" ref={row}>
-          {/* It reached the model inside a turn already running, which is why
-              there is no checkpoint on this row to rewind to. */}
+        {(item.steer || source) && <div className="hl user-hl">
           {item.steer && <span className="steermark">{t("插话")}</span>}
           {source && <span className="viamark">{source}</span>}
-          {/* The entry point lives on the turn it returns to, so there is no
-              list to read and no turn number to match up by eye. */}
-          {reopen && (
-            <button
-              className="reask-open"
-              data-action="turn.edit"
-              data-target={item.id}
-              title={t("改写这条消息并重新发送")}
-              aria-label={compact ? t("改写") : undefined}
-              onClick={() => setDraft(item.text)}
-            >
-              <StudioIcon name="edit" />{!compact && t("改写")}
-            </button>
-          )}
-          {rewind && (
-            <RewindControl cp={cp!} compact={compact} onPrepare={onPrepareRewind!} onCommit={onCommitRewind!} onUndo={onUndoRewind!} />
-          )}
-        </div>
+        </div>}
         <div className="out">
           {draft === null ? (
-            <div className="txt">{item.text}</div>
+            <>
+              <div className="txt" data-action={editable ? "turn.edit" : undefined}
+                onDoubleClick={editable ? () => setDraft(item.text) : undefined}>{item.text}</div>
+              <div className="user-acts">
+                <CopyButton text={item.text} iconOnly label={t("复制消息")} />
+                {editable && <button type="button" data-action="turn.edit" data-target={item.id}
+                  title={t("改写这条消息并重新发送")} aria-label={t("改写这条消息")}
+                  onClick={() => setDraft(item.text)}><StudioIcon name="rewind" /></button>}
+              </div>
+            </>
           ) : (
             <div className="reask">
               <textarea

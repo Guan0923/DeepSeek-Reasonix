@@ -4,6 +4,7 @@ import type { Item } from "../state/session";
 import { pairCheckpoints } from "../state/checkpoints";
 import { t } from "../i18n";
 import type { Quote, ReplyActions } from "./cards/SayCard";
+import { forkTargets } from "./forktargets";
 
 interface Inputs {
   port: AgentPort;
@@ -15,13 +16,16 @@ interface Inputs {
   onSettings: (section?: string) => void;
   onRunDetail: () => void;
   onError: (e: unknown) => void;
+  onFork?: (checkpoint: Checkpoint) => Promise<void>;
+  onRewound: () => Promise<void>;
 }
 
 /** What a finished reply can be acted on with, and the draft signal a quote
  *  travels to the composer on. The transcript owns neither: the pane holds the
  *  session these read from, and the composer is where a quote has to land. */
-export function useReplyActions({ port, items, checkpoints, running, model, submit, onSettings, onRunDetail, onError }: Inputs) {
+export function useReplyActions({ port, items, checkpoints, running, model, submit, onSettings, onRunDetail, onError, onFork, onRewound }: Inputs) {
   const [quote, setQuote] = useState<Quote>({ text: "", n: 0 });
+  const forks = useMemo(() => running ? new Map<string, Checkpoint>() : forkTargets(items, checkpoints), [items, checkpoints, running]);
 
   // Re-running a turn is a conversation rewind and then the same words again:
   // the transcript goes back, the files do not, and the reply that was there
@@ -30,16 +34,14 @@ export function useReplyActions({ port, items, checkpoints, running, model, subm
   // the word "regenerate" makes.
   const regenerate = useCallback(
     async (turn: number, text: string) => {
-      try {
-        const plan = await port.prepareRewind(turn, "conversation");
-        if (!plan.canConversation) throw new Error(plan.disabledReason || t("这一轮无法重新生成"));
-        await port.commitRewind(plan.planId);
-        await submit(text);
-      } catch (e) {
-        onError(e);
-      }
+      const plan = await port.prepareRewind(turn, "conversation");
+      if (!plan.canConversation) throw new Error(plan.disabledReason || t("这一轮无法重新生成"));
+      const result = await port.commitRewind(plan.planId);
+      if (!result.conversationOk) throw new Error(result.error || t("对话没有被回退，原文仍在记录里"));
+      await onRewound();
+      if (!await submit(text)) throw new Error(t("消息未发送，请重试"));
     },
-    [port, submit, onError],
+    [port, submit, onRewound],
   );
 
   // The last thing the person said, and the turn the kernel gave it. A reply is
@@ -79,12 +81,18 @@ export function useReplyActions({ port, items, checkpoints, running, model, subm
   const reply = useMemo<ReplyActions>(
     () => ({
       onQuote: (text: string, id: string) => setQuote((q) => ({ text, turn: turnOf(id), n: q.n + 1 })),
-      onRegenerate: lastAsk && !running ? () => void regenerate(lastAsk.turn, lastAsk.text) : undefined,
+      onRegenerate: lastAsk && !running ? () => void regenerate(lastAsk.turn, lastAsk.text).catch(onError) : undefined,
       model,
       onConfigureModel: () => onSettings("model"),
       onRunDetail,
+      forkable: new Set(forks.keys()),
+      onFork: onFork ? async (id) => {
+        const checkpoint = forks.get(id);
+        if (!checkpoint) return;
+        try { await onFork(checkpoint); } catch (e) { onError(e); }
+      } : undefined,
     }),
-    [lastAsk, running, regenerate, model, onSettings, onRunDetail, turnOf],
+    [lastAsk, running, regenerate, model, onSettings, onRunDetail, turnOf, forks, onFork, onError],
   );
 
   // Rewriting a message is the same act with different words: the turn goes

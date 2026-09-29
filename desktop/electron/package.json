@@ -14,6 +14,7 @@
     "build:app": "electron-builder --dir",
     "build:dist": "electron-builder",
     "smoke": "electron test/smoke.js",
+    "message-actions": "electron test/message_actions.js",
     "browser-live": "electron test/browser_live.js",
     "freeze-live": "electron test/freeze_live.js",
     "computer-live": "electron test/computer_live.js"
