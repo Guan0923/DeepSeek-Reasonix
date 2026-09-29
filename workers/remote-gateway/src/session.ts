@@ -3,15 +3,20 @@ import type { Env, RemoteCapability } from "./env";
 import {
   CLOSE_DEVICE_REPLACED,
   CLOSE_DISCONNECTED_BY_DEVICE,
+  CLOSE_IDLE,
   CLOSE_REAUTH_REQUIRED,
   CLOSE_REVOKED,
+  EVICTABLE_IDLE_MS,
   HEARTBEAT_MS,
   HEARTBEAT_REQUEST,
   HEARTBEAT_RESPONSE,
+  lastActive,
   leaseEnd,
   nextDeadline,
   readLease,
   REVALIDATE_MS,
+  SESSION_REVOCATION_TTL_MS,
+  UNCHECKED_LIMIT_MS,
   verdictEnd,
   type LeaseEnd,
   type SocketLease,
@@ -32,6 +37,8 @@ const SESSION_ID = /^[0-9a-f]{64}$/;
 const DEVICE_ID = /^[0-9a-f]{64}$/;
 const REVOKED_AT_KEY = "revokedAt";
 const CHECKED_AT_KEY = "checkedAt";
+const CHECKED_OK_AT_KEY = "checkedOkAt";
+const REVOKED_SESSIONS_KEY = "revokedSessions";
 
 function messageBytes(message: string): number {
   return new TextEncoder().encode(message).byteLength;
@@ -95,6 +102,10 @@ export class RemoteSession {
     if (revokedAt !== undefined && admittedAt <= revokedAt) {
       return new Response("Device revoked", { status: 403 });
     }
+    const sessionRevokedAt = sessionId ? (await this.revokedSessions(now))[sessionId] : undefined;
+    if (sessionRevokedAt !== undefined && admittedAt <= sessionRevokedAt) {
+      return new Response("Signed out", { status: 401 });
+    }
     const scopes = (request.headers.get("x-reasonix-scopes") ?? "")
       .split(",")
       .filter(Boolean) as RemoteCapability[];
@@ -104,7 +115,13 @@ export class RemoteSession {
     const ownerMismatch = [...devices, ...controllers].some(([, lease]) => lease.userId !== userId);
     if (ownerMismatch) return new Response("Session owner mismatch", { status: 403 });
     if (role === "controller" && controllers.length >= MAX_CONTROLLERS) {
-      return new Response("Too many controllers", { status: 429 });
+      const quietest = controllers
+        .map(([socket, lease]) => ({ socket, lease, at: lastActive(lease, this.state.getWebSocketAutoResponseTimestamp(socket)) }))
+        .sort((a, b) => a.at - b.at)[0];
+      if (!quietest || now - quietest.at < EVICTABLE_IDLE_MS) {
+        return new Response("Too many controllers", { status: 429 });
+      }
+      this.end(quietest.socket, quietest.lease, { code: CLOSE_IDLE, reason: "Replaced by a newer connection" });
     }
 
     const pair = new WebSocketPair();
@@ -140,6 +157,7 @@ export class RemoteSession {
     }
     if ((await this.state.storage.get<number>(CHECKED_AT_KEY)) === undefined) {
       await this.state.storage.put(CHECKED_AT_KEY, now);
+      await this.state.storage.put(CHECKED_OK_AT_KEY, now);
     }
     await this.schedule();
     const headers = new Headers();
@@ -158,6 +176,9 @@ export class RemoteSession {
     }
     let closed = 0;
     if (typeof body.sessionId === "string") {
+      const revoked = await this.revokedSessions(Date.now());
+      revoked[body.sessionId] = Date.now();
+      await this.state.storage.put(REVOKED_SESSIONS_KEY, revoked);
       for (const [socket, lease] of this.live("controller")) {
         if (lease.sessionId !== body.sessionId) continue;
         this.end(socket, lease, { code: CLOSE_REAUTH_REQUIRED, reason: "Signed out" });
@@ -181,7 +202,13 @@ export class RemoteSession {
     }
     const checkedAt = await this.state.storage.get<number>(CHECKED_AT_KEY);
     if (checkedAt === undefined || now - checkedAt >= REVALIDATE_MS) {
-      await this.revalidate();
+      if (await this.revalidate()) {
+        await this.state.storage.put(CHECKED_OK_AT_KEY, now);
+      } else if (now - ((await this.state.storage.get<number>(CHECKED_OK_AT_KEY)) ?? now) >= UNCHECKED_LIMIT_MS) {
+        for (const [socket, lease] of [...this.live("controller"), ...this.live("device")]) {
+          this.end(socket, lease, { code: CLOSE_IDLE, reason: "Access could not be re-checked" });
+        }
+      }
       await this.state.storage.put(CHECKED_AT_KEY, now);
     }
     await this.schedule();
@@ -271,19 +298,31 @@ export class RemoteSession {
     }
   }
 
-  private async revalidate(): Promise<void> {
+  // Whether the account service answered; a failed check keeps connections
+  // open until UNCHECKED_LIMIT_MS passes without a good one.
+  private async revalidate(): Promise<boolean> {
     const sockets = [...this.live("controller"), ...this.live("device")];
-    if (sockets.length === 0) return;
+    if (sockets.length === 0) return true;
     const verdicts = await checkLeases(this.env, sockets.map(([, lease]) => ({
       userId: lease.userId,
       deviceId: lease.deviceId,
       ...(lease.sessionId ? { sessionId: lease.sessionId } : {}),
     })));
-    if (!verdicts || verdicts.length !== sockets.length) return;
+    if (!verdicts || verdicts.length !== sockets.length) return false;
     sockets.forEach(([socket, lease], index) => {
       const end = verdictEnd(verdicts[index] ?? "active");
       if (end) this.end(socket, lease, end);
     });
+    return true;
+  }
+
+  private async revokedSessions(now: number): Promise<Record<string, number>> {
+    const stored = (await this.state.storage.get<Record<string, number>>(REVOKED_SESSIONS_KEY)) ?? {};
+    const fresh: Record<string, number> = {};
+    for (const [id, at] of Object.entries(stored)) {
+      if (now - at < SESSION_REVOCATION_TTL_MS) fresh[id] = at;
+    }
+    return fresh;
   }
 
   private async schedule(): Promise<void> {

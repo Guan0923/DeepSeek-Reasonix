@@ -11,7 +11,6 @@ import {
   REMOTE_AUTH_PROTOCOL_PREFIX,
   REMOTE_WEBSOCKET_PROTOCOL,
 } from "./protocol";
-import { FALLBACK_REAUTH_MS } from "./lease";
 export { RemoteSession } from "./session";
 
 const DEVICE_PATH = /^\/v1\/devices\/([0-9a-f]{64})\/connect$/;
@@ -152,6 +151,7 @@ async function withinBudget(request: Request, env: Env, token: string): Promise<
 
 interface Admission {
   role: "device" | "controller";
+  admittedAt: number;
   userId: number;
   scopes: string[];
   sessionId?: string;
@@ -173,7 +173,7 @@ function forwardToSession(
   headers.set("x-reasonix-user-id", String(admission.userId));
   headers.set("x-reasonix-device-id", targetDeviceId);
   headers.set("x-reasonix-scopes", admission.scopes.join(","));
-  headers.set("x-reasonix-admitted-at", String(Date.now()));
+  headers.set("x-reasonix-admitted-at", String(admission.admittedAt));
   if (admission.sessionId) headers.set("x-reasonix-session", admission.sessionId);
   if (admission.reauthAt !== undefined) headers.set("x-reasonix-reauth-at", String(admission.reauthAt));
   const protocols = offeredProtocols(request);
@@ -271,6 +271,9 @@ const worker: ExportedHandler<Env> = {
       return jsonError(429, "rate_limited", "Too many connection attempts.");
     }
 
+    // Taken before the account service answers, so a revocation that lands
+    // while it is answering is newer than this admission.
+    const admittedAt = Date.now();
     const deviceMatch = DEVICE_PATH.exec(url.pathname);
     if (deviceMatch?.[1]) {
       const authenticated = await authenticateDevice(env, deviceMatch[1], token);
@@ -279,6 +282,7 @@ const worker: ExportedHandler<Env> = {
       }
       return forwardToSession(request, env, authenticated.device.id, {
         role: "device",
+        admittedAt,
         userId: authenticated.userId,
         scopes: authenticated.device.capabilities,
       });
@@ -288,12 +292,16 @@ const worker: ExportedHandler<Env> = {
       const consumed = await consumeGrant(env, token);
       if (!consumed) return jsonError(401, "invalid_grant", "The connection grant is invalid or expired.");
       const reauthAt = Date.parse(consumed.grant.reauthAt ?? "");
+      if (!Number.isSafeInteger(reauthAt) || reauthAt <= Date.now()) {
+        return jsonError(401, "reauth_required", "Sign in again to control this computer remotely.");
+      }
       return forwardToSession(request, env, consumed.grant.targetDeviceId, {
         role: "controller",
+        admittedAt,
         userId: consumed.grant.userId,
         scopes: consumed.grant.scopes,
         sessionId: consumed.grant.sessionId,
-        reauthAt: Number.isFinite(reauthAt) ? reauthAt : Date.now() + FALLBACK_REAUTH_MS,
+        reauthAt,
       });
     }
 

@@ -65,7 +65,7 @@ Design notes:
 | POST   | `/me/devices`              | ✓    | register/rotate a device credential     |
 | PATCH  | `/me/devices/:id`          | ✓    | rename an active device                 |
 | DELETE | `/me/devices/:id`          | ✓    | revoke a device and close its live relay connections |
-| POST   | `/me/remote-grants`        | ✓    | issue a 60-second, scoped connection ticket; `403 remote_reauth_required` once the session is 24 h old |
+| POST   | `/me/remote-grants`        | ✓    | issue a 60-second, scoped connection ticket; `403 remote_reauth_required` once the session is 24 h old or is a device-flow session |
 | GET    | `/me/backups`              | ✓    | list encrypted config backups + `limits` |
 | POST   | `/me/backups`              | ✓    | `{ label, format, appVersion, platform, categories, envelope(base64) }`; ≤ 4 MiB, ≤ 10 per account |
 | GET    | `/me/backups/:id`          | ✓    | `{ backup, envelope }`                  |

@@ -336,4 +336,67 @@ describe("relay connection lease, end to end", () => {
     const status = await relay.room.fetch(new Request("https://session.internal/status"));
     await expect(status.json()).resolves.toEqual({ online: true });
   });
+
+  it("refuses a controller from a session signed out while its grant was in flight", async () => {
+    const relay = new Relay();
+    relay.accounts.signIn("1".repeat(64));
+    await relay.connectDevice();
+    const admittedAt = Date.now();
+    await relay.room.fetch(new Request("https://session.internal/revoke", {
+      method: "POST", body: JSON.stringify({ sessionId: "1".repeat(64) }),
+    }));
+
+    const response = await relay.room.fetch(new Request("https://session.internal/connect", {
+      headers: {
+        upgrade: "websocket",
+        "x-reasonix-role": "controller",
+        "x-reasonix-user-id": String(USER),
+        "x-reasonix-device-id": DEVICE,
+        "x-reasonix-session": "1".repeat(64),
+        "x-reasonix-admitted-at": String(admittedAt),
+        "x-reasonix-reauth-at": String(Date.now() + HOUR),
+      },
+    }));
+    expect(response.status).toBe(401);
+  });
+
+  it("makes room for a new controller by closing one that went quiet, never an active one", async () => {
+    const relay = new Relay();
+    relay.accounts.signIn("1".repeat(64));
+    const device = (await relay.connectDevice()).socket!;
+    const phones: FakeSocket[] = [];
+    for (let index = 0; index < 4; index += 1) phones.push((await relay.connectController("1".repeat(64))).socket!);
+
+    expect((await relay.connectController("1".repeat(64))).status).toBe(429);
+
+    await relay.advance(2 * MINUTE, async () => {
+      heartbeat(device);
+      for (const phone of phones.slice(1)) await relay.say(phone, "poll");
+    });
+    const fifth = await relay.connectController("1".repeat(64));
+    expect(fifth.status).toBe(101);
+    expect(phones[0]?.closed?.code).toBe(CLOSE_IDLE);
+    expect(phones.slice(1).every((phone) => phone.closed === null)).toBe(true);
+  });
+
+  it("stops failing open once access has gone unchecked for an hour", async () => {
+    const relay = new Relay();
+    relay.accounts.signIn("1".repeat(64));
+    const device = (await relay.connectDevice()).socket!;
+    const phone = (await relay.connectController("1".repeat(64))).socket!;
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 503 }));
+
+    await relay.advance(55 * MINUTE, async () => {
+      heartbeat(device);
+      await relay.say(phone, "poll");
+    });
+    expect(phone.closed).toBeNull();
+
+    await relay.advance(10 * MINUTE, async () => {
+      heartbeat(device);
+      if (phone.readyState === 1) await relay.say(phone, "poll");
+    });
+    expect(phone.closed?.code).toBe(CLOSE_IDLE);
+    expect(device.closed?.code).toBe(CLOSE_IDLE);
+  });
 });

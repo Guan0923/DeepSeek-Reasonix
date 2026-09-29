@@ -46,7 +46,10 @@ describe("remote access HTTP boundaries", () => {
     await expect(response.json()).resolves.toMatchObject({ error: { code: "unauthorized_gateway" } });
   });
 
-  it("asks for a fresh sign-in before issuing a grant from an old session", async () => {
+  it.each([
+    ["an old browser session", { s_created: -(24 * 60 * 60 * 1000 + 1000), s_kind: "web" }],
+    ["a fresh device-flow session", { s_created: 0, s_kind: "cli" }],
+  ])("asks for a fresh sign-in before issuing a grant from %s", async (_name, session) => {
     const day = 24 * 60 * 60 * 1000;
     const db = {
       prepare() {
@@ -58,7 +61,8 @@ describe("remote access HTTP boundaries", () => {
               display_name: "", avatar_url: "", bio: "", role: "member", status: "active",
               created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z",
               s_expires: new Date(Date.now() + day).toISOString(),
-              s_created: new Date(Date.now() - day - 1000).toISOString(),
+              s_created: new Date(Date.now() + session.s_created).toISOString(),
+              s_kind: session.s_kind,
             };
           },
         };

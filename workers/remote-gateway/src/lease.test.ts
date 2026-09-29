@@ -41,5 +41,6 @@ describe("connection lease", () => {
     expect(readLease(null)).toBeNull();
     expect(readLease({ role: "controller", userId: 7 })).toBeNull();
     expect(readLease(controller)).toEqual(controller);
+    expect(readLease({ ...controller, reauthAt: null })).toBeNull();
   });
 });

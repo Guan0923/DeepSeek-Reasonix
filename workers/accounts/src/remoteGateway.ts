@@ -45,19 +45,24 @@ export async function disconnectRemote(
   let delivered = true;
   for (let at = 0; at < deviceIds.length; at += 50) {
     const batch = deviceIds.slice(at, at + 50);
-    try {
-      const response = await fetch(`${origin}/v1/devices/revoke`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-reasonix-gateway-token": env.REMOTE_GATEWAY_TOKEN,
-        },
-        body: JSON.stringify(sessionId ? { deviceIds: batch, sessionId } : { deviceIds: batch }),
-      });
-      delivered &&= response.ok;
-    } catch {
-      delivered = false;
+    const body = JSON.stringify(sessionId ? { deviceIds: batch, sessionId } : { deviceIds: batch });
+    let ok = false;
+    for (let attempt = 0; attempt < 2 && !ok; attempt += 1) {
+      try {
+        const response = await fetch(`${origin}/v1/devices/revoke`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-reasonix-gateway-token": env.REMOTE_GATEWAY_TOKEN,
+          },
+          body,
+        });
+        ok = response.ok;
+      } catch {
+        ok = false;
+      }
     }
+    delivered &&= ok;
   }
   return delivered;
 }

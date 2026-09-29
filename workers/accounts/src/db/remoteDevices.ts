@@ -257,7 +257,8 @@ export class RemoteDeviceRepo {
       }
       const session = await this.db.prepare(
         `SELECT s.created_at FROM sessions s JOIN users u ON u.id = s.user_id
-         WHERE s.token_hash = ?1 AND s.user_id = ?2 AND s.expires_at > ?3 AND u.status = 'active'`,
+         WHERE s.token_hash = ?1 AND s.user_id = ?2 AND s.expires_at > ?3
+           AND s.kind = 'web' AND u.status = 'active'`,
       ).bind(lease.sessionId, lease.userId, now).first<{ created_at: string }>();
       verdicts.push(session && session.created_at > signedInAfter ? "active" : "reauth_required");
     }

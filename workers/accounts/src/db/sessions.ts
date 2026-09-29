@@ -10,6 +10,7 @@ export interface NewSession {
 
 export interface SessionRef {
   id: string;
+  kind: "web" | "cli";
   createdAt: string;
 }
 
@@ -51,20 +52,20 @@ export class SessionRepo {
     const tokenHash = await hashToken(this.pepper, token);
     const row = await this.db
       .prepare(
-        `SELECT u.*, s.expires_at AS s_expires, s.created_at AS s_created
+        `SELECT u.*, s.expires_at AS s_expires, s.created_at AS s_created, s.kind AS s_kind
          FROM sessions s JOIN users u ON u.id = s.user_id
          WHERE s.token_hash = ?1`,
       )
       .bind(tokenHash)
-      .first<UserRow & { s_expires: string; s_created: string }>();
+      .first<UserRow & { s_expires: string; s_created: string; s_kind: string }>();
     if (!row) return null;
     if (row.s_expires <= new Date().toISOString()) {
       await this.deleteByHash(tokenHash);
       return null;
     }
     if (row.status !== "active") return null;
-    const { s_expires: _ignored, s_created: createdAt, ...user } = row;
-    return { user, session: { id: tokenHash, createdAt } };
+    const { s_expires: _ignored, s_created: createdAt, s_kind: kind, ...user } = row;
+    return { user, session: { id: tokenHash, kind: kind === "cli" ? "cli" : "web", createdAt } };
   }
 
   async deleteByToken(token: string): Promise<void> {

@@ -137,7 +137,7 @@ describe("remote gateway admission", () => {
     const forwarded: ForwardedRequest[] = [];
     const targetDeviceId = "c".repeat(64);
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      grant: { userId: 9, targetDeviceId, scopes: ["terminal"] },
+      grant: { userId: 9, targetDeviceId, scopes: ["terminal"], reauthAt: new Date(Date.now() + 60_000).toISOString() },
     })));
 
     const response = await run(
@@ -150,6 +150,16 @@ describe("remote gateway admission", () => {
     expect(forwarded[0]?.request.headers.get("x-reasonix-role")).toBe("controller");
     expect(forwarded[0]?.request.headers.get("x-reasonix-scopes")).toBe("terminal");
     expect(Number(forwarded[0]?.request.headers.get("x-reasonix-reauth-at"))).toBeGreaterThan(Date.now());
+  });
+
+  it("refuses a grant that does not say when its session must sign in again", async () => {
+    const forwarded: ForwardedRequest[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      grant: { userId: 9, targetDeviceId: "c".repeat(64), scopes: ["desktop"] },
+    })));
+    const response = await run(websocketRequest("/v1/sessions/connect", "d".repeat(64)), environment(forwarded));
+    expect(response.status).toBe(401);
+    expect(forwarded).toHaveLength(0);
   });
 
   it("carries the signing-in session and its re-authentication time, never a client's copy", async () => {
@@ -200,7 +210,7 @@ describe("remote gateway admission", () => {
     const targetDeviceId = "e".repeat(64);
     const ticket = "f".repeat(64);
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      grant: { userId: 11, targetDeviceId, scopes: ["tasks"] },
+      grant: { userId: 11, targetDeviceId, scopes: ["tasks"], reauthAt: new Date(Date.now() + 60_000).toISOString() },
     })));
 
     const response = await run(

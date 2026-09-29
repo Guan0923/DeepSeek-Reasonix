@@ -46,9 +46,23 @@ After admission each connection holds a lease:
 | Hard limit | the signing-in account session reaches 24 hours old | none |
 | Re-checked against the account service | every 5 minutes | every 5 minutes |
 
-The account service refuses to issue a grant from a session older than 24 hours
-(`remote_reauth_required`), so the hard limit cannot be reset by reconnecting;
-only a fresh sign-in resets it. Removing a device, changing or resetting the
+The account service refuses to issue a grant from a session older than 24 hours,
+or from a device-flow (`cli`) session, whose age says nothing about when a
+password was last entered (`remote_reauth_required`). The hard limit therefore
+cannot be reset by reconnecting; only a fresh password sign-in resets it. A grant
+that does not carry `reauthAt` is refused.
+
+The idle limit reclaims connections whose page is closed or frozen; an open
+Web Studio page polls every few seconds, so it is not a measure of whether a
+person is present. A full room (four controllers) closes its quietest controller
+if that one has been silent for a minute, and refuses the new one otherwise.
+
+When the re-check cannot reach the account service the connections stay open,
+but only until an hour passes without a successful check; then every
+connection closes with 4408 and has to be admitted again. Admission time is
+taken before the account service is asked, and the room remembers device and
+session revocations, so an admission already in flight when a revocation lands
+is refused. Removing a device, changing or resetting the
 password and deleting the account push `POST /v1/devices/revoke` so live
 connections close at once; signing out pushes the same call with the session,
 which closes only that session's controllers. The five-minute re-check bounds
@@ -72,9 +86,11 @@ reconnects.
 ## Deployment
 
 Production deployment runs from the existing `deploy-accounts-worker.yml`
-workflow on the `platform` branch. The workflow deploys the account service
-first, then this gateway, so their shared authentication contract and secret
-cannot be released in the wrong order.
+workflow on the `platform` branch. The workflow applies the account database
+migrations, deploys the account service, then this gateway, so their shared
+authentication contract and secret cannot be released in the wrong order.
+The gateway refuses grants without `reauthAt`, so it must never be deployed
+ahead of an account service that sends it.
 
 Encrypted attachments use the private `reasonix-remote-attachments` R2 bucket.
 Objects are always served as `application/octet-stream` with content sniffing

@@ -4,9 +4,12 @@ export const CONTROLLER_IDLE_MS = 30 * 60 * 1000;
 export const DEVICE_IDLE_MS = 30 * 60 * 1000;
 export const REVALIDATE_MS = 5 * 60 * 1000;
 export const HEARTBEAT_MS = 20 * 1000;
-// Only used when the account service did not say when the signing-in session
-// must sign in again; it matches that service's REMOTE_REAUTH_MS.
-export const FALLBACK_REAUTH_MS = 24 * 60 * 60 * 1000;
+// Re-checks may fail open while the account service is unreachable, but not for
+// longer than this; then every connection has to be admitted again.
+export const UNCHECKED_LIMIT_MS = 60 * 60 * 1000;
+// A full room makes room only by closing a controller silent this long.
+export const EVICTABLE_IDLE_MS = 60 * 1000;
+export const SESSION_REVOCATION_TTL_MS = 10 * 60 * 1000;
 
 export const HEARTBEAT_REQUEST = '{"type":"heartbeat"}';
 export const HEARTBEAT_RESPONSE = '{"type":"heartbeat_ack"}';
@@ -74,6 +77,7 @@ export function readLease(value: unknown): SocketLease | null {
   if (lease.role !== "device" && lease.role !== "controller") return null;
   if (!Number.isSafeInteger(lease.userId) || typeof lease.deviceId !== "string") return null;
   if (!Number.isSafeInteger(lease.admittedAt) || !Number.isSafeInteger(lease.lastActiveAt)) return null;
+  if (lease.role === "controller" && !Number.isSafeInteger(lease.reauthAt)) return null;
   return {
     role: lease.role,
     userId: lease.userId as number,

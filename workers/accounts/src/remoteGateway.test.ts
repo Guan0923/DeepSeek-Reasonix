@@ -59,8 +59,10 @@ describe("remote revocation push", () => {
     }));
   });
 
-  it("reports an undelivered disconnect without throwing", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+  it("retries once and reports an undelivered disconnect without throwing", async () => {
+    const fetchMock = vi.fn(async () => { throw new Error("offline"); });
+    vi.stubGlobal("fetch", fetchMock);
     await expect(disconnectRemote(env, ["1".repeat(64)])).resolves.toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -76,6 +76,11 @@ me.post("/remote-grants", async (c) => {
   const session = c.get("session");
   const { targetDeviceId, scopes } = await parseBody(c, RemoteGrantIssueSchema);
   if (!session) throw new ApiError(401, "unauthorized", "Sign in to continue.");
+  // A device-flow session is minted by approving from another session, so its
+  // age says nothing about when a password was last entered.
+  if (session.kind !== "web") {
+    throw new ApiError(403, "remote_reauth_required", "Sign in on this browser to control a computer remotely.");
+  }
   const reauthAt = Date.parse(session.createdAt) + REMOTE_REAUTH_MS;
   if (!(reauthAt > Date.now())) {
     throw new ApiError(403, "remote_reauth_required", "Sign in again to control this computer remotely.");
