@@ -26,6 +26,11 @@ export const EN_KERNEL: Record<string, string> = {
   "无法连接反馈服务，请检查网络后重试，已填内容会保留": "The feedback service cannot be reached - check the network and retry; what you wrote is kept",
   "反馈服务暂时无法处理请求，请稍后再试": "The feedback service could not handle that - try again later",
   "本机保存反馈记录失败，请重试": "Feedback could not be recorded on this machine - try again",
+  "目前只能从本机对话创建分支": "Forking is currently available for local conversations only",
+  "请等待当前任务完成后再创建对话分支": "Wait for the current task to finish before forking",
+  "这轮对话已发生变化，请刷新后重新选择最终答复": "This turn has changed. Refresh and select its final response again",
+  "创建对话分支失败": "Could not create the conversation fork",
+  "对话分支已保存，但无法打开新窗格，请从侧栏重新打开": "The fork was saved, but its pane could not open. Open it from the sidebar",
   "该决定已不符合当前状态：计划在你回答前已发生变更": "That decision is no longer current - the plan changed before you answered",
   "该条已发送给模型，无法撤回": "That line already reached the model - it cannot be taken back",
   // 能力开关：名字、这台机器的存档、以及服务器自己

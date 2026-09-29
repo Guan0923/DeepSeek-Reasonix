@@ -95,6 +95,7 @@ interface Props {
   // position are exactly what a tab switch must not throw away.
   visible: boolean;
   onSessionChanged: () => void;
+  onFork?: (checkpoint: Checkpoint) => Promise<void>;
   // Bumped when something outside this pane changed a setting that belongs to
   // its session. /status is polled only while a turn runs, so without this the
   // pane keeps reporting the posture it had when it opened.
@@ -118,7 +119,7 @@ interface Props {
   alert?: ReactNode;
 }
 
-function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, onReport, onSessionChanged, pulse, findPulse, onSettings, needsProject, onOpenProject, onKeepHere, theme, dockW, dockMax, onDockW, manualBrowser = false, onManualBrowser, alert }: Props) {
+function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, onReport, onSessionChanged, onFork, pulse, findPulse, onSettings, needsProject, onOpenProject, onKeepHere, theme, dockW, dockMax, onDockW, manualBrowser = false, onManualBrowser, alert }: Props) {
   const [s, dispatch] = useReducer(reduce, initialState);
   const [traj, trajDispatch] = useReducer(reduceTraj, initialTraj);
   const [status, setStatus] = useState<SessionStatus | null>(null);
@@ -303,7 +304,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
     return history;
   }, [port, applyStatus, refreshWallet, onSessionChanged, replayTrajectory]);
 
-  const { onPrepareRewind, onCommitRewind, onUndoRewind, onPrepareFileRevert, onCommitFileRevert } = useRewindActions(port, reloadSession);
+  const { onPrepareFileRevert, onCommitFileRevert } = useRewindActions(port);
 
   // Both of these read only the user and tool cards, so they key off the
   // revision rather than the items array: a streamed answer leaves every card
@@ -489,7 +490,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   );
   const find = useFind(s.items, findPulse, active, useCallback(() => showView("flow"), [showView]));
 
-  const { quote, reply, onResend } = useReplyActions({ port, items: s.items, checkpoints, running, model: status?.label, submit, reloadSession, onSettings, onRunDetail: () => showView("analysis"), onError: fail });
+  const { quote, reply, onResend } = useReplyActions({ port, items: s.items, checkpoints, running, model: status?.label, submit, reloadSession, onSettings, onRunDetail: () => showView("analysis"), onError: fail, onFork });
 
   // Where the bottom is moves as blocks mount under it, so this only asks the
   // transcript to follow again and lets it scroll itself into place.
@@ -572,9 +573,6 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
         onExtInvoke={onExtInvoke}
         onExtSubmit={onExtSubmit}
         checkpoints={paired}
-        onPrepareRewind={onPrepareRewind}
-        onCommitRewind={onCommitRewind}
-        onUndoRewind={onUndoRewind}
         onPrepareFileRevert={onPrepareFileRevert}
         onCommitFileRevert={onCommitFileRevert}
         needsProject={needsProject}

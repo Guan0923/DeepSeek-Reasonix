@@ -15,7 +15,7 @@ const checkpoint = (turn: number, msgIndex: number): Checkpoint => ({ turn, msgI
 
 function draw(items: Item[], checkpoints: Checkpoint[], running = false) {
   const prepareRewind = vi.fn(async (turn: number, _scope: RewindScope) => ({ planId: `plan-${turn}`, canConversation: true }));
-  const commitRewind = vi.fn(async (_planId: string) => ({}));
+  const commitRewind = vi.fn(async (_planId: string) => ({ conversationOk: true }));
   const submit = vi.fn(async (_text: string) => true);
   const reloadSession = vi.fn(async () => {});
   const port = { prepareRewind, commitRewind } as unknown as AgentPort;
@@ -108,7 +108,7 @@ it("removes the superseded reply before sending the original question again", as
   const order: string[] = [];
   const port = {
     prepareRewind: vi.fn(async () => ({ planId: "first", canConversation: true })),
-    commitRewind: vi.fn(async () => ({})),
+    commitRewind: vi.fn(async () => ({ conversationOk: true })),
     history: vi.fn(async () => [{ role: "system" as const, content: "sys", msgIndex: 0 }]),
   } as unknown as AgentPort;
   function Replies() {
