@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { reason } from "../i18n/kernel";
 import { t } from "../i18n";
-import type { AccountState, AgentPort, ProviderSetup } from "../port/port";
+import type { AccountState, AgentPort, Checkpoint, ProviderSetup } from "../port/port";
 import type { HubPort, RuntimeView, TreeWorkspace } from "../port/hub";
 import { Chrome } from "./Chrome";
 import { useLaunchHealth } from "./launchhealth";
@@ -355,6 +355,20 @@ export function App({ hub }: { hub: HubPort }) {
     [hub, reloadPanes],
   );
 
+  const forkPane = useCallback(async (id: string, checkpoint: Checkpoint) => {
+    const source = runtimes.find((rt) => rt.id === id);
+    if (!source?.sessionPath || checkpoint.msgIndex === undefined || !checkpoint.stamp) {
+      throw new Error(t("这轮对话已发生变化，请刷新后重试"));
+    }
+    const view = await hub.fork(id, {
+      sessionPath: source.sessionPath, turn: checkpoint.turn,
+      msgIndex: checkpoint.msgIndex, stamp: checkpoint.stamp,
+    });
+    setRuntimes((prev) => [...prev.filter((rt) => rt.id !== view.id), view]);
+    focusPane(view.id);
+    await reloadPanes();
+  }, [hub, runtimes, focusPane, reloadPanes]);
+
   const adder = useAddWorkspace(hub, reloadTree, fail);
   // 每个窗口都有一个根 —— 没选过项目时那是它碰巧启动的地方。两者读起来一样，
   // 于是「从哪加项目」这句问题永远问不出口；只有内核说的 remembered 分得开。
@@ -668,6 +682,7 @@ export function App({ hub }: { hub: HubPort }) {
                   // session path, and until /runtimes reports it the pane still
                   // looks blank — the next history row would take it over.
                   onSessionChanged={refreshPanes}
+                  onFork={!rt.host && !rt.readOnly ? (checkpoint) => forkPane(rt.id, checkpoint) : undefined}
                   pulse={settingsPulse}
                   findPulse={findPulse}
                   alert={rt.id === active ? (errorBar ?? undefined) : undefined}

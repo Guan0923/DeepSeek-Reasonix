@@ -335,9 +335,6 @@ export const ACTIONS: UIAction[] = [
   // "changed since the checkpoint" question rides on data-value.
   { id: "file-revert.prepare", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
   { id: "file-revert.commit", kind: "destructive", target: "entity", proof: "authority-effect" },
-  { id: "rewind.prepare", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
-  { id: "rewind.commit", kind: "destructive", target: "entity", proof: "authority-effect" },
-  { id: "rewind.undo", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
   { id: "extensions.submit", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "provider.probe", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "provider.draft", kind: "interaction", target: "none", proof: "interaction" },
@@ -458,6 +455,7 @@ export const ACTIONS: UIAction[] = [
   { id: "palette.pick", kind: "view", target: "entity", proof: "interaction" },
   { id: "palette.search", kind: "view", target: "none", proof: "interaction" },
   { id: "reply.quote", kind: "view", target: "entity", proof: "interaction" },
+  { id: "reply.fork", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
   { id: "reply.retry", kind: "view", target: "entity", proof: "interaction" },
   { id: "reply.retry-now", kind: "kernel-mutation", target: "entity", proof: "interaction" },
   { id: "reply.configure", kind: "view", target: "none", proof: "interaction" },
