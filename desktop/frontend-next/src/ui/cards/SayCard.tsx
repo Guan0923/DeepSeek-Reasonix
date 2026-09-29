@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useStartsOpen } from "../../state/foldpref";
 import { StudioIcon } from "../StudioIcon";
 import { t } from "../../i18n";
@@ -11,6 +12,7 @@ import { Boundary } from "../Boundary";
 import { CopyButton } from "../CopyButton";
 import { useRevealed } from "../reveal";
 import { useDismiss } from "../dismiss";
+import { pinToViewport, zoom } from "../place";
 
 // Folded, the only thing left of a thought is how much of the turn it was. The
 // spec puts both halves there — how long, and how much — because either alone
@@ -25,6 +27,8 @@ function thoughtLabel(item: Extract<Item, { t: "say" }>) {
 }
 
 const LIVE_TICK_MS = 100;
+const MENU_GAP = 5;
+const MENU_EDGE = 6;
 
 // While the model is still thinking the reader sees the clock run, not a bare
 // ellipsis; a card this window did not watch begin has no start to count from.
@@ -90,10 +94,39 @@ export function SayCard({ item, afterAnswer, reply }: { item: Extract<Item, { t:
   const [touched, setOpen] = useState<boolean | null>(null);
   const open = touched ?? start;
   const [menu, setMenu] = useState<"" | "retry" | "more">("");
-  // The menu draws above this row, outside its box, so leaving the row is the
-  // way to reach it — not the way to dismiss it.
   const acts = useRef<HTMLDivElement>(null);
-  useDismiss(!!menu, acts, () => setMenu(""));
+  const retryButton = useRef<HTMLButtonElement>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const popup = useRef<HTMLDivElement>(null);
+  useDismiss(!!menu, acts, () => setMenu(""), popup);
+  useLayoutEffect(() => {
+    if (!menu) return;
+    const place = () => {
+      const el = popup.current;
+      const trigger = (menu === "retry" ? retryButton : moreButton).current;
+      if (!el || !trigger) return;
+      el.style.maxHeight = "";
+      const anchor = trigger.getBoundingClientRect();
+      const clip = acts.current?.closest<HTMLElement>('[data-pane="flow"]')?.getBoundingClientRect();
+      const top = Math.max(MENU_EDGE, clip?.top ?? MENU_EDGE);
+      const bottom = Math.min(innerHeight - MENU_EDGE, clip?.bottom ?? innerHeight - MENU_EDGE);
+      const height = el.offsetHeight * zoom();
+      const above = anchor.top - top - MENU_GAP;
+      const below = bottom - anchor.bottom - MENU_GAP;
+      const down = above < height && below > above;
+      const available = Math.max(0, down ? below : above);
+      if (available < height) el.style.maxHeight = `${available / zoom()}px`;
+      const boxHeight = el.offsetHeight * zoom();
+      pinToViewport(el, anchor.left, down ? anchor.bottom + MENU_GAP : anchor.top - MENU_GAP - boxHeight, MENU_EDGE);
+    };
+    place();
+    addEventListener("scroll", place, true);
+    addEventListener("resize", place);
+    return () => {
+      removeEventListener("scroll", place, true);
+      removeEventListener("resize", place);
+    };
+  }, [menu]);
   // Thinking is the longest-running stream of the turn — 10s of it before the
   // first answer token, measured — so it gets the same paced reveal the answer
   // does rather than tracking the wire's bursts.
@@ -143,11 +176,11 @@ export function SayCard({ item, afterAnswer, reply }: { item: Extract<Item, { t:
               )}
               {reply?.onRegenerate && (
                 <span className="acts-menu">
-                  <button type="button" data-action="reply.retry" title={t("重新生成")} aria-label={t("重新生成")} aria-expanded={menu === "retry"} onClick={() => setMenu((m) => (m === "retry" ? "" : "retry"))}>
+                  <button ref={retryButton} type="button" data-action="reply.retry" title={t("重新生成")} aria-label={t("重新生成")} aria-expanded={menu === "retry"} onClick={() => setMenu((m) => (m === "retry" ? "" : "retry"))}>
                     <StudioIcon name="refresh" />
                   </button>
-                  {menu === "retry" && (
-                    <div className="acts-pop" role="menu">
+                  {menu === "retry" && createPortal(
+                    <div className="acts-pop" role="menu" ref={popup}>
                       <div className="acts-pop-head">{t("重新生成")}<small>{t("当前回复会留在运行历史里")}</small></div>
                       <button type="button" role="menuitem" data-action="reply.retry-now" onClick={() => { setMenu(""); reply.onRegenerate?.(); }}>
                         <StudioIcon name="refresh" /><span>{t("按当前配置重试")}</span>{reply.model && <small>{reply.model}</small>}
@@ -157,17 +190,17 @@ export function SayCard({ item, afterAnswer, reply }: { item: Extract<Item, { t:
                           <StudioIcon name="sliders" /><span>{t("先调整模型与强度")}</span>
                         </button>
                       )}
-                    </div>
+                    </div>, document.body
                   )}
                 </span>
               )}
               {reply && (
                 <span className="acts-menu">
-                  <button type="button" data-action="reply.more" title={t("更多")} aria-label={t("更多")} aria-expanded={menu === "more"} onClick={() => setMenu((m) => (m === "more" ? "" : "more"))}>
+                  <button ref={moreButton} type="button" data-action="reply.more" title={t("更多")} aria-label={t("更多")} aria-expanded={menu === "more"} onClick={() => setMenu((m) => (m === "more" ? "" : "more"))}>
                     <StudioIcon name="more" />
                   </button>
-                  {menu === "more" && (
-                    <div className="acts-pop" role="menu">
+                  {menu === "more" && createPortal(
+                    <div className="acts-pop" role="menu" ref={popup}>
                       <div className="acts-pop-head">{t("这条回复")}</div>
                       <button type="button" role="menuitem" data-action="reply.download" onClick={() => { setMenu(""); download(item.text); }}>
                         <StudioIcon name="download" /><span>{t("下载回复")}</span><small>Markdown</small>
@@ -180,7 +213,7 @@ export function SayCard({ item, afterAnswer, reply }: { item: Extract<Item, { t:
                           </button>
                         </>
                       )}
-                    </div>
+                    </div>, document.body
                   )}
                 </span>
               )}
