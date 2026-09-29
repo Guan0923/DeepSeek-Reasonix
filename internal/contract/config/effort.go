@@ -37,7 +37,7 @@ func effortCapabilityForProtocol(e *ProviderEntry, protocol string) (EffortCapab
 		}
 		return deepSeekEffortCapability(e), true
 	case ReasoningProtocolGLM:
-		return binaryThinkingEffortCapability("enabled"), true
+		return zhipuEffortCapability(e), true
 	case ReasoningProtocolKimiK3:
 		return kimiK3EffortCapability(), true
 	case ReasoningProtocolAnthropic:
@@ -94,12 +94,7 @@ func EffortCapabilityForEntry(e *ProviderEntry) EffortCapability {
 		// the model default" (== adaptive for M3).
 		return EffortCapability{Supported: true, Levels: []string{"auto", "adaptive", "disabled"}, Default: "adaptive"}
 	case isZhipuEntry(e):
-		// Zhipu GLM exposes a binary thinking knob (enabled|disabled) on its
-		// OpenAI-compatible endpoint and ignores reasoning_effort, so /effort
-		// mirrors that vocabulary. Default is "enabled" because GLM runs with
-		// thinking on out of the box; "auto" means "don't override the model
-		// default" (== enabled for GLM).
-		return binaryThinkingEffortCapability("enabled")
+		return zhipuEffortCapability(e)
 	case isLongCatEntry(e):
 		// LongCat exposes the same binary thinking vocabulary on its
 		// OpenAI-compatible endpoint and documents no reasoning_effort depth scale.
@@ -165,7 +160,7 @@ func NormalizeEffort(e *ProviderEntry, raw string) (string, error) {
 	case ReasoningProtocolKimiK3:
 		return normalizeKimiK3ReasoningEffort(level)
 	case ReasoningProtocolGLM:
-		return normalizeBinaryThinkingEffort(level)
+		return normalizeZhipuEffort(e, level)
 	case ReasoningProtocolAnthropic:
 		return normalizeAnthropicEffort(level)
 	}
@@ -189,11 +184,7 @@ func NormalizeEffort(e *ProviderEntry, raw string) (string, error) {
 			return "", fmt.Errorf("usage: /effort auto|adaptive|disabled")
 		}
 	case isZhipuEntry(e):
-		// GLM's knob is binary (enabled|disabled); map Anthropic / OpenAI-style
-		// depth levels onto the nearest valid value so a stale /effort high|low
-		// still works. "off" is a retired DeepSeek level meaning "no thinking",
-		// which maps to "disabled".
-		return normalizeBinaryThinkingEffort(level)
+		return normalizeZhipuEffort(e, level)
 	case isLongCatEntry(e):
 		// LongCat's knob is binary (enabled|disabled); depth-like aliases mean
 		// thinking on, while the legacy off spellings disable it.
@@ -223,6 +214,7 @@ func EffortDisplay(e *ProviderEntry) string {
 		return "auto"
 	}
 	effort := normalizeEffortLevel(e.Effort)
+	effort = zhipuLegacyStoredEffort(e, effort)
 	if !effortInContract(e, effort) {
 		return "auto"
 	}
@@ -238,7 +230,7 @@ func EffectiveEffort(e *ProviderEntry) string {
 	if e == nil {
 		return ""
 	}
-	if effort := normalizeStoredEffort(e.Effort); effort != "" && effortInContract(e, effort) {
+	if effort := zhipuLegacyStoredEffort(e, normalizeStoredEffort(e.Effort)); effort != "" && effortInContract(e, effort) {
 		return effort
 	}
 	if explicitReasoningProtocol(e) == ReasoningProtocolKimiK3 {
@@ -467,6 +459,67 @@ func openAIEffortCapability() EffortCapability {
 // Anthropic-compatible gateways. def is what "auto" resolves to.
 func binaryThinkingEffortCapability(def string) EffortCapability {
 	return EffortCapability{Supported: true, Levels: []string{"auto", "enabled", "disabled"}, Default: def}
+}
+
+func zhipuEffortCapability(e *ProviderEntry) EffortCapability {
+	if !isZhipuEntry(e) {
+		return binaryThinkingEffortCapability("enabled")
+	}
+	switch provider.ZhipuDepthModel(e.Model) {
+	case "glm-5.2":
+		return EffortCapability{Supported: true, Levels: []string{"auto", "none", "minimal", "low", "medium", "high", "xhigh", "max"}, Default: "max"}
+	case "glm-5.3", "glm-5.3-flash":
+		return EffortCapability{Supported: true, Levels: []string{"auto", "low", "high", "max"}, Default: "max"}
+	default:
+		return binaryThinkingEffortCapability("enabled")
+	}
+}
+
+func zhipuLegacyStoredEffort(e *ProviderEntry, effort string) string {
+	if !isZhipuEntry(e) {
+		return effort
+	}
+	switch provider.ZhipuDepthModel(e.Model) {
+	case "glm-5.2":
+		if effort == "enabled" {
+			return "max"
+		}
+		if effort == "disabled" {
+			return "none"
+		}
+	case "glm-5.3", "glm-5.3-flash":
+		if effort == "enabled" {
+			return "max"
+		}
+		if effort == "disabled" {
+			return "low" // 5.3 rejects disabled thinking; preserve the cheapest intent.
+		}
+	}
+	return effort
+}
+
+func normalizeZhipuEffort(e *ProviderEntry, level string) (string, error) {
+	cap := zhipuEffortCapability(e)
+	if containsString(cap.Levels, level) {
+		return level, nil
+	}
+	switch provider.ZhipuDepthModel(e.Model) {
+	case "glm-5.2":
+		switch level {
+		case "enabled":
+			return "max", nil
+		case "disabled", "off":
+			return "none", nil
+		}
+	case "glm-5.3", "glm-5.3-flash":
+		if level == "enabled" {
+			return "max", nil
+		}
+	}
+	if cap.Default == "enabled" {
+		return normalizeBinaryThinkingEffort(level)
+	}
+	return "", fmt.Errorf("usage: /effort %s", strings.Join(cap.Levels, "|"))
 }
 
 // normalizeBinaryThinkingEffort maps depth vocabularies onto the binary knob so

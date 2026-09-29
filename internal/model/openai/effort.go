@@ -31,6 +31,7 @@ type effortEndpoint struct {
 	flash        bool // deepseek-v4-flash — the only official DeepSeek model with effort=low
 	minimax      bool
 	zhipu        bool
+	zhipuDepth   string
 	longcat      bool
 	ollamaCloud  bool
 	explicit     bool
@@ -41,11 +42,18 @@ type effortEndpoint struct {
 // configured effort for this endpoint. Binary thinking knobs and disabled
 // thinking yield nil — an override adjusts depth, never whether thinking runs.
 func requestEffortVocabulary(e effortEndpoint) []string {
-	if e.thinkingType == "disabled" || e.protocol == "none" || e.minimax || e.zhipu || e.longcat {
+	if e.thinkingType == "disabled" || e.protocol == "none" || e.minimax || (e.zhipu && e.zhipuDepth == "") || e.longcat {
 		return nil
 	}
 	var levels []string
 	switch {
+	case e.zhipuDepth == "glm-5.2":
+		if e.effort == "none" || e.effort == "minimal" {
+			return nil
+		}
+		levels = []string{"low", "medium", "high", "xhigh", "max"}
+	case e.zhipuDepth != "":
+		levels = []string{"low", "high", "max"}
 	case e.explicit:
 		levels = e.supported
 	case e.deepseek:
