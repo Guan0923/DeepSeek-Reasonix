@@ -11,13 +11,12 @@ import {
   REMOTE_AUTH_PROTOCOL_PREFIX,
   REMOTE_WEBSOCKET_PROTOCOL,
 } from "./protocol";
+import { FALLBACK_REAUTH_MS } from "./lease";
 export { RemoteSession } from "./session";
 
 const DEVICE_PATH = /^\/v1\/devices\/([0-9a-f]{64})\/connect$/;
 const ATTACHMENT_PATH = /^\/v1\/attachments\/([0-9a-f]{64})$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const DEVICE_ADMISSION_MS = 30 * 60 * 1000;
-const CONTROLLER_ADMISSION_MS = 15 * 60 * 1000;
 const MAX_PRESENCE_DEVICES = 50;
 
 function equalSecret(supplied: string, expected: string): boolean {
@@ -27,6 +26,42 @@ function equalSecret(supplied: string, expected: string): boolean {
     difference |= supplied.charCodeAt(index) ^ expected.charCodeAt(index);
   }
   return difference === 0;
+}
+
+function gatewayAuthenticated(request: Request, env: Env): boolean {
+  const supplied = request.headers.get("x-reasonix-gateway-token") ?? "";
+  return Boolean(env.REMOTE_GATEWAY_TOKEN) && equalSecret(supplied, env.REMOTE_GATEWAY_TOKEN ?? "");
+}
+
+// The account service calls this right after revoking a device or ending a
+// session, so live connections close now rather than at their next check.
+async function revokeDevices(request: Request, env: Env): Promise<Response> {
+  let body: { deviceIds?: unknown; sessionId?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError(400, "invalid_request", "A JSON body is required.");
+  }
+  const deviceIds = body.deviceIds;
+  if (!Array.isArray(deviceIds) || deviceIds.length === 0 || deviceIds.length > MAX_PRESENCE_DEVICES ||
+      deviceIds.some((id) => typeof id !== "string" || !SHA256_PATTERN.test(id))) {
+    return jsonError(400, "invalid_devices", `Up to ${MAX_PRESENCE_DEVICES} valid device IDs are allowed.`);
+  }
+  if (body.sessionId !== undefined && (typeof body.sessionId !== "string" || !SHA256_PATTERN.test(body.sessionId))) {
+    return jsonError(400, "invalid_session", "The session ID is invalid.");
+  }
+  const payload = JSON.stringify(body.sessionId ? { sessionId: body.sessionId } : {});
+  const results = await Promise.all([...new Set(deviceIds as string[])].map(async (deviceId) => {
+    try {
+      const stub = env.REMOTE_SESSIONS.get(env.REMOTE_SESSIONS.idFromName(deviceId));
+      const response = await stub.fetch("https://session.internal/revoke", { method: "POST", body: payload });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }));
+  if (results.includes(false)) return jsonError(502, "revoke_incomplete", "Some devices could not be reached.");
+  return Response.json({ ok: true });
 }
 
 function attachmentKey(objectId: string): string {
@@ -115,22 +150,32 @@ async function withinBudget(request: Request, env: Env, token: string): Promise<
   return (await env.GATEWAY_LIMITER.limit({ key: `${ip}:${token.slice(0, 16)}` })).success;
 }
 
+interface Admission {
+  role: "device" | "controller";
+  userId: number;
+  scopes: string[];
+  sessionId?: string;
+  reauthAt?: number;
+}
+
 function forwardToSession(
   request: Request,
   env: Env,
   targetDeviceId: string,
-  role: "device" | "controller",
-  userId: number,
-  scopes: string[],
-  admissionMs: number,
+  admission: Admission,
 ): Promise<Response> {
   const id = env.REMOTE_SESSIONS.idFromName(targetDeviceId);
-  const headers = new Headers(request.headers);
-  headers.set("x-reasonix-role", role);
-  headers.set("x-reasonix-user-id", String(userId));
-  headers.set("x-reasonix-scopes", scopes.join(","));
-  headers.set("x-reasonix-expires-at", String(Date.now() + admissionMs));
-  headers.delete("authorization");
+  const headers = new Headers();
+  for (const [name, value] of request.headers) {
+    if (!name.startsWith("x-reasonix-") && name !== "authorization") headers.append(name, value);
+  }
+  headers.set("x-reasonix-role", admission.role);
+  headers.set("x-reasonix-user-id", String(admission.userId));
+  headers.set("x-reasonix-device-id", targetDeviceId);
+  headers.set("x-reasonix-scopes", admission.scopes.join(","));
+  headers.set("x-reasonix-admitted-at", String(Date.now()));
+  if (admission.sessionId) headers.set("x-reasonix-session", admission.sessionId);
+  if (admission.reauthAt !== undefined) headers.set("x-reasonix-reauth-at", String(admission.reauthAt));
   const protocols = offeredProtocols(request);
   if (protocols.includes(REMOTE_WEBSOCKET_PROTOCOL)) {
     headers.set("sec-websocket-protocol", REMOTE_WEBSOCKET_PROTOCOL);
@@ -161,9 +206,14 @@ const worker: ExportedHandler<Env> = {
     if (!originAllowed(request, env)) {
       return jsonError(403, "origin_rejected", "This website is not allowed to use the remote gateway.");
     }
+    if (url.pathname === "/v1/devices/revoke" && request.method === "POST") {
+      if (!gatewayAuthenticated(request, env)) {
+        return jsonError(401, "unauthorized_gateway", "Gateway authentication failed.");
+      }
+      return revokeDevices(request, env);
+    }
     if (url.pathname === "/v1/devices/status" && request.method === "POST") {
-      const supplied = request.headers.get("x-reasonix-gateway-token") ?? "";
-      if (!env.REMOTE_GATEWAY_TOKEN || !equalSecret(supplied, env.REMOTE_GATEWAY_TOKEN)) {
+      if (!gatewayAuthenticated(request, env)) {
         return jsonError(401, "unauthorized_gateway", "Gateway authentication failed.");
       }
       let body: unknown;
@@ -227,21 +277,24 @@ const worker: ExportedHandler<Env> = {
       if (!authenticated || authenticated.device.id !== deviceMatch[1]) {
         return jsonError(401, "invalid_device", "The device credential is invalid or revoked.");
       }
-      return forwardToSession(
-        request, env, authenticated.device.id, "device", authenticated.userId,
-        authenticated.device.capabilities,
-        DEVICE_ADMISSION_MS,
-      );
+      return forwardToSession(request, env, authenticated.device.id, {
+        role: "device",
+        userId: authenticated.userId,
+        scopes: authenticated.device.capabilities,
+      });
     }
 
     if (url.pathname === "/v1/sessions/connect") {
       const consumed = await consumeGrant(env, token);
       if (!consumed) return jsonError(401, "invalid_grant", "The connection grant is invalid or expired.");
-      return forwardToSession(
-        request, env, consumed.grant.targetDeviceId, "controller",
-        consumed.grant.userId, consumed.grant.scopes,
-        CONTROLLER_ADMISSION_MS,
-      );
+      const reauthAt = Date.parse(consumed.grant.reauthAt ?? "");
+      return forwardToSession(request, env, consumed.grant.targetDeviceId, {
+        role: "controller",
+        userId: consumed.grant.userId,
+        scopes: consumed.grant.scopes,
+        sessionId: consumed.grant.sessionId,
+        reauthAt: Number.isFinite(reauthAt) ? reauthAt : Date.now() + FALLBACK_REAUTH_MS,
+      });
     }
 
     return jsonError(404, "not_found", "Not found.");

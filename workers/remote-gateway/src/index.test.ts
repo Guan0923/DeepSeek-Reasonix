@@ -22,7 +22,8 @@ function environment(forwarded: ForwardedRequest[], attachments?: Record<string,
       idFromName(name: string) { return name as unknown as DurableObjectId; },
       get(id: DurableObjectId) {
         return {
-          async fetch(request: Request) {
+          async fetch(input: RequestInfo, init?: RequestInit) {
+            const request = input instanceof Request ? input : new Request(input, init);
             forwarded.push({ id: id as unknown as string, request });
             return new Response("forwarded");
           },
@@ -127,7 +128,9 @@ describe("remote gateway admission", () => {
     expect(forwarded[0]?.id).toBe(deviceId);
     expect(forwarded[0]?.request.headers.get("authorization")).toBeNull();
     expect(forwarded[0]?.request.headers.get("x-reasonix-role")).toBe("device");
-    expect(Number(forwarded[0]?.request.headers.get("x-reasonix-expires-at"))).toBeGreaterThan(Date.now());
+    expect(forwarded[0]?.request.headers.get("x-reasonix-device-id")).toBe(deviceId);
+    expect(Number(forwarded[0]?.request.headers.get("x-reasonix-admitted-at"))).toBeLessThanOrEqual(Date.now());
+    expect(forwarded[0]?.request.headers.get("x-reasonix-reauth-at")).toBeNull();
   });
 
   it("consumes a controller grant and routes it to the target device room", async () => {
@@ -146,6 +149,50 @@ describe("remote gateway admission", () => {
     expect(forwarded[0]?.id).toBe(targetDeviceId);
     expect(forwarded[0]?.request.headers.get("x-reasonix-role")).toBe("controller");
     expect(forwarded[0]?.request.headers.get("x-reasonix-scopes")).toBe("terminal");
+    expect(Number(forwarded[0]?.request.headers.get("x-reasonix-reauth-at"))).toBeGreaterThan(Date.now());
+  });
+
+  it("carries the signing-in session and its re-authentication time, never a client's copy", async () => {
+    const forwarded: ForwardedRequest[] = [];
+    const targetDeviceId = "c".repeat(64);
+    const reauthAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      grant: { userId: 9, targetDeviceId, scopes: ["desktop"], sessionId: "5".repeat(64), reauthAt },
+    })));
+    const request = websocketRequest("/v1/sessions/connect", "d".repeat(64));
+    const forged = new Headers(request.headers);
+    forged.set("x-reasonix-reauth-at", String(Number.MAX_SAFE_INTEGER));
+    forged.set("x-reasonix-role", "device");
+
+    await run(new Request(request, { headers: forged }), environment(forwarded));
+
+    const headers = forwarded[0]?.request.headers;
+    expect(headers?.get("x-reasonix-role")).toBe("controller");
+    expect(headers?.get("x-reasonix-session")).toBe("5".repeat(64));
+    expect(Number(headers?.get("x-reasonix-reauth-at"))).toBe(Date.parse(reauthAt));
+  });
+
+  it("closes a revoked device's connections only for the account service", async () => {
+    const forwarded: ForwardedRequest[] = [];
+    const deviceId = "a".repeat(64);
+    const denied = await run(new Request("https://remote.reasonix.io/v1/devices/revoke", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deviceIds: [deviceId] }),
+    }), environment(forwarded));
+    expect(denied.status).toBe(401);
+    expect(forwarded).toHaveLength(0);
+
+    const env = environment(forwarded);
+    const response = await run(new Request("https://remote.reasonix.io/v1/devices/revoke", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-reasonix-gateway-token": "gateway-secret" },
+      body: JSON.stringify({ deviceIds: [deviceId], sessionId: "6".repeat(64) }),
+    }), env);
+    expect(response.status).toBe(200);
+    expect(forwarded[0]?.id).toBe(deviceId);
+    expect(new URL(forwarded[0]!.request.url).pathname).toBe("/revoke");
+    await expect(forwarded[0]!.request.json()).resolves.toEqual({ sessionId: "6".repeat(64) });
   });
 
   it("admits a browser controller without exposing its ticket to the session", async () => {

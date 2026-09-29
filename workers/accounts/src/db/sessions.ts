@@ -8,6 +8,16 @@ export interface NewSession {
   ttlMs?: number;
 }
 
+export interface SessionRef {
+  id: string;
+  createdAt: string;
+}
+
+export interface ResolvedSession {
+  user: UserRow;
+  session: SessionRef;
+}
+
 export class SessionRepo {
   constructor(
     private readonly db: D1Database,
@@ -32,23 +42,29 @@ export class SessionRepo {
 
   // Resolves a cookie token to its active user, pruning the row if expired.
   async resolve(token: string): Promise<UserRow | null> {
+    return (await this.resolveSession(token))?.user ?? null;
+  }
+
+  // The session's id is its stored hash, so it can name the session to another
+  // service without ever being usable as a cookie.
+  async resolveSession(token: string): Promise<ResolvedSession | null> {
     const tokenHash = await hashToken(this.pepper, token);
     const row = await this.db
       .prepare(
-        `SELECT u.*, s.expires_at AS s_expires
+        `SELECT u.*, s.expires_at AS s_expires, s.created_at AS s_created
          FROM sessions s JOIN users u ON u.id = s.user_id
          WHERE s.token_hash = ?1`,
       )
       .bind(tokenHash)
-      .first<UserRow & { s_expires: string }>();
+      .first<UserRow & { s_expires: string; s_created: string }>();
     if (!row) return null;
     if (row.s_expires <= new Date().toISOString()) {
       await this.deleteByHash(tokenHash);
       return null;
     }
     if (row.status !== "active") return null;
-    const { s_expires: _ignored, ...user } = row;
-    return user;
+    const { s_expires: _ignored, s_created: createdAt, ...user } = row;
+    return { user, session: { id: tokenHash, createdAt } };
   }
 
   async deleteByToken(token: string): Promise<void> {

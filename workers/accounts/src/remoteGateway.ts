@@ -28,3 +28,36 @@ export async function remoteDevicePresence(
     return { onlineIds: new Set(), available: false };
   }
 }
+
+// Asks the relay to close live connections the account service has just
+// revoked. With `sessionId`, only controllers admitted through that account
+// session close; without it, every connection to the named devices does.
+// The relay also re-checks each connection on a timer, so a failed call here
+// delays the disconnect rather than losing it.
+export async function disconnectRemote(
+  env: Bindings,
+  deviceIds: string[],
+  sessionId?: string,
+): Promise<boolean> {
+  if (deviceIds.length === 0) return true;
+  if (!env.REMOTE_GATEWAY_TOKEN || !env.REMOTE_GATEWAY_ORIGIN) return false;
+  const origin = env.REMOTE_GATEWAY_ORIGIN.replace(/\/+$/, "");
+  let delivered = true;
+  for (let at = 0; at < deviceIds.length; at += 50) {
+    const batch = deviceIds.slice(at, at + 50);
+    try {
+      const response = await fetch(`${origin}/v1/devices/revoke`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-reasonix-gateway-token": env.REMOTE_GATEWAY_TOKEN,
+        },
+        body: JSON.stringify(sessionId ? { deviceIds: batch, sessionId } : { deviceIds: batch }),
+      });
+      delivered &&= response.ok;
+    } catch {
+      delivered = false;
+    }
+  }
+  return delivered;
+}

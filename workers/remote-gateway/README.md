@@ -14,7 +14,8 @@ the Durable Objects Hibernation API.
 - `GET /v1/sessions/connect` with `Authorization: Bearer <oneTimeGrant>`
 
 The account service can also batch-check live device sockets through
-`POST /v1/devices/status`. This internal endpoint requires the shared gateway
+`POST /v1/devices/status`, and close revoked ones through
+`POST /v1/devices/revoke`. These internal endpoints require the shared gateway
 secret; browser clients never receive it. Registered devices are not treated as
 online merely because they connected in the past.
 
@@ -29,9 +30,44 @@ device replies must target that ID, so responses are never broadcast to other
 controllers. The account service and this Worker share the
 `REMOTE_GATEWAY_TOKEN` Worker secret.
 
-Device admissions expire after 30 minutes and controller admissions after 15
-minutes. Clients reconnect with fresh credentials so account or device
-revocation takes effect without keeping a server-side revocation stream alive.
+## Admission and leases
+
+A credential is checked once, at the WebSocket upgrade. Controller grants are
+one-time and expire 60 seconds after the account service issues them; a device
+credential lasts until the device is revoked. An open connection is never cut
+because the credential that admitted it has aged.
+
+After admission each connection holds a lease:
+
+| | Controller | Device |
+|---|---|---|
+| Idle limit, sliding on the connection's own frames | 30 minutes | 30 minutes |
+| Also counts as activity | — | `{"type":"heartbeat"}`, answered by the runtime without waking the object |
+| Hard limit | the signing-in account session reaches 24 hours old | none |
+| Re-checked against the account service | every 5 minutes | every 5 minutes |
+
+The account service refuses to issue a grant from a session older than 24 hours
+(`remote_reauth_required`), so the hard limit cannot be reset by reconnecting;
+only a fresh sign-in resets it. Removing a device, changing or resetting the
+password and deleting the account push `POST /v1/devices/revoke` so live
+connections close at once; signing out pushes the same call with the session,
+which closes only that session's controllers. The five-minute re-check bounds
+the delay when a push is lost.
+
+Each close carries a code the client acts on without reading the reason text:
+
+| Code | Meaning | Client action |
+|---|---|---|
+| 4408 | idle limit reached | reconnect silently with a fresh grant |
+| 4401 | the account session must sign in again (age limit or signed out) | ask the user to sign in |
+| 4403 | the device or the account's access was revoked | stop; do not retry |
+| 4004 | the desktop disconnected this controller | stop; do not retry |
+| 4001 | a newer device connection replaced this one | device only |
+
+A device connection is greeted with `relay_hello`, which lists the controllers
+still attached, so a reconnecting desktop keeps their encrypted sessions, and
+names the heartbeat frame. Controllers stay attached while their device
+reconnects.
 
 ## Deployment
 
