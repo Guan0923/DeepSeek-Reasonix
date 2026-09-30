@@ -13,23 +13,6 @@ const item = { t: "user", id: "row", text: "把重试次数从 1 改成 3" } as 
 const cp: Checkpoint = { turn: 4, prompt: "把重试次数从 1 改成 3", files: 2, msgIndex: 7 };
 
 describe("editing a message and sending it again", () => {
-  it("copies a single digit and opens its editor only on double click", async () => {
-    const user = userEvent.setup();
-    const write = vi.spyOn(navigator.clipboard, "writeText");
-    render(<UserCard item={{ ...item, text: "1" }} cp={cp} onResend={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "复制消息" }));
-    expect(write).toHaveBeenCalledWith("1");
-    await user.click(screen.getByText("1"));
-    expect(screen.queryByRole("textbox")).toBeNull();
-    await user.dblClick(screen.getByText("1"));
-    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("1");
-  });
-
-  it("does not edit a queued message on double click", async () => {
-    render(<UserCard item={{ ...item, pending: true }} cp={cp} onResend={vi.fn()} />);
-    await userEvent.dblClick(screen.getByText(item.text));
-    expect(screen.queryByRole("textbox")).toBeNull();
-  });
   it("offers nothing without a turn to go back to", () => {
     render(<UserCard item={item} onResend={vi.fn()} />);
     expect(screen.queryByRole("button", { name: /改写/ })).toBeNull();

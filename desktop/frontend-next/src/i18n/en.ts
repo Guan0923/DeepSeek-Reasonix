@@ -20,10 +20,9 @@ import { EN_FEEDBACK } from "./en_feedback";
 import { EN_COMMUNITY } from "./en_community";
 
 export const EN: Record<string, string> = {
-  "复制消息": "Copy message",
+  "{title}(分支)": "{title} (branch)",
   "从此回复创建对话分支": "Fork conversation from this response",
   "这轮对话已发生变化，请刷新后重试": "This turn has changed. Refresh and try again.",
-  "消息未发送，请重试": "The message was not sent. Try again.",
   "工作台": "Workbench",
   "从右侧选择文件，或打开浏览器": "Choose a file on the right, or open a browser",
   ...EN_SETTINGS,

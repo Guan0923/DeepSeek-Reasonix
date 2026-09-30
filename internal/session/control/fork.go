@@ -94,5 +94,8 @@ func (c *Controller) ForkTurn(sessionPath string, turn, msgIndex int, stamp stri
 	if err := sessionstore.SaveBranchMeta(path, meta); err != nil {
 		return "", err
 	}
+	if err := c.checkpoints.storeRef().CopyConversationPrefixTo(ckptDir(path), sessionstore.BranchID(path), last+1); err != nil {
+		return "", errors.Join(err, removeSessionArtifacts(path))
+	}
 	return path, nil
 }

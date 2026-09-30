@@ -355,20 +355,6 @@ export function App({ hub }: { hub: HubPort }) {
     [hub, reloadPanes],
   );
 
-  const forkPane = useCallback(async (id: string, checkpoint: Checkpoint) => {
-    const source = runtimes.find((rt) => rt.id === id);
-    if (!source?.sessionPath || checkpoint.msgIndex === undefined || !checkpoint.stamp) {
-      throw new Error(t("这轮对话已发生变化，请刷新后重试"));
-    }
-    const view = await hub.fork(id, {
-      sessionPath: source.sessionPath, turn: checkpoint.turn,
-      msgIndex: checkpoint.msgIndex, stamp: checkpoint.stamp,
-    });
-    setRuntimes((prev) => [...prev.filter((rt) => rt.id !== view.id), view]);
-    focusPane(view.id);
-    await reloadPanes();
-  }, [hub, runtimes, focusPane, reloadPanes]);
-
   const adder = useAddWorkspace(hub, reloadTree, fail);
   // 每个窗口都有一个根 —— 没选过项目时那是它碰巧启动的地方。两者读起来一样，
   // 于是「从哪加项目」这句问题永远问不出口；只有内核说的 remembered 分得开。
@@ -449,6 +435,23 @@ export function App({ hub }: { hub: HubPort }) {
       })),
     [runtimes, titleFor, runs, viewed.tree, viewed.remote],
   );
+  const forkPane = useCallback(async (id: string, checkpoint: Checkpoint) => {
+    const source = runtimes.find((rt) => rt.id === id);
+    if (!source?.sessionPath || checkpoint.msgIndex === undefined || !checkpoint.stamp) {
+      throw new Error(t("这轮对话已发生变化，请刷新后重试"));
+    }
+    const view = await hub.fork(id, {
+      sessionPath: source.sessionPath, turn: checkpoint.turn,
+      msgIndex: checkpoint.msgIndex, stamp: checkpoint.stamp,
+    });
+    if (!view.sessionPath) throw new Error(t("对话分支已保存，但无法打开新窗格，请从侧栏重新打开"));
+    const title = tabs.find((tab) => tab.rt.id === id)?.title ?? t("新会话");
+    await hub.renameSession(view.sessionPath, t("{title}(分支)", { title }));
+    setRuntimes((prev) => [...prev.filter((rt) => rt.id !== view.id), view]);
+    focusPane(view.id);
+    await reloadPanes();
+  }, [hub, runtimes, tabs, focusPane, reloadPanes]);
+
   // The folder only earns tab space when the panes actually span more than one.
   const manyRoots = useMemo(() => new Set(runtimes.map((rt) => rt.root)).size > 1, [runtimes]);
   const activeRuntime = runtimes.find((rt) => rt.id === active);

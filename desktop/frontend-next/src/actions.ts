@@ -335,6 +335,9 @@ export const ACTIONS: UIAction[] = [
   // "changed since the checkpoint" question rides on data-value.
   { id: "file-revert.prepare", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
   { id: "file-revert.commit", kind: "destructive", target: "entity", proof: "authority-effect" },
+  { id: "rewind.prepare", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
+  { id: "rewind.commit", kind: "destructive", target: "entity", proof: "authority-effect" },
+  { id: "rewind.undo", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
   { id: "extensions.submit", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "provider.probe", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "provider.draft", kind: "interaction", target: "none", proof: "interaction" },
