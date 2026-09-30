@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"path/filepath"
-	"strings"
 
 	"reasonix/internal/session/control"
-	"reasonix/internal/state/sessionstore"
 )
 
 func (h *Hub) forkRuntime(w http.ResponseWriter, r *http.Request) {
@@ -48,25 +45,6 @@ func (h *Hub) forkRuntime(w http.ResponseWriter, r *http.Request) {
 		default:
 			refuse(w, http.StatusInternalServerError, "fork.failed", err.Error(), nil)
 		}
-		return
-	}
-	parent, _, err := sessionstore.LoadBranchMeta(req.SessionPath)
-	if err != nil {
-		refuse(w, http.StatusInternalServerError, "fork.failed", err.Error(), nil)
-		return
-	}
-	title := strings.TrimSpace(parent.CustomTitle)
-	if title == "" {
-		title, _ = h.titleCacheFor(filepath.Dir(req.SessionPath)).get(filepath.Base(req.SessionPath), titleSource(parent.Preview), sessionstore.SessionContentModTime(req.SessionPath).UnixNano())
-	}
-	if title == "" {
-		title = previewTitle(parent.Preview)
-	}
-	if title == "" {
-		title = strings.TrimSuffix(filepath.Base(req.SessionPath), ".jsonl")
-	}
-	if err := sessionstore.RenameSession(path, title+"(分支)"); err != nil {
-		refuse(w, http.StatusInternalServerError, "fork.failed", err.Error(), nil)
 		return
 	}
 	child, err := h.Open(r.Context(), OpenRequest{Root: rt.Root, SessionPath: path})

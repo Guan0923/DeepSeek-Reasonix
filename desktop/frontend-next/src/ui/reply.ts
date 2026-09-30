@@ -34,14 +34,17 @@ export function useReplyActions({ port, items, checkpoints, running, model, subm
   // the word "regenerate" makes.
   const regenerate = useCallback(
     async (turn: number, text: string) => {
-      const plan = await port.prepareRewind(turn, "conversation");
-      if (!plan.canConversation) throw new Error(plan.disabledReason || t("这一轮无法重新生成"));
-      const result = await port.commitRewind(plan.planId);
-      if (!result.conversationOk) throw new Error(result.error || t("对话没有被回退，原文仍在记录里"));
-      await reloadSession();
-      if (!await submit(text)) throw new Error(t("消息未发送，请重试"));
+      try {
+        const plan = await port.prepareRewind(turn, "conversation");
+        if (!plan.canConversation) throw new Error(plan.disabledReason || t("这一轮无法重新生成"));
+        await port.commitRewind(plan.planId);
+        await reloadSession();
+        await submit(text);
+      } catch (e) {
+        onError(e);
+      }
     },
-    [port, submit, reloadSession],
+    [port, submit, reloadSession, onError],
   );
 
   // A reply belongs to the most recent user turn, including when that turn
@@ -88,7 +91,7 @@ export function useReplyActions({ port, items, checkpoints, running, model, subm
       onRegenerate: (id: string) => {
         if (running) return;
         const ask = replyTurns.get(id);
-        if (ask) void regenerate(ask.turn, ask.text).catch(onError);
+        if (ask) void regenerate(ask.turn, ask.text);
       },
       model,
       onConfigureModel: () => onSettings("model"),
