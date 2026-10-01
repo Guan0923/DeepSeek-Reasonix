@@ -39,7 +39,7 @@ func TestAutoSkipsPowerShellThatDoesNotLaunch(t *testing.T) {
 	launches := func(p string) bool { asked = append(asked, p); return p != alias && p != `C:\fake\pwsh.exe` }
 
 	h := shellHost{"windows", fakePath("pwsh", "powershell"), yes, nil, winPS, no, no, launches}
-	if got := h.auto(); got.Kind != ShellPowerShell || got.Path != `C:\fake\System32\powershell.exe` {
+	if got := h.auto(nil); got.Kind != ShellPowerShell || got.Path != `C:\fake\System32\powershell.exe` {
 		t.Fatalf("auto = %+v, want Windows PowerShell 5.1", got)
 	}
 	if want := []string{alias, `C:\fake\pwsh.exe`, `C:\fake\System32\powershell.exe`}; !slices.Equal(asked, want) {
@@ -47,13 +47,13 @@ func TestAutoSkipsPowerShellThatDoesNotLaunch(t *testing.T) {
 	}
 
 	h.launches = yes
-	if got := h.auto(); got.Path != alias {
+	if got := h.auto(nil); got.Path != alias {
 		t.Fatalf("auto = %+v, want the Store pwsh when it launches", got)
 	}
 
 	asked = nil
 	h = shellHost{"windows", fakePath("bash", "pwsh"), yes, nil, winPS, yes, no, launches}
-	if got := h.auto(); got.Kind != ShellBash || len(asked) != 0 {
+	if got := h.auto(nil); got.Kind != ShellBash || len(asked) != 0 {
 		t.Fatalf("auto = %+v, asked %q; want bash with no PowerShell probe", got, asked)
 	}
 }
