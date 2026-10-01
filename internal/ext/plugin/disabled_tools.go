@@ -51,3 +51,13 @@ func DisabledMCPBindings(s Spec) []tool.MCPBinding {
 	}
 	return out
 }
+
+// ApplyDisabledMCPPolicy replaces the registry's policy for one server. A
+// complete replacement, rather than additive marks, prevents stale entries from
+// surviving a reconnect whose disabled_tools list has shrunk or changed.
+func ApplyDisabledMCPPolicy(reg *tool.Registry, s Spec) {
+	if reg == nil {
+		return
+	}
+	reg.ReplaceDisabledMCP(s.Name, DisabledMCPBindings(s))
+}

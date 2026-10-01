@@ -40,6 +40,9 @@ type ResolvedCall struct {
 	Unavailable bool
 	// UnavailableReason is the host-proven failure detail.
 	UnavailableReason string
+	// RefusalCode is the host refusal identity when SkipExecute carries a
+	// policy denial rather than a generic unavailable result.
+	RefusalCode string
 	// Commit applies a resolve-only state transition after the host has checked
 	// the resolved call. Proxy resolvers must not mutate host state before this
 	// callback runs: read-only agents may reject the action after resolution.

@@ -708,6 +708,32 @@ func TestMergeMCPJSONPreservesUserDisabledTools(t *testing.T) {
 	}
 }
 
+func TestMergeMCPJSONUserCollisionKeepsProjectDisabledTools(t *testing.T) {
+	cfg := &Config{Plugins: []PluginEntry{{
+		Name:          "shared",
+		Command:       "project-bin",
+		Source:        MCPSourceProjectConfig,
+		DisabledTools: []string{"publish", "delete"},
+	}}}
+	cfg.mergeMCPJSON([]PluginEntry{{
+		Name:          "shared",
+		Command:       "user-bin",
+		Source:        MCPSourceClaudeUser,
+		DisabledTools: []string{"write"},
+	}})
+
+	if len(cfg.Plugins) != 1 {
+		t.Fatalf("plugins = %+v", cfg.Plugins)
+	}
+	got := cfg.Plugins[0]
+	if got.Command != "project-bin" || got.Source != MCPSourceProjectConfig {
+		t.Fatalf("project entry did not remain authoritative: %+v", got)
+	}
+	if want := []string{"publish", "delete", "write"}; !slices.Equal(got.DisabledTools, want) {
+		t.Fatalf("disabled_tools = %v, want %v", got.DisabledTools, want)
+	}
+}
+
 func TestLoadLegacyMCP(t *testing.T) {
 	dir := testenv.TempDir(t)
 	path := filepath.Join(dir, "config.json")

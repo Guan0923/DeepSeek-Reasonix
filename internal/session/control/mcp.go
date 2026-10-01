@@ -64,6 +64,7 @@ func (m *mcpManager) connectSpec(s plugin.Spec) (int, error) {
 	}
 	host, ctx, reg := m.host, m.pluginCtx, m.reg
 	m.mu.Unlock()
+	plugin.ApplyDisabledMCPPolicy(reg, s)
 
 	tools, err := host.Add(ctx, s)
 	if err != nil {
@@ -78,7 +79,6 @@ func (m *mcpManager) connectSpec(s plugin.Spec) (int, error) {
 		}
 	}
 	if reg != nil {
-		markDisabledMCPTools(reg, s)
 		reg.ResumePrefix(plugin.ToolPrefix(s.Name))
 		reg.RemovePrefix(plugin.ToolPrefix(s.Name))
 		for _, t := range tools {
@@ -102,6 +102,7 @@ func (m *mcpManager) registerSpecOnDemand(s plugin.Spec) (int, error) {
 	}
 	host, ctx, reg := m.host, m.pluginCtx, m.reg
 	m.mu.Unlock()
+	plugin.ApplyDisabledMCPPolicy(reg, s)
 
 	var tools []tool.Tool
 	if host.HasClient(s.Name) {
@@ -117,7 +118,6 @@ func (m *mcpManager) registerSpecOnDemand(s plugin.Spec) (int, error) {
 		tools = plugin.LazyToolset(s, cached, host, reg, ctx, false)
 	}
 	if reg != nil {
-		markDisabledMCPTools(reg, s)
 		prefix := plugin.ToolPrefix(s.Name)
 		reg.ResumePrefix(prefix)
 		reg.RemovePrefix(prefix)
@@ -128,18 +128,12 @@ func (m *mcpManager) registerSpecOnDemand(s plugin.Spec) (int, error) {
 	return len(tools), nil
 }
 
-func markDisabledMCPTools(reg *tool.Registry, s plugin.Spec) {
-	if reg == nil {
-		return
-	}
-	for _, binding := range plugin.DisabledMCPBindings(s) {
-		reg.MarkDisabledMCP(binding)
-	}
-}
-
 // disconnect drops a live server and its tools from the registry. Reports whether
 // a live server was removed.
 func (m *mcpManager) disconnect(name string) bool {
+	if reg := m.registry(); reg != nil {
+		reg.ClearDisabledMCP(name)
+	}
 	host := m.hostRef()
 	if host == nil {
 		return false
@@ -160,6 +154,7 @@ func (m *mcpManager) removeToolPrefix(name string) int {
 	if reg == nil {
 		return 0
 	}
+	reg.ClearDisabledMCP(name)
 	return reg.RemovePrefix(plugin.ToolPrefix(name))
 }
 

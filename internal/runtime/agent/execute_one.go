@@ -20,7 +20,7 @@ import (
 // CodeMCPToolDisabled identifies a call refused by an explicit disabled_tools
 // entry. The tool is absent from the registry, so this code keeps the reason
 // visible when the model calls it from stale context.
-const CodeMCPToolDisabled = "mcp.tool_disabled_by_user"
+const CodeMCPToolDisabled = tool.CodeMCPToolDisabled
 
 // toolCallPlan holds the resolved, policy-checked state for one tool call.
 // Package-private; not shared across goroutines beyond the single executeOne
@@ -161,11 +161,7 @@ func (a *Agent) parseToolCall(ctx context.Context, plan *toolCallPlan) (toolOutc
 				output: fmt.Sprintf("MCP server %q is connected; its real tools are now available", server),
 			}, true
 		}
-		if a.svc.tools.DisabledMCP(plan.call.Name) {
-			refusal := tool.Refusal{
-				Code:    CodeMCPToolDisabled,
-				Message: fmt.Sprintf("blocked: tool %q is disabled by user configuration", plan.call.Name),
-			}
+		if refusal, ok := a.svc.tools.DisabledMCPRefusal(plan.call.Name); ok {
 			msg := refusal.String()
 			return toolOutcome{output: msg, blocked: true, errMsg: firstLine(msg), refusalCode: refusal.Code}, true
 		}
@@ -381,7 +377,12 @@ func (a *Agent) applyPlanModeAndProxy(ctx context.Context, plan *toolCallPlan) (
 				a.task.ledger.Record(rec)
 			}
 			if rc.Unavailable {
-				return toolOutcome{output: result, errMsg: firstLine(rc.UnavailableReason)}, true
+				return toolOutcome{
+					output:      result,
+					errMsg:      firstLine(rc.UnavailableReason),
+					blocked:     rc.RefusalCode != "",
+					refusalCode: rc.RefusalCode,
+				}, true
 			}
 			body, bound, truncMsg := a.boundToolOutput(result, plan.call.Name, plan.call.ID, plan.call.Arguments, false)
 			out := toolOutcome{output: body, bound: bound, truncMsg: truncMsg}
