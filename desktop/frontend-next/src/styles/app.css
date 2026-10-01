@@ -2862,6 +2862,7 @@
     background: var(--raised); color: var(--text); font: var(--w-reg) var(--fs-ui)/1.7 var(--mono); resize: vertical;
   }
   .addsrv .paste::placeholder, .addpkg .paste::placeholder { color: var(--ghost); white-space: pre-line }
+  .addpkg .paste:disabled { background: var(--overlay); cursor: default }
   .addsrv .paste:focus, .addpkg .paste:focus { outline: 2px solid var(--focus); outline-offset: 1px }
   .addsrv .acts, .addpkg .acts { display: flex; align-items: center; gap: 8px; margin-top: 10px }
   .addsrv .acts .note, .addpkg .acts .note { flex: 1; font: var(--w-reg) var(--fs-meta) var(--ui); color: var(--ghost) }
@@ -3100,6 +3101,12 @@
   .addp .fields label { display: flex; flex-direction: column; gap: 4px }
   .addp .fields label.grow { flex: 1; min-width: 150px }
   .addp .fields label.full { flex-basis: 100% }
+  .addp .fields input[aria-invalid="true"] { border-color: var(--err) }
+  .addp .fields .name-cell { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 4px }
+  .addp .fields .name-cell label { display: flex; flex-direction: column; gap: 4px }
+  .addp .fields input[aria-invalid="true"]:focus { outline-color: var(--err) }
+  .addp .fields .name-rule { margin: 0; font: var(--w-reg) var(--fs-micro)/1.45 var(--ui); color: var(--ghost) }
+  .addp .fields .name-rule[data-bad] { color: var(--err) }
   .addp .fields .tip { font: var(--w-reg) var(--fs-micro)/1.45 var(--ui); font-style: normal; color: var(--ghost) }
   .addp-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hair) }
   .addp-section.compact { margin-top: 12px }
@@ -3274,6 +3281,8 @@
   }
   .mkt-fields .mono { font: var(--w-reg) var(--fs-meta)/1.5 var(--mono) }
   .mkt-fields textarea { resize: vertical }
+  .mkt-pub .mkt-fields :is(input, textarea):disabled,
+  .mkt-pub .mkt-seen:has(:disabled) { opacity: .5; cursor: default }
   .mkt-fields input:focus, .mkt-fields textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px }
   .mkt-fields input::placeholder { color: var(--ghost) }
   .mkt-vote { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 0 }

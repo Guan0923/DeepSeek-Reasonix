@@ -248,6 +248,7 @@ export const ACTIONS: UIAction[] = [
   { id: "market.mine-retry", kind: "view", target: "none", proof: "interaction" },
   { id: "market.submit", kind: "kernel-mutation", target: "none", proof: "interaction" },
   { id: "market.vote", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "market.vote-retry", kind: "view", target: "none", proof: "interaction" },
   // Taking back the innermost open thing: a popover, an inline form. One
   // intent, reached by pressing away and by Escape.
   { id: "layer.dismiss", kind: "navigation", target: "none", proof: "interaction" },
@@ -285,6 +286,7 @@ export const ACTIONS: UIAction[] = [
   // state — which is why it is one id and why it is not a mutation.
   { id: "external.open", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "remote-host.remove", kind: "destructive", target: "none", proof: "authority-effect" },
+  { id: "workspace.reveal", kind: "shell-native", target: "entity", proof: "interaction" },
   { id: "workspace.remove", kind: "destructive", target: "none", proof: "authority-effect" },
   { id: "extensions.invoke", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
 
