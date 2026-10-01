@@ -45,18 +45,22 @@ func (c *Controller) settingsNotice(fields []string, trimmed string) bool {
 func (c *Controller) effortStatusText() string {
 	cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot())
 	if err != nil {
-		return "effort: " + err.Error()
+		return fmt.Sprintf(i18n.M.EffortReadErrorFmt, err.Error())
 	}
 	entry, ok := cfg.ResolveModel(c.ModelRef())
 	if !ok {
-		return fmt.Sprintf("effort: unknown model %q", c.ModelRef())
+		return fmt.Sprintf(i18n.M.EffortUnknownModelFmt, c.ModelRef())
 	}
 	capability := config.EffortCapabilityForEntry(entry)
 	if !capability.Supported {
-		return fmt.Sprintf("effort is not configurable for %s", entry.Name)
+		return fmt.Sprintf(i18n.M.EffortUnsupportedFmt, entry.Name)
 	}
-	return fmt.Sprintf("effort for %s: %s (default: %s; options: %s)",
+	text := fmt.Sprintf(i18n.M.EffortStatusFmt,
 		entry.Name, config.EffortDisplay(entry), capability.Default, strings.Join(capability.Levels, "|"))
+	if config.EffortForcesThinking(entry) {
+		text += "\n" + i18n.M.ArgEffortForcedOn
+	}
+	return text
 }
 
 func (c *Controller) forgetNotice(name string) {

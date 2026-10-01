@@ -392,10 +392,16 @@ var Chinese = Messages{
 	ArgEffortHigh:        "较深推理",
 	ArgEffortXHigh:       "超高推理",
 	ArgEffortMax:         "最高推理",
+	ArgEffortForcedOn:    "思考仍开启并计费，该模型无法关闭思考",
 	ArgThemeCurrent:      "当前",
 	ArgLanguageAuto:      "从 REASONIX_LANG / 系统 locale 自动检测",
 	ArgLanguageEn:        "English",
 	ArgLanguageZh:        "中文",
+
+	EffortReadErrorFmt:    "推理档位：%s",
+	EffortUnknownModelFmt: "推理档位：未知模型 %q",
+	EffortUnsupportedFmt:  "%s 不支持配置推理档位",
+	EffortStatusFmt:       "%s 的推理档位：%s（默认：%s；选项：%s）",
 
 	ListModelsHeaderFmt: "模型（当前：%s）",
 	ListModelsHint:      "用底部的模型切换器，或输入 /model <provider/model>",

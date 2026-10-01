@@ -391,10 +391,16 @@ var English = Messages{
 	ArgEffortHigh:        "deeper reasoning",
 	ArgEffortXHigh:       "extra deep reasoning",
 	ArgEffortMax:         "maximum reasoning",
+	ArgEffortForcedOn:    "Thinking stays on and is billed; this model cannot turn it off",
 	ArgThemeCurrent:      "current",
 	ArgLanguageAuto:      "auto-detect from REASONIX_LANG / locale",
 	ArgLanguageEn:        "English",
 	ArgLanguageZh:        "中文",
+
+	EffortReadErrorFmt:    "effort: %s",
+	EffortUnknownModelFmt: "effort: unknown model %q",
+	EffortUnsupportedFmt:  "effort is not configurable for %s",
+	EffortStatusFmt:       "effort for %s: %s (default: %s; options: %s)",
 
 	ListModelsHeaderFmt: "models (active: %s)",
 	ListModelsHint:      "switch with the model switcher, or type /model <provider/model>",
