@@ -58,12 +58,10 @@ type Shell struct {
 	Path string
 }
 
-// ResolveShell picks the interpreter the shell tool runs commands under. With
-// prefer "auto"/"" it favours a real bash so the model's POSIX habits work and
-// only falls back to PowerShell on Windows when bash is absent. prefer "bash" or
-// "powershell"/"pwsh" forces that interpreter (path overrides the PATH lookup),
-// warning to warn and falling back to auto-detection if the forced one is
-// missing — so a typo or an uninstalled shell can never leave the tool broken.
+// ResolveShell picks the interpreter the shell tool runs commands under. Auto
+// favours bash; Windows uses PowerShell only when bash is absent. A forced kind
+// uses path over the PATH lookup and falls back to auto if it is unusable, so a
+// typo or missing shell can never leave the tool broken.
 func ResolveShell(prefer, path string, warn io.Writer) Shell {
 	return resolveShell(prefer, path, warn, runtime.GOOS, exec.LookPath, fileExists, windowsBashCandidates(), windowsPowerShellCandidates(), probeBash, isWindowsWSLBash, powerShellLaunches)
 }
@@ -198,12 +196,9 @@ func VerifyShell(prefer, path string) error {
 	return nil
 }
 
-// resolveShell is ResolveShell with its environment lookups injected — including
-// the Git-for-Windows bash candidates, which derive from %ProgramFiles% and so
-// are empty off Windows — so the decision table is deterministically testable on
-// any host. launches answers whether the PowerShell about to be chosen can start;
-// it is injected for the same reason, so a host with no PowerShell can still
-// exercise "pwsh will not start, 5.1 will".
+// resolveShell is ResolveShell with its environment lookups injected, including
+// Git-for-Windows candidates whose %ProgramFiles% values are empty off Windows.
+// launches is injected too, so any host can test "pwsh will not start, 5.1 will".
 func resolveShell(prefer, path string, warn io.Writer, goos string, lookPath func(string) (string, error), exists func(string) bool, winBashCandidates []string, winPowerShellCandidates []string, probe func(string) bool, isWSL func(string) bool, launches func(string) bool) Shell {
 	h := shellHost{goos, lookPath, exists, winBashCandidates, winPowerShellCandidates, probe, isWSL, launches}
 	switch strings.ToLower(strings.TrimSpace(prefer)) {

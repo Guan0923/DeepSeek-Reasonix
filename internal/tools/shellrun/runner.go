@@ -69,10 +69,9 @@ type Request struct {
 // Result is the structured outcome of a foreground run.
 type Result struct {
 	Combined string
-	// OutputTail is the bounded tail of combined output, populated only when the
-	// run did not complete successfully. Stdout and stderr share one pipe so the
-	// model-visible ordering is preserved, which makes a stderr-only tail
-	// impossible; in practice the last bytes before a failure are the diagnosis.
+	// OutputTail is the bounded tail of combined output, populated only after a
+	// failed run. Stdout and stderr share one pipe, so the final bytes are the
+	// diagnosis rather than a stderr-only tail that would reorder the streams.
 	OutputTail   string
 	ExitCode     *int
 	Started      bool
@@ -119,12 +118,9 @@ func RunForeground(ctx context.Context, req Request) Result {
 		writers = append(writers, pw)
 		defer pw.Flush()
 	}
-	// Stdout and Stderr must stay the *same* writer value: os/exec then hands the
-	// child a single pipe, so the two streams interleave in the order the child
-	// wrote them and only one copy goroutine calls Progress. Two MultiWriters
-	// would mean two pipes, and combined output would be reordered per stream.
-	// The bounded tail therefore covers combined output rather than stderr only;
-	// failing commands routinely report on stdout, so the tail stays useful.
+	// Keep Stdout and Stderr the same writer: os/exec then creates one pipe, so
+	// they interleave in write order and Progress has a single caller. Separate
+	// MultiWriters would reorder streams and require two pipes.
 	w := io.MultiWriter(writers...)
 	cmd.Stdout = w
 	cmd.Stderr = w
@@ -201,15 +197,17 @@ func RunForeground(ctx context.Context, req Request) Result {
 		out.FailurePhase = tool.ShellPhaseExecution
 	} else {
 		out.FailurePhase = tool.ShellPhaseLaunch
-		// The interpreter itself could not start, so every command in this session
-		// will fail the same way. Name the shell that was asked for and why the
-		// spawn failed; otherwise the only trace is a tool card reading "exit
-		// status 1" with no executable in it.
-		slog.Warn("shellrun: the interpreter could not be started",
-			"shell", req.ShellKind, "path", req.ShellPath, "source", source, "err", err)
+		warnInterpreterStartFailure(source, req, err)
 	}
 	out.Err = err
 	return out
+}
+
+func warnInterpreterStartFailure(source string, req Request, err error) {
+	// Every command in this session fails the same way; name the shell and spawn
+	// error so the tool card contains the executable that was asked for.
+	slog.Warn("shellrun: the interpreter could not be started",
+		"shell", req.ShellKind, "path", req.ShellPath, "source", source, "err", err)
 }
 
 func processStarted(cmd *exec.Cmd, err error) bool {
