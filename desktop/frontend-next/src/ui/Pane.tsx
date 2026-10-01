@@ -491,7 +491,6 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
 
   const onRunDetail = useCallback(() => showView("analysis"), [showView]);
   const { quote, reply, onResend } = useReplyActions({ port, items: s.items, checkpoints, running, model: status?.label, submit, reloadSession, onSettings, onRunDetail, onError: fail, onFork });
-
   // Where the bottom is moves as blocks mount under it, so this only asks the
   // transcript to follow again and lets it scroll itself into place.
   const toLatest = () => setJump((n) => n + 1);

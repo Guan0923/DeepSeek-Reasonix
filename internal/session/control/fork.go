@@ -80,22 +80,20 @@ func (c *Controller) ForkTurn(sessionPath string, turn, msgIndex int, stamp stri
 	child := sessionstore.NewSession("")
 	child.Messages = append([]provider.Message(nil), msgs[:last+1]...)
 	path := sessionstore.NewSessionPath(c.sessionDir, c.label)
-	if err := child.SaveIfAbsent(path); err != nil {
-		return "", err
-	}
 	preview, turns := sessionstore.SessionPreviewFromMessages(child.Messages)
 	meta := sessionstore.BranchMeta{
 		ParentID: sessionstore.BranchID(sessionPath), WorkspaceRoot: c.workspaceRoot,
 		Preview: preview, Turns: turns, SchemaVersion: sessionstore.BranchMetaCountsVersion,
 	}
-	if parent, ok, err := sessionstore.LoadBranchMeta(sessionPath); err == nil && ok {
-		meta.Model, meta.AgentPreset, meta.Mode = parent.Model, parent.AgentPreset, parent.Mode
+	meta.Model, meta.AgentPreset = c.ModelRef(), c.AgentPreset()
+	meta.Mode = "agent"
+	if c.PlanMode() {
+		meta.Mode = "plan"
 	}
-	if err := sessionstore.SaveBranchMeta(path, meta); err != nil {
+	if err := saveFork(path, child, meta, func() error {
+		return c.checkpoints.storeRef().CopyConversationPrefixTo(ckptDir(path), sessionstore.BranchID(path), last+1)
+	}); err != nil {
 		return "", err
-	}
-	if err := c.checkpoints.storeRef().CopyConversationPrefixTo(ckptDir(path), sessionstore.BranchID(path), last+1); err != nil {
-		return "", errors.Join(err, removeSessionArtifacts(path))
 	}
 	return path, nil
 }

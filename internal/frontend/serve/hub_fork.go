@@ -3,9 +3,11 @@ package serve
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"reasonix/internal/session/control"
+	"reasonix/internal/state/sessionstore"
 )
 
 func (h *Hub) forkRuntime(w http.ResponseWriter, r *http.Request) {
@@ -39,17 +41,25 @@ func (h *Hub) forkRuntime(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, control.ErrForkBusy):
-			busy(w, "fork.busy", err.Error(), nil)
+			busy(w, "fork.busy", "wait for the running turn to finish before forking", nil)
 		case errors.Is(err, control.ErrForkBoundary):
-			busy(w, "fork.stale", err.Error(), nil)
+			refuse(w, http.StatusConflict, "fork.stale", "the selected conversation checkpoint is no longer valid; refresh and select the final reply again", nil)
 		default:
-			refuse(w, http.StatusInternalServerError, "fork.failed", err.Error(), nil)
+			slog.Warn("serve: fork creation failed", "runtime", rt.ID, "code", "fork.failed")
+			refuse(w, http.StatusInternalServerError, "fork.failed", "could not create the conversation fork", nil)
 		}
 		return
 	}
-	child, err := h.Open(r.Context(), OpenRequest{Root: rt.Root, SessionPath: path})
+	settings, ok, err := sessionstore.LoadBranchMeta(path)
+	if err != nil || !ok {
+		slog.Warn("serve: fork settings unavailable", "runtime", rt.ID, "code", "fork.open_failed")
+		refuse(w, http.StatusInternalServerError, "fork.open_failed", "the fork was created, but its settings cannot be read; please try again", nil)
+		return
+	}
+	child, err := h.openWithSettings(r.Context(), OpenRequest{Root: rt.Root, SessionPath: path}, &settings)
 	if err != nil {
-		refuse(w, http.StatusInternalServerError, "fork.open_failed", "fork was saved but its pane could not be opened: "+err.Error(), map[string]any{"sessionPath": path})
+		slog.Warn("serve: fork opening failed", "runtime", rt.ID, "code", "fork.open_failed")
+		refuse(w, http.StatusInternalServerError, "fork.open_failed", "the fork was created, but cannot be opened right now; please try again", nil)
 		return
 	}
 	writeJSON(w, child.view())

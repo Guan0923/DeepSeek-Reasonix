@@ -48,14 +48,14 @@ func TestCopyConversationPrefixKeepsBoundariesWithoutFileOrUndoState(t *testing.
 	for i, checkpoint := range copied {
 		original := before[i]
 		if checkpoint.Turn != original.Turn || checkpoint.MsgIndex != original.MsgIndex ||
-			checkpoint.Prompt != original.Prompt || !checkpoint.Time.Equal(original.Time) || len(checkpoint.Paths) != 0 {
+			checkpoint.Prompt != original.Prompt || !checkpoint.Time.Equal(original.Time) || len(checkpoint.Paths) != 0 || !checkpoint.ForkCopied {
 			t.Fatalf("wrong conversation checkpoint: %+v", checkpoint)
 		}
 		var stored Checkpoint
 		if err := json.Unmarshal([]byte(read(t, child.checkpointPath(&Checkpoint{Turn: checkpoint.Turn}))), &stored); err != nil {
 			t.Fatal(err)
 		}
-		if stored.SessionID != "child" || len(stored.Files) != 0 || len(stored.CoverageGaps) != 0 || len(stored.ActiveWriters) != 0 {
+		if stored.SessionID != "child" || len(stored.Files) != 0 || len(stored.CoverageGaps) != 0 || len(stored.ActiveWriters) != 0 || !stored.ForkCopied {
 			t.Fatalf("inherited source state: %+v", stored)
 		}
 	}

@@ -145,7 +145,7 @@ export function SayCard({ item, afterAnswer, reply }: { item: Extract<Item, { t:
                 <button type="button" data-action="reply.fork" title={t("从此回复创建对话分支")}
                   aria-label={t("从此回复创建对话分支")} disabled={forking}
                   onClick={() => { setForking(true); void reply.onFork!(item.id).finally(() => setForking(false)); }}>
-                  <StudioIcon name={forking ? "clock" : "branch"} />
+                  <StudioIcon name={forking ? "clock" : "fork"} />
                 </button>
               )}
               {reply && (

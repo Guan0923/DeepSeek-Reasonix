@@ -35,7 +35,7 @@ const SAID: Record<string, string> = {
   "fork.busy": "请等待当前任务完成后再创建对话分支",
   "fork.stale": "这轮对话已发生变化，请刷新后重新选择最终答复",
   "fork.failed": "创建对话分支失败",
-  "fork.open_failed": "对话分支已保存，但无法打开新窗格，请从侧栏重新打开",
+  "fork.open_failed": "分支已创建，但暂时无法打开，请重试。",
   // ── 忙：不是出错，是「现在不行」 ─────────────────────────────────
   "plan.decision_stale": "该决定已不符合当前状态：计划在你回答前已发生变更",
   "busy.switch_model": "任务正在运行，请先停止再切换模型",

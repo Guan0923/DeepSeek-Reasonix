@@ -23,7 +23,7 @@ func (s *Store) CopyConversationPrefixTo(dir, sessionID string, messageCount int
 		checkpoints = append(checkpoints, &Checkpoint{
 			SchemaVersion: SchemaV2, Turn: original.Turn, Time: original.Time,
 			Prompt: original.Prompt, MsgIndex: original.MsgIndex, SessionID: sessionID,
-			Files: []FileSnap{}, Coverage: CoverageNone,
+			Files: []FileSnap{}, Coverage: CoverageNone, ForkCopied: true,
 		})
 	}
 	s.mu.Unlock()
