@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"sync"
@@ -200,6 +201,12 @@ func RunForeground(ctx context.Context, req Request) Result {
 		out.FailurePhase = tool.ShellPhaseExecution
 	} else {
 		out.FailurePhase = tool.ShellPhaseLaunch
+		// The interpreter itself could not start, so every command in this session
+		// will fail the same way. Name the shell that was asked for and why the
+		// spawn failed; otherwise the only trace is a tool card reading "exit
+		// status 1" with no executable in it.
+		slog.Warn("shellrun: the interpreter could not be started",
+			"shell", req.ShellKind, "path", req.ShellPath, "source", source, "err", err)
 	}
 	out.Err = err
 	return out
