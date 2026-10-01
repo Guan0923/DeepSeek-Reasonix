@@ -214,8 +214,11 @@ func (b *builder) load() error {
 	b.shell = sandbox.ResolveShell(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, b.stderr)
 	// Record which interpreter this session actually runs commands under. When a
 	// command fails at launch, the log has to answer "which shell was even tried"
-	// without guessing from the host's PATH.
-	slog.Info("boot: shell tool interpreter resolved", "kind", b.shell.Kind.String(), "path", b.shell.Path, "prefer", cfg.Tools.Shell.Prefer)
+	// without guessing from the host's PATH. This is a diagnostic, so it stays at
+	// Debug: headless `run` must leave stderr empty unless --debug is passed. The
+	// always-on counterpart is the Warn emitted by shellrun when a launch fails,
+	// which carries the same kind/path/source fields.
+	slog.Debug("boot: shell tool interpreter resolved", "kind", b.shell.Kind.String(), "path", b.shell.Path, "prefer", cfg.Tools.Shell.Prefer)
 	b.prompt, err = buildPromptAssembly(b.ctx, opts, cfg, b.root, b.shell, b.sink, b.timer)
 	return err
 }
