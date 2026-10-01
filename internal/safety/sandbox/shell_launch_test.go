@@ -96,3 +96,11 @@ func TestLaunchProbesAnswerRepeatedDiscoveryOnce(t *testing.T) {
 		t.Fatalf("probe ran %d times, want 1", runs)
 	}
 }
+
+// A missing path is not a launchable Store alias; callers that gate on this
+// helper must not keep an interpreter that the host does not have.
+func TestPowerShellLaunchesRejectsMissingPath(t *testing.T) {
+	if powerShellLaunches(filepath.Join(t.TempDir(), "missing-pwsh.exe")) {
+		t.Fatal("missing PowerShell reported as launchable")
+	}
+}

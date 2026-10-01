@@ -211,13 +211,25 @@ func (b *builder) load() error {
 		return err
 	}
 	b.timer.mark("provider")
-	b.shell = sandbox.ResolveShell(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, b.stderr)
+	b.shell = resolveShellWithNotice(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, b.stderr, b.sink)
 	// Record the resolved interpreter for diagnostics, staying at Debug because
 	// headless `run` must leave stderr empty unless --debug is passed. A launch
 	// failure emits an always-on Warn with the same kind/path/source fields.
 	slog.Debug("boot: shell tool interpreter resolved", "kind", b.shell.Kind.String(), "path", b.shell.Path, "prefer", cfg.Tools.Shell.Prefer)
 	b.prompt, err = buildPromptAssembly(b.ctx, opts, cfg, b.root, b.shell, b.sink, b.timer)
 	return err
+}
+
+// resolveShellWithNotice keeps shell-discovery warnings on stderr for CLI
+// diagnostics and also reports them through the boot sink, where the settings
+// surface can show which interpreter actually runs.
+func resolveShellWithNotice(prefer, path string, stderr io.Writer, sink event.Sink) sandbox.Shell {
+	var warnings strings.Builder
+	shell := sandbox.ResolveShell(prefer, path, io.MultiWriter(stderr, &warnings))
+	if detail := strings.TrimSpace(warnings.String()); detail != "" {
+		report(sink, event.Event{Level: event.LevelWarn, Text: "Shell tool interpreter fallback.", Detail: detail})
+	}
+	return shell
 }
 
 // loadConfig reads the configuration this build runs under. The read-only

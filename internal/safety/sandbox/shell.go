@@ -170,6 +170,10 @@ func DetectShells() []Shell { return currentHost().available() }
 // surface calls it before persisting, so a typo is refused where it was typed
 // instead of failing every later command far from the screen that caused it.
 func VerifyShell(prefer, path string) error {
+	return verifyShell(prefer, path, fileExists, probeBash, powerShellLaunches)
+}
+
+func verifyShell(prefer, path string, exists, probe, launches func(string) bool) error {
 	kind := ShellBash
 	switch strings.ToLower(strings.TrimSpace(prefer)) {
 	case "", "auto", "bash":
@@ -182,15 +186,15 @@ func VerifyShell(prefer, path string) error {
 	if path == "" {
 		return nil
 	}
-	if !fileExists(path) {
+	if !exists(path) {
 		return fmt.Errorf("%s: no such executable", path)
 	}
-	if kind == ShellBash && !probeBash(path) {
+	if kind == ShellBash && !probe(path) {
 		return fmt.Errorf("%s: did not run a command", path)
 	}
 	// Bash has always been proven here; PowerShell was not, so a Store alias that
 	// stats fine but will not start was accepted and then failed every command.
-	if kind == ShellPowerShell && !powerShellLaunches(path) {
+	if kind == ShellPowerShell && !launches(path) {
 		return fmt.Errorf("%s: did not start", path)
 	}
 	return nil
@@ -217,9 +221,9 @@ func resolveShell(prefer, path string, warn io.Writer, goos string, lookPath fun
 		warnMissingShell(warn, prefer)
 		return h.auto(warn)
 	case "powershell", "pwsh":
-		// A pinned path is proven the same way the bash arm proves its own. A path
-		// that exists but will not start is exactly the failure this resolver is
-		// meant to keep out of a session, so existence alone must not win.
+		// A pinned path is proven the same way the bash arm proves its own. A Store
+		// alias that will not start is exactly the failure this resolver keeps out
+		// of a session, so existence alone must not win.
 		if path != "" && exists(path) && launches(path) {
 			return Shell{Kind: ShellPowerShell, Path: path}
 		}

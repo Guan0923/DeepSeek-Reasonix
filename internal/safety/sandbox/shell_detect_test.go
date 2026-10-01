@@ -303,3 +303,17 @@ func TestResolveShellRefusesPinnedPowerShellThatWillNotStart(t *testing.T) {
 		t.Fatalf("the ignored pin went unreported: %q", warn.String())
 	}
 }
+
+// VerifyShell has to prove the PowerShell path too: a Store alias can exist and
+// still fail to start, which used to be accepted at the settings boundary.
+func TestVerifyShellRejectsPowerShellThatWillNotStart(t *testing.T) {
+	const path = `C:\fake\WindowsApps\pwsh.exe`
+	exists := func(string) bool { return true }
+	probe := func(string) bool { return true }
+	if err := verifyShell("pwsh", path, exists, probe, func(string) bool { return false }); err == nil || !strings.Contains(err.Error(), "did not start") {
+		t.Fatalf("unstartable PowerShell error = %v, want did not start", err)
+	}
+	if err := verifyShell("pwsh", path, exists, probe, func(string) bool { return true }); err != nil {
+		t.Fatalf("working PowerShell refused: %v", err)
+	}
+}
