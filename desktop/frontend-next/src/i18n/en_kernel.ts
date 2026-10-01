@@ -23,6 +23,11 @@ export const EN_KERNEL: Record<string, string> = {
   "会话 {holder}（{session}）持有写入范围：{paths}": "Session {holder} ({session}) holds write claim: {paths}",
   "所需写入范围：{paths}": "Requested write claim: {paths}",
   "另一个会话持有所需的写入范围。本次操作未执行；请结束当前轮次，待该范围释放后再重试": "Another session holds the requested write claim. This operation did not run; end the current turn and retry after the claim is released",
+  "请输入聊天标题": "Enter a chat title",
+  "该会话还没有可用于命名的用户消息": "This chat has no user message to name it from",
+  "未配置可用于自动命名的模型，请先配置模型": "Configure a model before using automatic naming",
+  "自动命名失败，原标题未更改，请重试": "Automatic naming failed. The original title is unchanged. Please try again",
+
   "反馈通道今日已满，请明天再试": "Feedback is at capacity for today - try again tomorrow",
   "这份反馈的回复次数已到上限，或回复太频繁了，请稍后再试": "This report has reached its reply limit, or you replied too often - try again later",
   "这份反馈现在不接收回复": "This report takes no reply right now",
