@@ -1098,6 +1098,8 @@ export const EN: Record<string, string> = {
   "项目操作：{name}": "Project actions: {name}",
   "项目操作": "Project actions",
   "不删除文件": "Keeps files",
+  "在文件管理器中显示": "Show in file manager",
+  "文件夹已不在磁盘上": "Folder is gone",
   "删除会话：{title}": "Delete session: {title}",
   "会话在文件夹里打开，先添加一个": "A session opens in a folder; add one first",
   "添加文件夹": "Add folder",
@@ -1221,5 +1223,7 @@ export const EN: Record<string, string> = {
   "同一段内容被逐字重复": "The same block is being repeated verbatim",
   "任务已按设置暂停：模型卡在重复输出同一段文字": "Paused by your setting: the model is stuck repeating the same text",
   "等待你的输入": "Waiting for you",
+  "引导没有生效：这一轮在处理它之前就结束了。如果仍然需要，请再发送一次：": "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:",
+  "上下文已用到压缩阈值的 {percent}%，已告知模型约剩 {remaining} 个词元的空间。": "Context at {percent}% of the compaction threshold — the model was told it has about {remaining} tokens of room left.",
   "模型卡在重复输出同一段文字，这一轮已停止；可以重试、补充引导，或换一个供应商/模型": "The model is stuck repeating the same text; this turn was stopped. Try again, add guidance, or switch provider/model.",
 };
