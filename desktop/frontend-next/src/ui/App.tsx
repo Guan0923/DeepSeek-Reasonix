@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { reason } from "../i18n/kernel";
 import { t } from "../i18n";
-import type { AccountState, AgentPort, Checkpoint, ProviderSetup } from "../port/port";
+import type { AccountState, AgentPort, ProviderSetup } from "../port/port";
 import type { HubPort, RuntimeView, TreeWorkspace } from "../port/hub";
 import { Chrome } from "./Chrome";
 import { useLaunchHealth } from "./launchhealth";
@@ -22,6 +22,7 @@ import { Boundary } from "./Boundary";
 import { SettingsUnavailable } from "./SettingsUnavailable";
 import { useMachineBooks } from "./machinebooks";
 import { usePaint } from "./paint";
+import { useForkPane } from "./forkpane";
 import { rememberActivePane, savedActivePane } from "./activepane";
 import { Sidebar } from "./Sidebar";
 import { Sky } from "./Sky";import { useAddWorkspace } from "./addws";
@@ -31,9 +32,7 @@ import { Onboarding } from "./Onboarding";
 import { Welcome } from "./Welcome";
 import { markSettled } from "../boot/gate";
 
-// Start fetching the settings chunk with the shell instead of waiting for the
-// first click. It remains a separate chunk (and keeps its failure boundary),
-// but opening settings no longer produces a veil while the module catches up.
+// Prefetch the separate settings chunk; a load failure stays inside its boundary.
 const settingsModule = import("./Settings").then(
   (module) => ({ module, error: null as unknown }),
   (error: unknown) => ({ module: null, error }),
@@ -472,22 +471,7 @@ export function App({ hub }: { hub: HubPort }) {
     () => runtimes.map((rt, i) => ({ rt, title: titleFor(rt, i), run: runs[rt.id]?.run ?? "idle", live: runs[rt.id]?.live ?? false })),
     [runtimes, titleFor, runs],
   );
-  const forkPane = useCallback(async (id: string, checkpoint: Checkpoint) => {
-    const source = runtimes.find((rt) => rt.id === id);
-    if (!source?.sessionPath || checkpoint.msgIndex === undefined || !checkpoint.stamp) {
-      throw new Error(t("这轮对话已发生变化，请刷新后重试"));
-    }
-    const view = await hub.fork(id, {
-      sessionPath: source.sessionPath, turn: checkpoint.turn,
-      msgIndex: checkpoint.msgIndex, stamp: checkpoint.stamp,
-    });
-    if (!view.sessionPath) throw new Error(t("对话分支已保存，但无法打开新窗格，请从侧栏重新打开"));
-    const title = tabs.find((tab) => tab.rt.id === id)?.title ?? t("新会话");
-    await hub.renameSession(view.sessionPath, t("{title}(分支)", { title }));
-    setRuntimes((prev) => [...prev.filter((rt) => rt.id !== view.id), view]);
-    focusPane(view.id);
-    await reloadPanes();
-  }, [hub, runtimes, tabs, focusPane, reloadPanes]);
+  const forkPane = useForkPane({ hub, runtimes, setRuntimes, focusPane, reloadPanes });
 
   // The folder only earns tab space when the panes actually span more than one.
   const manyRoots = useMemo(() => new Set(runtimes.map((rt) => rt.root)).size > 1, [runtimes]);

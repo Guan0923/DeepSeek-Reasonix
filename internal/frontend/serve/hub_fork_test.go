@@ -30,7 +30,7 @@ func TestHubForkOpensTheCompletedPrefixInAnotherRuntime(t *testing.T) {
 	t.Setenv("REASONIX_HOME", home)
 	root := testenv.TempDir(t)
 	ag := agent.New(&turnIdentityProvider{}, tool.NewRegistry(), sessionstore.NewSession("sys"), agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Runner: ag, Executor: ag, WorkspaceRoot: root,
+	ctrl := control.New(control.Options{Runner: ag, Executor: ag, WorkspaceRoot: root, ModelRef: "default/shared-chat",
 		SessionDir: SessionDirFor(root), SessionPath: filepath.Join(SessionDirFor(root), "source.jsonl")})
 	h := NewHub(HubOptions{})
 	defer h.Shutdown()
