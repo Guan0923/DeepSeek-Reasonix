@@ -37,25 +37,6 @@ func (windowsShell) Home(ctx context.Context, _ Conn, fs *sftpfs.FS) (string, er
 // Paths keeps the SFTP spelling, which is what the file layer addresses and
 // what every state path is stored as. The shell form is derived where a
 // command needs it, never the other way round.
-func (windowsShell) Absolute(p string) (string, bool) {
-	if !isWindowsAbsolute(p) {
-		return "", false
-	}
-	return toSFTPPath(p), true
-}
-
-func isWindowsAbsolute(p string) bool {
-	if strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`) {
-		return true
-	}
-	return len(p) >= 3 && isASCIILetter(p[0]) && p[1] == ':' && (p[2] == '/' || p[2] == '\\')
-}
-
-func isASCIILetter(c byte) bool {
-	c |= 0x20
-	return c >= 'a' && c <= 'z'
-}
-
 func (windowsShell) Paths(home, workspace string) StatePaths {
 	return pathsFor(toSFTPPath(home), toSFTPPath(workspace))
 }

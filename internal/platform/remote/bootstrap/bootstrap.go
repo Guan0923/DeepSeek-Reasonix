@@ -127,7 +127,10 @@ func EnsureServe(ctx context.Context, conn Conn, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	workspace := resolveWorkspace(target, opts.Workspace, home)
+	workspace, err := resolveWorkspace(ctx, fs, opts.Workspace, home)
+	if err != nil {
+		return Result{}, err
+	}
 	paths := target.Paths(home, workspace)
 
 	// 2. Reuse a live process if the recorded pid is still running.
@@ -235,7 +238,10 @@ func Status(ctx context.Context, conn Conn, workspace string) (ServeState, bool,
 	if err != nil {
 		return ServeState{}, false, err
 	}
-	ws := resolveWorkspace(target, workspace, home)
+	ws, err := resolveWorkspace(ctx, fs, workspace, home)
+	if err != nil {
+		return ServeState{}, false, err
+	}
 	paths := target.Paths(home, ws)
 	st, err := readState(ctx, fs, paths.StateJSON)
 	if err != nil {
@@ -255,7 +261,10 @@ func Stop(ctx context.Context, conn Conn, workspace string) error {
 	if err != nil {
 		return err
 	}
-	ws := resolveWorkspace(target, workspace, home)
+	ws, err := resolveWorkspace(ctx, fs, workspace, home)
+	if err != nil {
+		return err
+	}
 	paths := target.Paths(home, ws)
 	st, err := readState(ctx, fs, paths.StateJSON)
 	if err != nil {
@@ -289,7 +298,10 @@ func RepointBroker(ctx context.Context, conn Conn, workspace string, broker Brok
 	if err != nil {
 		return err
 	}
-	ws := resolveWorkspace(target, workspace, home)
+	ws, err := resolveWorkspace(ctx, fs, workspace, home)
+	if err != nil {
+		return err
+	}
 	paths := target.Paths(home, ws)
 	st, err := readState(ctx, fs, paths.StateJSON)
 	if err != nil || !st.BrokerFile {
@@ -311,7 +323,10 @@ func Logs(ctx context.Context, conn Conn, workspace string, n int, w io.Writer) 
 	if err != nil {
 		return err
 	}
-	ws := resolveWorkspace(target, workspace, home)
+	ws, err := resolveWorkspace(ctx, fs, workspace, home)
+	if err != nil {
+		return err
+	}
 	paths := target.Paths(home, ws)
 	res, err := conn.Exec(ctx, target.Logs(paths.LogFile, n))
 	if err != nil {
@@ -519,20 +534,22 @@ func removeServeState(ctx context.Context, fs *sftpfs.FS, paths StatePaths) {
 	}
 }
 
-// resolveWorkspace spells a workspace the way the file layer addresses it.
-// Only the target machine can say what an absolute path looks like there.
-func resolveWorkspace(target remoteOS, workspace, home string) string {
+func resolveWorkspace(ctx context.Context, fs *sftpfs.FS, workspace, home string) (string, error) {
 	workspace = strings.TrimSpace(workspace)
-	switch {
-	case workspace == "" || workspace == "~" || workspace == "~/":
-		return home
-	case strings.HasPrefix(workspace, "~/"):
-		return strings.TrimRight(home, "/") + "/" + workspace[2:]
+	if workspace == "" {
+		return home, nil
 	}
-	if abs, ok := target.Absolute(workspace); ok {
-		return abs
+	if workspace == "~" {
+		return home, nil
 	}
-	return strings.TrimRight(home, "/") + "/" + workspace
+	if after, ok0 := strings.CutPrefix(workspace, "~/"); ok0 {
+		return strings.TrimRight(home, "/") + "/" + after, nil
+	}
+	if strings.HasPrefix(workspace, "/") {
+		return workspace, nil
+	}
+	// Relative to home.
+	return strings.TrimRight(home, "/") + "/" + workspace, nil
 }
 
 func generateToken() (string, error) {
