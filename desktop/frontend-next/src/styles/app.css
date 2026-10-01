@@ -4858,6 +4858,7 @@
   .pc-note { margin: 0; padding-top: 10px; border-top: 1px solid var(--border); color: var(--ghost); font: var(--w-reg) var(--fs-micro)/1.5 var(--ui) }
   [data-fold~="scene"] .phonecard { position: fixed; top: calc(var(--chrome-h, 45px) + 6px); right: 12px; left: 12px; width: auto }
   .share .rmtf { margin-top: 10px }
+  .share .rmtf input { background: var(--raised); border-radius: var(--r-sm) }
   .shareopen { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px }
   .shareopen .rmtadd { margin-top: 0; justify-self: start }
   .shareqr { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap }
