@@ -17,6 +17,11 @@ import (
 	"reasonix/internal/tools/shellrun"
 )
 
+// CodeMCPToolDisabled identifies a call refused by an explicit disabled_tools
+// entry. The tool is absent from the registry, so this code keeps the reason
+// visible when the model calls it from stale context.
+const CodeMCPToolDisabled = "mcp.tool_disabled_by_user"
+
 // toolCallPlan holds the resolved, policy-checked state for one tool call.
 // Package-private; not shared across goroutines beyond the single executeOne
 // invocation that owns it.
@@ -156,6 +161,14 @@ func (a *Agent) parseToolCall(ctx context.Context, plan *toolCallPlan) (toolOutc
 				output: fmt.Sprintf("MCP server %q is connected; its real tools are now available", server),
 			}, true
 		}
+		if a.svc.tools.DisabledMCP(plan.call.Name) {
+			refusal := tool.Refusal{
+				Code:    CodeMCPToolDisabled,
+				Message: fmt.Sprintf("blocked: tool %q is disabled by user configuration", plan.call.Name),
+			}
+			msg := refusal.String()
+			return toolOutcome{output: msg, blocked: true, errMsg: firstLine(msg), refusalCode: refusal.Code}, true
+		}
 		if a.svc.postureLocked.Load() {
 			msg := fmt.Sprintf("blocked: tool %q is not available: this run is read-only and offers only %s. Nothing else can be enabled from inside the run.", plan.call.Name, strings.Join(a.svc.tools.AllNames(), ", "))
 			return toolOutcome{output: msg, blocked: true, errMsg: firstLine(msg), refusalCode: CodePostureToolNotAllowed}, true
@@ -243,23 +256,6 @@ func contextualToolGateOutcome(ctx context.Context, target tool.Tool, name strin
 	refusal := unavailableReason(ctx, target, name)
 	msg := refusal.String()
 	return toolOutcome{output: msg, blocked: true, errMsg: firstLine(msg), refusalCode: refusal.Code}, true
-}
-
-// What the model is told when a contextual tool is out of context. The tool
-// answers it, because the tool is what knows; a table here keyed by name would
-// go stale the first time one is added. A contextual tool that says nothing is
-// a fact about the registry rather than about the call, so the host names it
-// under its own code instead of leaving the reader a bare sentence.
-func unavailableReason(ctx context.Context, target tool.Tool, name string) tool.Refusal {
-	if r, ok := target.(tool.ContextualReasoner); ok {
-		if refusal := r.Unavailable(ctx); !refusal.Empty() {
-			return refusal
-		}
-	}
-	return tool.Refusal{
-		Code:    "tool.unavailable_unspecified",
-		Message: fmt.Sprintf("blocked: tool %q is unavailable in the current workflow context", name),
-	}
 }
 
 // applyMutationDependencyBarrier blocks later mutations and verifications in the

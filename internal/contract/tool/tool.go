@@ -352,11 +352,12 @@ func LookupBuiltin(name string) (Tool, bool) {
 
 // Registry is a per-run set of tools: enabled built-ins plus plugin tools.
 type Registry struct {
-	mu        sync.RWMutex
-	tools     map[string]Tool
-	order     []string
-	canon     map[string]json.RawMessage
-	suspended map[string]bool
+	mu          sync.RWMutex
+	tools       map[string]Tool
+	order       []string
+	canon       map[string]json.RawMessage
+	suspended   map[string]bool
+	disabledMCP map[string]bool
 	// providerVisible, when non-nil, restricts Schemas/ContractEntries to the
 	// listed tool names. Get/Execute still resolve every registered tool so
 	// use_capability can dispatch tool:<name> without changing the provider
@@ -371,7 +372,7 @@ type Registry struct {
 
 // NewRegistry returns an empty registry.
 func NewRegistry() *Registry {
-	return &Registry{tools: map[string]Tool{}, canon: map[string]json.RawMessage{}, suspended: map[string]bool{}}
+	return &Registry{tools: map[string]Tool{}, canon: map[string]json.RawMessage{}, suspended: map[string]bool{}, disabledMCP: map[string]bool{}}
 }
 
 // SetProviderVisibleTools restricts the provider-visible schema surface to the

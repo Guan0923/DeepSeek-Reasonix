@@ -18,15 +18,23 @@ import (
 // configured ones stay process-idle until their first call.
 func registerMCPTools(ctx context.Context, host *plugin.Host, reg *tool.Registry, plan mcpSpecPlan, sink event.Sink) ([]plugin.Spec, map[string]bool) {
 	for _, s := range plan.extra {
+		markDisabledMCPTools(reg, s)
 		registerHostSessionServer(ctx, host, reg, s, sink)
 	}
 	known := map[string]bool{}
 	for _, s := range plan.configured {
+		markDisabledMCPTools(reg, s)
 		if registerConfiguredServer(ctx, host, reg, s, plan.alwaysLoad[s.Name]) {
 			known[s.Name] = true
 		}
 	}
 	return plan.configured, known
+}
+
+func markDisabledMCPTools(reg *tool.Registry, s plugin.Spec) {
+	for _, binding := range plugin.DisabledMCPBindings(s) {
+		reg.MarkDisabledMCP(binding)
+	}
 }
 
 // registerHostSessionServer connects a server the host session named for this

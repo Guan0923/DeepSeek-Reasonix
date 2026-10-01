@@ -12,6 +12,8 @@ import (
 
 	"reasonix/internal/contract/event"
 	"reasonix/internal/contract/provider"
+	"reasonix/internal/contract/tool"
+	"reasonix/internal/ext/plugin"
 )
 
 func disabledToolsMCPServer(t *testing.T) *httptest.Server {
@@ -120,5 +122,13 @@ disabled_tools = ["write"]
 				ctrl.Close()
 			}
 		})
+	}
+}
+
+func TestDisabledMCPToolsAreMarkedBeforeRegistration(t *testing.T) {
+	reg := tool.NewRegistry()
+	markDisabledMCPTools(reg, plugin.Spec{Name: "filtered", DisabledTools: []string{"write"}})
+	if !reg.DisabledMCP("mcp__filtered__write") || !reg.DisabledMCP("write") {
+		t.Fatal("disabled MCP aliases were not marked")
 	}
 }

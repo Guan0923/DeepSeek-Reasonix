@@ -282,6 +282,7 @@ func (c *Config) mergeMCPJSON(entries []PluginEntry) {
 			// Within one project, reasonix.toml remains more specific than the
 			// Claude-compatible .mcp.json file.
 			if e.Source == MCPSourceProjectMCPJSON && !c.Plugins[i].Source.ProjectScoped() {
+				e.DisabledTools = mergeDisabledToolPolicies(c.Plugins[i].DisabledTools, e.DisabledTools)
 				c.Plugins[i] = e
 			}
 			continue
