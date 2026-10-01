@@ -30,6 +30,10 @@ local Go server with build, connection, tool-call, and lifecycle checks.
 The [Studio theme author guide](THEME_AUTHOR_GUIDE.md) uses a copyable pure-theme
 package, the current token vocabulary, and Appearance activation and cleanup.
 
+The [compatible command example](../examples/command-notes-kit/README.md) shows
+a copied Claude- or Codex-format package, qualified command names, argument
+substitution, and the disable, re-enable and removal checks.
+
 ## CLI Mode
 
 Use `reasonix plugin` when installing or managing plugin packages from a
