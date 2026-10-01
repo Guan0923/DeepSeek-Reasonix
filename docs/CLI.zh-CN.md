@@ -119,7 +119,11 @@ reasonix config compact-ratio --local 75   # 写入 ./reasonix.toml 项目覆盖
 
 它**默认关闭**：模型经常写出没有文件头的 diff 围栏，普通代码栏才是无损的默认。
 
-没有 `--- `/`+++ ` 文件头的分段会回退到普通代码栏，不会丢行。与
+流式输出的围栏会逐 hunk 着色：每个 `@@` 头会将其之前的行确定下来并着色渲染，尚未完成的
+hunk 仍留在普通代码栏上。
+
+没有 `--- `/`+++ ` 文件头的分段会把其中的 diff 内容留在普通代码栏上，不会丢行；
+只含前导（例如 `git show` 的 commit 头）而没有 diff 内容的分段会被省略。与
 `[cli].diff_formatter` 一样，它仅属于用户/全局配置，项目内的 `reasonix.toml`
 无法设置。
 
@@ -133,8 +137,8 @@ diff 卡片，以及整段输出就是 diff 的 shell 结果（见下方
 整个 diff 写入该命令的 stdin，其 stdout 在去掉非 SGR 控制序列后回写，因此格式化器的
 颜色得以保留，而光标或剪贴板转义无法生效。
 
-全屏 TUI 中它在渲染路径之外运行：先画内置行，待其输出就绪后再替换，因此慢格式化器不会
-卡住界面。
+全屏 TUI 中它在渲染路径之外运行：格式化输出尚未就绪的那部分先画在普通代码栏上，就绪后再
+替换；更早的 hunk 已经格式化好的行保持彩色，因此慢格式化器不会卡住界面。
 
 命令失败、超时、输出为空或 diff 超过 1 MiB 时保留内置渲染器。与
 `[cli].update_channel` 一样，它仅属于用户/全局配置，项目内的 `reasonix.toml`
@@ -258,7 +262,7 @@ reasonix run "运行测试" --output-format stream-json
 }
 ```
 
-`permission_denials` 列出本次运行的权限门拒绝的调用，没有被拒时为空数组；被拒不改变退出码。
+`permission_denials` 列出本次运行的权限门拒绝的调用，没有被拒时为空数组；被拒不改变退出码，唯独在 `--fail-on-unverified` 下 `permission.untrusted_folder` 退出 `3`。
 同一个 `code` 也随被拒的工具结果出现：`stream-json` 里是 `refusalCode`，`--events-jsonl`
 里是 `refusal_code`。
 
@@ -267,6 +271,7 @@ reasonix run "运行测试" --output-format stream-json
 | `code` | 原因 |
 | --- | --- |
 | `permission.unattended` | 需要批准，但无人可以批准。 |
+| `permission.untrusted_folder` | 因工作区文件夹没有信任决定而需要批准，且无人可以批准。该条记录带 `remedy`：`reasonix trust --dir <文件夹>`（先展示该文件夹会运行什么再批准），或为单次运行加 `--permission-mode auto`；结果里的 `unverified_by` 给出该码。 |
 | `permission.read_only` | 会话处于 `read-only`。 |
 | `permission.deny_rule` | 命中 deny 规则。 |
 | `permission.declined` | 有人拒绝了。 |
@@ -304,7 +309,7 @@ reasonix run "运行测试" --output-format stream-json
 | `0` | 模型已结束，包括有调用被拒或就绪检查未满足的情况。 |
 | `1` | 运行失败：模型服务、配置、上限或取消。 |
 | `2` | 命令行参数无效。 |
-| `3` | 指定了 `--fail-on-unverified` 且最终就绪检查未满足。 |
+| `3` | 指定了 `--fail-on-unverified`，且最终就绪检查未满足，或因文件夹未被信任而所有编辑和命令都被拒绝。 |
 
 ### 脱敏机器接口
 

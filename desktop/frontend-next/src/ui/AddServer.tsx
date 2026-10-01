@@ -26,7 +26,13 @@ interface Props {
   onInstalled: () => void;
 }
 
-export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
+export function AddServer(props: Props) {
+  const [connection, setConnection] = useState({ port: props.port, generation: 0 });
+  if (connection.port !== props.port) setConnection({ port: props.port, generation: connection.generation + 1 });
+  return <ServerInput key={connection.generation} {...props} />;
+}
+
+function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
   // Mounted only while open, so this component is the layer Escape closes.
   useEscape(true, onClose);
   const [text, setText] = useState("");
@@ -35,8 +41,11 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<McpInstallResult[]>([]);
+  const remaining = draft?.servers.filter((s) => !results.some((r) => r.name === s.name && r.state !== "issue")) ?? [];
+  const hasSaved = results.some((r) => r.state !== "issue");
 
   const parse = async () => {
+    if (busy || !text.trim()) return;
     setBusy(true);
     setError("");
     try {
@@ -53,19 +62,19 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
     if (!draft) return;
     setBusy(true);
     setError("");
+    const out: McpInstallResult[] = [];
     try {
-      const out: McpInstallResult[] = [];
-      for (const s of draft.servers) out.push(await port.installMcp(s, scope));
-      setResults(out);
-      if (out.some((r) => r.state !== "issue")) onInstalled();
+      for (const s of remaining) out.push(await port.installMcp(s, scope));
     } catch (e) {
       setError(reason(e));
     } finally {
+      setResults((previous) => [...new Map([...previous, ...out].map((r) => [r.name, r])).values()]);
       setBusy(false);
+      if (out.some((r) => r.state !== "issue")) onInstalled();
     }
   };
 
-  if (results.length > 0) {
+  if (results.length > 0 && !error && !busy) {
     return (
       <div className="addsrv" data-stage="done">
         {results.map((r) => (
@@ -81,7 +90,7 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
   }
 
   return (
-    <div className="addsrv" data-stage={draft ? "confirm" : "paste"}>
+    <div className="addsrv" data-stage={draft ? "confirm" : "paste"} aria-busy={busy}>
       {!draft && (
         <>
           <textarea
@@ -93,7 +102,10 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
             placeholder={PLACEHOLDER}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void parse();
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                void parse();
+              }
             }}
           />
           <div className="acts">
@@ -110,7 +122,8 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
 
       {draft && (
         <>
-          {draft.servers.map((s) => (
+          {results.map((r) => <Outcome key={r.name} r={r} />)}
+          {remaining.map((s) => (
             <div className="cand" key={s.name}>
               <div className="cand-hd">
                 <span className="nm">{s.name}</span>
@@ -131,13 +144,13 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
               question. Only the third option edits a tracked file, so it is the
               one that has to say so out loud — and it is never the default. */}
           <div className="scope" role="radiogroup" aria-label={t("安装位置")}>
-            <button role="radio" aria-checked={scope === "user"} onClick={() => setScope("user")}>
+            <button role="radio" aria-checked={scope === "user"} disabled={busy || hasSaved} onClick={() => setScope("user")}>
               {t("我的")}<i>{t("所有项目均可使用")}</i>
             </button>
             <button
               role="radio"
               aria-checked={scope === "local"}
-              disabled={!canProject}
+              disabled={busy || hasSaved || !canProject}
               onClick={() => setScope("local")}
             >
               {t("仅当前项目")}<i>{t("不写入仓库，他人不会获得")}</i>
@@ -145,7 +158,7 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
             <button
               role="radio"
               aria-checked={scope === "project"}
-              disabled={!canProject}
+              disabled={busy || hasSaved || !canProject}
               onClick={() => setScope("project")}
             >
               {t("写进仓库")}<i>{t("clone 仓库的人也会获得")}</i>
@@ -155,7 +168,7 @@ export function AddServer({ port, canProject, onClose, onInstalled }: Props) {
             <div className="warn">{t("这会修改仓库中的配置文件，属于一处待提交的改动。")}</div>
           )}
           <div className="acts">
-            <button className="act" onClick={() => setDraft(null)}>
+            <button className="act" disabled={busy} onClick={() => { setDraft(null); setResults([]); setError(""); }}>
               {t("返回")}
             </button>
             <button className="act" data-action="mcp.add" data-primary disabled={busy} onClick={() => void install()}>

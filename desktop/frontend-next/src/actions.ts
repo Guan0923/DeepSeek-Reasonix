@@ -95,6 +95,10 @@ export const ACTIONS: UIAction[] = [
 
   { id: "tool.image-open", kind: "view", target: "none", proof: "interaction" },
   { id: "tool.image-close", kind: "view", target: "none", proof: "interaction" },
+  { id: "tool.show-all", kind: "view", target: "none", proof: "interaction" },
+  { id: "agent.open", kind: "view", target: "entity", proof: "interaction" },
+  { id: "agent.focus-trap", kind: "navigation", target: "none", proof: "interaction" },
+  { id: "agent.close", kind: "view", target: "none", proof: "interaction" },
 
   // ── The turn ─────────────────────────────────────────────────────────────
   // Send and stop remain two actions even when they sit together: during a
@@ -244,6 +248,7 @@ export const ACTIONS: UIAction[] = [
   { id: "market.mine-retry", kind: "view", target: "none", proof: "interaction" },
   { id: "market.submit", kind: "kernel-mutation", target: "none", proof: "interaction" },
   { id: "market.vote", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "market.vote-retry", kind: "view", target: "none", proof: "interaction" },
   // Taking back the innermost open thing: a popover, an inline form. One
   // intent, reached by pressing away and by Escape.
   { id: "layer.dismiss", kind: "navigation", target: "none", proof: "interaction" },
@@ -281,6 +286,7 @@ export const ACTIONS: UIAction[] = [
   // state — which is why it is one id and why it is not a mutation.
   { id: "external.open", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "remote-host.remove", kind: "destructive", target: "none", proof: "authority-effect" },
+  { id: "workspace.reveal", kind: "shell-native", target: "entity", proof: "interaction" },
   { id: "workspace.remove", kind: "destructive", target: "none", proof: "authority-effect" },
   { id: "extensions.invoke", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
 
@@ -295,6 +301,7 @@ export const ACTIONS: UIAction[] = [
   { id: "remote.probe", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "remote.read", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "workspace.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
+  { id: "workspace.move", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
 
   // ── Taking a change back ─────────────────────────────────────────────────
   // Planning a revert and performing one are two contracts: the first asks the

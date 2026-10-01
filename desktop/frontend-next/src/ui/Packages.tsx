@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { t } from "../i18n";
 import type { AgentPort, PluginExport, PluginItem, PluginPackage } from "../port/port";
 import { Switch } from "./Switch";
@@ -15,14 +15,20 @@ interface Props {
 }
 
 export function Packages({ port, packages, onChanged, updating, onUpdate }: Props) {
+  const [connection, setConnection] = useState({ port, generation: 0 });
+  const currentConnection = useRef(connection);
+  currentConnection.current = connection;
+  if (connection.port !== port) setConnection({ port, generation: connection.generation + 1 });
   return (
     <>
       {packages.map((p) => (
         <Package
-          key={p.name}
+          key={`${connection.generation}:${p.name}`}
           p={p}
           port={port}
-          onDone={onChanged}
+          onDone={() => {
+            if (currentConnection.current === connection) onChanged();
+          }}
           updating={updating}
           onUpdate={() => onUpdate(p.name)}
         />
@@ -94,6 +100,7 @@ function Package({
         disabled={locked}
         onClick={() =>
           void run("export", async () => {
+            setExported(null);
             setExported(await port.exportPlugin(p.name));
           })
         }
@@ -150,10 +157,10 @@ function Package({
     </>
   );
 
-  const why = p.error || failed;
   const notes = (
     <>
-      {why && <div className="why">{why}</div>}
+      {p.error && <div className="why">{p.error}</div>}
+      {failed && <div className="why" role="alert">{failed}</div>}
       {p.status === "disabled_incompatible" && (
         <div className="why">{p.statusReason || t("这个包和当前版本不兼容，已经被停用。")}</div>
       )}
@@ -163,8 +170,9 @@ function Package({
         </div>
       ))}
       {exported && (
-        <div className="why">
+        <div className="why" role="status">
           {exported.savedTo ? t("已保存至 {path}。", { path: exported.savedTo }) : t("导出完成。")}
+          {" "}
           {exported.required.length
             ? t("里面的密钥值已经去掉，装它的人要自己提供：{names}", { names: exported.required.join("、") })
             : t("该包不需要填写任何密钥。")}
@@ -174,7 +182,7 @@ function Package({
   );
 
   return (
-    <details className="srv" data-extension-name={p.name} data-st={p.enabled ? "ready" : "disabled"} aria-busy={locked} open={confirming || undefined}>
+    <details className="srv" data-extension-name={p.name} data-st={p.enabled ? "ready" : "disabled"} aria-busy={locked} open={confirming || !!failed || !!exported || undefined}>
       <summary>{head}</summary>
       {confirm}
       {notes}

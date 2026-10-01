@@ -293,7 +293,8 @@ func (h *Hub) Open(ctx context.Context, req OpenRequest) (*Runtime, error) {
 		FeedbackSurface: feedbackSurface(h.surface()),
 		BalanceStore:    h.wallets,
 
-		ProviderResolver: h.opts.ProviderResolver,
+		ProviderResolver:         h.opts.ProviderResolver,
+		CleanupPendingReconciler: BackgroundCleanupReconciler,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", root, err)
@@ -329,12 +330,16 @@ func (h *Hub) Open(ctx context.Context, req OpenRequest) (*Runtime, error) {
 			return nil, keepRefusalStatus(status, err)
 		}
 	}
+	if err := addRememberedWorkspace(ctx, root); err != nil {
+		built.Controller.Close()
+		leases.Release()
+		return nil, err
+	}
 	rt := &Runtime{ID: h.nextID(), Root: root, Server: srv, Events: bc, leases: leases}
 	// Before publishing: Close reads rt.stop, and a pane must not be reachable
 	// before the fields its teardown depends on are set.
 	h.adoptHostDecisions(rt)
 	h.publish(rt)
-	rememberWorkspace(root)
 	return rt, nil
 }
 
@@ -492,6 +497,7 @@ func (h *Hub) Handler() http.Handler {
 	// stays the window's: a paired device reaches the rest.
 	hostMux := http.NewServeMux()
 	hostMux.HandleFunc("POST /host/pick-folder", h.pickLocalFolderHTTP)
+	hostMux.HandleFunc("GET /host/workspaces/locate", h.locateWorkspace)
 	hostMux.HandleFunc("GET /remotes", h.listRemoteHosts)
 	hostMux.HandleFunc("POST /remotes", h.saveRemoteHost)
 	hostMux.HandleFunc("GET /remotes/candidates", h.remoteCandidates)
@@ -639,7 +645,7 @@ func (h *Hub) resolveRoot(req OpenRequest) (string, error) {
 	// Closing the last pane leaves nothing to infer from, and "open a session"
 	// is exactly what someone does next. Fall back to the remembered list, the
 	// same answer the window uses when it launches with no pane at all.
-	for _, dir := range Workspaces() {
+	for _, dir := range LaunchWorkspaces() {
 		if st, err := os.Stat(dir); err == nil && st.IsDir() {
 			return dir, nil
 		}

@@ -136,9 +136,14 @@ line numbers) instead of the plain code rail.
 It is **off by default**: a model writes headerless diff fences often, and the
 plain rail is the lossless default.
 
-A fence section with no `--- `/`+++ ` file header falls back to the plain rail so
-no line is dropped. Like `[cli].diff_formatter` it is user/global only — a
-project-local `reasonix.toml` cannot set it.
+A streaming fence colours in hunk by hunk: each `@@` header settles the rows
+before it, which are drawn coloured while the in-progress hunk stays on the plain
+rail.
+
+A fence section with no `--- `/`+++ ` file header keeps its diff content on the
+plain rail; one that is only a preamble — a `git show` commit header, say —
+carries no diff and is omitted. Like `[cli].diff_formatter` it is user/global
+only — a project-local `reasonix.toml` cannot set it.
 
 `[cli].diff_formatter` names an optional external command that formats a diff
 for the CLI/TUI to render — a fenced ` ```diff ` / ` ```patch ` block, a writer
@@ -151,9 +156,10 @@ The whole diff is written to the command's stdin; its stdout is re-emitted with
 non-SGR control sequences stripped, so the formatter's colours survive but a
 cursor or clipboard escape cannot.
 
-In the full-screen TUI it runs off the render path: the built-in rows are drawn
-first and replaced once its output is ready, so a slow formatter cannot freeze
-the UI.
+In the full-screen TUI it runs off the render path: a part of the fence whose run
+is still pending is drawn on the plain rail and replaced once the output is ready
+— a hunk an earlier run already formatted stays coloured — so a slow formatter
+cannot freeze the UI.
 
 On any failure, timeout, empty output, or a diff larger than 1 MiB, the
 built-in renderer is kept. Like `[cli].update_channel` it is user/global only —
@@ -301,6 +307,7 @@ empty when nothing was, and a refusal never changes the exit code. The same
 | `code` | Cause |
 | --- | --- |
 | `permission.unattended` | It needed an approval and nobody could give one. |
+| `permission.untrusted_folder` | The folder is not trusted, so it needed an approval nobody could give. The denial's `remedy` names `reasonix trust --dir <folder>`, which shows what the folder would run before approving; `--fail-on-unverified` exits `3` and the result's `unverified_by` carries the code. |
 | `permission.read_only` | The session is in `read-only`. |
 | `permission.deny_rule` | A deny rule matched. |
 | `permission.declined` | A person answered no. |
@@ -344,7 +351,7 @@ Exit statuses of `reasonix run`:
 | `0` | The model finished, including with refused calls or unmet readiness. |
 | `1` | The run failed: provider, configuration, limit, or cancellation. |
 | `2` | The command line was invalid. |
-| `3` | `--fail-on-unverified` was given and final readiness stayed unmet. |
+| `3` | `--fail-on-unverified` was given and final readiness stayed unmet, or the folder is not trusted and its edits were refused. |
 
 ### Redacted machine interfaces
 

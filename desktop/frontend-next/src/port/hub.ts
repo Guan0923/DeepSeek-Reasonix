@@ -2,6 +2,7 @@ import { HttpError, type AgentPort } from "./port";
 import type { RemoteAsk, RemoteHost, RemoteHostEdit, RemoteListing, RemoteProbe } from "./remote";
 import type { CloudShareOffer, DeviceSelf, ShareOffer, SharePort, ShareStatus } from "./share";
 import { SsePort } from "./sse";
+import { host } from "./host";
 
 // How often a client waiting on a dial looks for the question it might be
 // stopped by. A person answers this one, so half a second is not the cost —
@@ -71,6 +72,9 @@ export interface HubPort extends SharePort {
   tree(): Promise<TreeWorkspace[]>;
   addWorkspace(path: string): Promise<TreeWorkspace>;
   removeWorkspace(path: string): Promise<void>;
+  /** Show a listed project's folder in the system file manager. */
+  revealWorkspace(path: string): Promise<void>;
+  moveWorkspace(path: string, direction: -1 | 1): Promise<void>;
   removeSession(path: string): Promise<void>;
   archiveSession(path: string, archived: boolean): Promise<void>;
   renameSession(path: string, title: string): Promise<void>;
@@ -200,8 +204,17 @@ export class SseHub implements HubPort {
     return this.post<TreeWorkspace>("/tree/workspaces", { path });
   }
 
+  async revealWorkspace(path: string) {
+    const why = await host().revealWorkspace(path);
+    if (why) throw new HttpError(0, why.error || "not shown", why, !!(why.code || why.error));
+  }
+
   async removeWorkspace(path: string) {
     await this.post<void>("/tree/workspaces/remove", { path });
+  }
+
+  async moveWorkspace(path: string, direction: -1 | 1) {
+    await this.post<void>("/tree/workspaces/move", { path, direction });
   }
 
   async removeSession(path: string) {

@@ -80,12 +80,14 @@ type Messages struct {
 	ResumePickNoMatch      string // resume picker: the query matches no session
 
 	// terminal transcript rows the kernel does not word.
-	TUIDeclinedFmt      string // an approval the user refused — %s tool, %s subject
-	TUIQuestion         string // an answered question that carried no prompt
-	TUISubagentCallsFmt string // calls a sub-agent made under its task — %d count
-	TUIStallTokensFmt   string // progress watch: %d context windows (%d tokens) with nothing observable
-	TUIStallRepeating   string // progress watch: the model repeats itself
-	TUIStallIdleFmt     string // progress watch: %d tool rounds with nothing observable
+	TUIDeclinedFmt          string // an approval the user refused — %s tool, %s subject
+	NoticeContextBudgetFmt  string // the model was warned the compaction trigger is near — %d percent, %d tokens left
+	NoticeUnappliedSteerFmt string // guidance that arrived too late for its turn — %s the guidance
+	TUIQuestion             string // an answered question that carried no prompt
+	TUISubagentCallsFmt     string // calls a sub-agent made under its task — %d count
+	TUIStallTokensFmt       string // progress watch: %d context windows (%d tokens) with nothing observable
+	TUIStallRepeating       string // progress watch: the model repeats itself
+	TUIStallIdleFmt         string // progress watch: %d tool rounds with nothing observable
 
 	// chat TUI status line / approval banner.
 	ChatThinking                    string // live reasoning marker label, e.g. "thinking…"
@@ -193,6 +195,17 @@ type Messages struct {
 	DiffFoldDisabled                string // notice when /diff-fold disables folding (shows all lines)
 
 	// `ask` tool question card.
+	AskURLSourceFmt      string
+	AskURLHint           string
+	AskURLWarning        string
+	AskURLLocalWarning   string
+	AskURLOpen           string
+	AskURLContinue       string
+	AskURLDecline        string
+	AskURLCancel         string
+	AskURLOpenFailed     string
+	AskURLSending        string
+	AskURLAnswerFailed   string
 	AskTypeSomething     string // the "type your own answer" option label
 	AskTypingHint        string // shown on that row while entering free text
 	AskNoteHint          string // shown under a single-choice pick while typing its note
