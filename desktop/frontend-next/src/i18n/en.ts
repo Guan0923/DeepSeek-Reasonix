@@ -334,6 +334,11 @@ export const EN: Record<string, string> = {
   "正在运行，暂停后才能关闭": "Running; pause it before closing",
   "受阻": "blocked",
   "状态不明": "uncertain",
+  "这条插话在本轮结束前没来得及送达，没有发给模型": "This guidance was not delivered before the turn ended, so the model never saw it",
+  "本轮已结束，但对话记录没能保存": "The turn ended, but the transcript could not be saved",
+  "本轮已结束，但队列没能确认这一条": "The turn ended, but the queue could not acknowledge this item",
+  "运行这一条的会话已不在了": "The session that was running this item is gone",
+  "队列记录损坏，这一条是从残留文件里找回的": "The queue record was corrupt; this item was salvaged from leftover files",
   "冻结 {n} 文件": "{n} frozen",
   "无法读取该条的正文，未打开编辑：{why}":
     "Could not read this entry back, so it was not opened for editing: {why}",
@@ -1093,6 +1098,8 @@ export const EN: Record<string, string> = {
   "项目操作：{name}": "Project actions: {name}",
   "项目操作": "Project actions",
   "不删除文件": "Keeps files",
+  "在文件管理器中显示": "Show in file manager",
+  "文件夹已不在磁盘上": "Folder is gone",
   "删除会话：{title}": "Delete session: {title}",
   "会话在文件夹里打开，先添加一个": "A session opens in a folder; add one first",
   "添加文件夹": "Add folder",
@@ -1216,5 +1223,7 @@ export const EN: Record<string, string> = {
   "同一段内容被逐字重复": "The same block is being repeated verbatim",
   "任务已按设置暂停：模型卡在重复输出同一段文字": "Paused by your setting: the model is stuck repeating the same text",
   "等待你的输入": "Waiting for you",
+  "引导没有生效：这一轮在处理它之前就结束了。如果仍然需要，请再发送一次：": "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:",
+  "上下文已用到压缩阈值的 {percent}%，已告知模型约剩 {remaining} 个词元的空间。": "Context at {percent}% of the compaction threshold — the model was told it has about {remaining} tokens of room left.",
   "模型卡在重复输出同一段文字，这一轮已停止；可以重试、补充引导，或换一个供应商/模型": "The model is stuck repeating the same text; this turn was stopped. Try again, add guidance, or switch provider/model.",
 };
