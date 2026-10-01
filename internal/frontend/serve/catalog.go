@@ -334,18 +334,18 @@ func (s *Server) mcp(w http.ResponseWriter, r *http.Request) {
 	for _, health := range ctl.MCPServerHealth() {
 		st, configured := declared[health.Name]
 		row := mcpEntry{
-			Name: health.Name, State: health.Status, Enabled: st.Enabled || !configured,
+			Name: health.Name, State: health.Status, Enabled: health.Status != control.MCPHealthPending && (st.Enabled || !configured),
 			LocalOverride: st.LocalOverride, Transport: st.Entry.Type,
 			Source: string(st.Entry.Source), Error: health.Error, HTTPStatus: health.HTTPStatus,
 			Tools: health.Tools, AlwaysLoad: st.AlwaysLoad, InSchema: st.InSchema,
 		}
-		if srv, ok := live[health.Name]; ok && health.Status == "ready" {
+		if srv, ok := live[health.Name]; ok && health.Status == control.MCPHealthReady {
 			row.Transport, row.Source = srv.Transport, srv.ConfigSource
 			row.Description = displayText(srv.Description, mcpServerTextLimit)
 			row.Prompts, row.Resources = srv.Prompts, srv.Resources
 			row.ToolList = mcpToolViews(srv.ToolList)
 		} else {
-			if f, ok := failures[health.Name]; ok && health.Status == "failed" {
+			if f, ok := failures[health.Name]; ok && (health.Status == control.MCPHealthFailed || health.Status == control.MCPHealthPending) {
 				row.Transport = f.Transport
 			}
 			row = remembered(st, row)
@@ -386,10 +386,10 @@ func (s *Server) mcpReconnect(w http.ResponseWriter, r *http.Request) {
 	}
 	tools, err := s.ctl().ReconnectMCPServer(name)
 	if err != nil {
-		writeJSONStatus(w, http.StatusBadGateway, map[string]any{"name": name, "state": "failed", "error": err.Error()})
+		writeJSONStatus(w, http.StatusBadGateway, map[string]any{"name": name, "state": control.MCPHealthFailed, "error": err.Error()})
 		return
 	}
-	writeJSON(w, map[string]any{"name": name, "state": "ready", "tools": tools})
+	writeJSON(w, map[string]any{"name": name, "state": control.MCPHealthReady, "tools": tools})
 }
 
 // mcpLoad sets whether a server's tools load into the provider schema. An
