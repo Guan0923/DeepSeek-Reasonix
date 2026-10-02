@@ -108,6 +108,7 @@ type model struct {
 	scr           *screen
 	picker        *sessionPicker
 	rewind        *rewindPicker
+	copying       *copyPicker
 	clearing      *clearConfirm
 	lastEsc       time.Time // an idle Esc on an empty composer, arming the second
 	// frameRows is how tall the last inline frame was: a print has only the
@@ -412,7 +413,7 @@ func (m *model) onScreenMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case edgeMsg:
 		return m.onEdge(), true
 	}
-	return nil, false
+	return m.onQueueMsg(msg)
 }
 
 // noteTurnEnd says how a turn that did not finish ended; a finished one says
