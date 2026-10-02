@@ -69,9 +69,7 @@ type Request struct {
 // Result is the structured outcome of a foreground run.
 type Result struct {
 	Combined string
-	// OutputTail is the bounded tail of combined output, populated only after a
-	// failed run. Stdout and stderr share one pipe, so the final bytes are the
-	// diagnosis rather than a stderr-only tail that would reorder the streams.
+	// OutputTail is the bounded tail of failed combined output.
 	OutputTail   string
 	ExitCode     *int
 	Started      bool

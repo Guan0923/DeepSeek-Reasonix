@@ -242,10 +242,9 @@ func TestBashCandidatesDropRelativePathAndDuplicates(t *testing.T) {
 	}
 }
 
-// The decision this issue is about, decided on any host: a PowerShell that is
-// found but will not start must not win, and Windows PowerShell 5.1 has to be
-// picked in its place. The launch probe is injected because a Linux or macOS
-// machine has no pwsh to run — the decision table is the point, not the OS.
+// A found PowerShell that will not start must not win; Windows PowerShell 5.1
+// is the fallback when it starts. The launch probe is injected so the decision
+// table is testable on hosts without pwsh.
 func TestResolveShellFallsBackFromUnusablePowerShell(t *testing.T) {
 	no := func(string) bool { return false }
 	pwsh := `C:\fake\PowerShell\7\pwsh.exe`
@@ -271,9 +270,9 @@ func TestResolveShellFallsBackFromUnusablePowerShell(t *testing.T) {
 	})
 }
 
-// With nothing left to pick, the resolver still answers — but it says so. A
-// silent bare "bash" is what the issue reported: the session held a shell that
-// nothing had proved the host owned, and every command died at launch.
+// With nothing left to pick, the resolver returns bare bash and warns: no
+// candidate was proven usable, so callers must not silently treat the fallback
+// as a confirmed host shell.
 func TestResolveShellSaysWhenNothingIsUsable(t *testing.T) {
 	no := func(string) bool { return false }
 	winPS := []string{`C:\fake\PowerShell\7\pwsh.exe`}
@@ -304,8 +303,8 @@ func TestResolveShellRefusesPinnedPowerShellThatWillNotStart(t *testing.T) {
 	}
 }
 
-// VerifyShell has to prove the PowerShell path too: a Store alias can exist and
-// still fail to start, which used to be accepted at the settings boundary.
+// VerifyShell proves the PowerShell path launches: an existing Store alias can
+// fail to start and must not be accepted at the settings boundary.
 func TestVerifyShellRejectsPowerShellThatWillNotStart(t *testing.T) {
 	const path = `C:\fake\WindowsApps\pwsh.exe`
 	exists := func(string) bool { return true }
