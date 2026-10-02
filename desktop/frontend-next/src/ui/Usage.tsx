@@ -272,9 +272,6 @@ export function Usage({ port }: { port: AgentPort }) {
   const input = report ? report.cache_hit + report.cache_miss : 0;
   const hitRate = input > 0 ? (report!.cache_hit / input) * 100 : 0;
 
-  if (err) return <div className="uerr">{err}</div>;
-  if (!report) return <div className="uwait">{t("正在读取记录…")}</div>;
-
   return (
     <div className="usage">
       <div className="uhead">
@@ -285,7 +282,7 @@ export function Usage({ port }: { port: AgentPort }) {
           <button type="button" aria-pressed={range.kind === "custom"} onClick={openCustom}>{t("自定义")}</button>
           <button type="button" aria-pressed={range.kind === "month"} onClick={openMonth}>{t("自然月")}</button>
         </div>
-        <span className="uspan">{report.from} → {report.to}</span>
+        {report && <span className="uspan">{report.from} → {report.to}</span>}
       </div>
 
       {range.kind === "custom" && (
@@ -316,6 +313,9 @@ export function Usage({ port }: { port: AgentPort }) {
         </label>
       )}
 
+      {err && <div className="uerr" role="alert">{err}</div>}
+      {!report && !err && <div className="uwait">{t("正在读取记录…")}</div>}
+      {report && <>
       <section className="uhero">
         {/* "Paid" is only honest while every folded quote came from the
             provider. One fallback-priced row and the label needs the caveat. */}
@@ -381,6 +381,7 @@ export function Usage({ port }: { port: AgentPort }) {
           <Bars rows={report.providers.map((p) => [p.provider, providerLabels[p.provider] ?? p.provider, p.tokens, `${fmtTokens(p.tokens)}  ${p.percent.toFixed(1)}%`, sourceColor(p.provider)])} />
         </section>
       </div>
+      </>}
     </div>
   );
 }

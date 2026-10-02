@@ -8,7 +8,6 @@ import { MockExecutionHold, mockExecutionGraph } from "./mock_graph";
 import { mockStorage, mockStoragePlan } from "./mock_storage";
 import { MEMORIES } from "./mock_memory";
 import { mockUsage } from "./mock_usage";
-import { DEFAULT_USAGE_DAYS } from "./usage";
 
 
 
@@ -124,7 +123,7 @@ export class MockPort extends MockFeedback implements AgentPort {
   private mem: MemoryEntry[] = MEMORIES.map((m) => ({ ...m }));
 
   async usage(query: number | UsageQuery): Promise<UsageReport> {
-    return mockUsage(typeof query === "number" ? query : "days" in query ? query.days : DEFAULT_USAGE_DAYS);
+    return mockUsage(query);
   }
 
   async memories(): Promise<MemoryCatalog> {

@@ -115,4 +115,23 @@ describe("usage can be asked for another window", () => {
 
     await waitFor(() => expect(port.usage).toHaveBeenLastCalledWith({ from: "2026-08-01", to: "2026-08-31" }));
   });
+
+  it("keeps the range controls visible when the server refuses a window", async () => {
+    const port = makePort({
+      usage: vi.fn((query) => "days" in query
+        ? Promise.resolve(REPORT)
+        : Promise.reject(new Error("range must be between 1 and 365 days"))),
+    });
+    render(<Usage port={port} />);
+    await screen.findByText("2026-08-01 → 2026-08-31");
+
+    fireEvent.click(screen.getByRole("button", { name: t("自定义") }));
+    fireEvent.change(screen.getByLabelText(t("开始日期")), { target: { value: "2024-01-01" } });
+    fireEvent.change(screen.getByLabelText(t("结束日期")), { target: { value: "2025-12-31" } });
+    fireEvent.click(screen.getByRole("button", { name: t("应用") }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("range must be between 1 and 365 days");
+    expect(screen.getByRole("button", { name: t("自定义") })).toBeTruthy();
+    expect(screen.getByLabelText(t("开始日期"))).toBeTruthy();
+  });
 });
