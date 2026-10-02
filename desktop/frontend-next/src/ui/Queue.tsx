@@ -16,7 +16,7 @@ interface Props {
   onRead: (id: string) => Promise<string>;
   onEdit: (id: string, text: string) => void;
   onMove: (id: string, to: number) => void;
-  onCancel: (id: string) => void;
+  onCancel: (id: string) => void | Promise<void>;
   onSendNow: (item: QueueItem) => void;
   onRetry: (id: string) => void;
   onRefresh: (id: string) => void;
