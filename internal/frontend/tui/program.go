@@ -116,6 +116,8 @@ type model struct {
 	glyphs    *glyphFit // console-measured stand-ins for runes drawn wider than counted
 	// yoloRestore is the posture Ctrl+Y leaves YOLO for.
 	yoloRestore string
+	// verbose keeps an answer's thinking open as it settles; /verbose toggles it.
+	verbose bool
 }
 
 type (
@@ -170,6 +172,7 @@ func newModel(ctx context.Context, opts Options) *model {
 		glyphs: newConsoleGlyphFit(os.Stdout),
 	}
 	termrender.SetCells(ansi.WcWidth)
+	m.verbose = storedVerbose()
 	if !opts.Inline {
 		m.scr = &screen{follow: true, mouseOff: mouseCaptureOffByDefault()}
 	}
@@ -503,6 +506,9 @@ func (m *model) settledChunk(it *Item) (settledPrint, bool) {
 	if m.scr != nil && shown == 0 && row.Reasoning != "" {
 		row.Fold = foldShut
 		p.row = &row
+	}
+	if m.verbose && shown == 0 && row.Reasoning != "" {
+		row.Fold = m.verboseFold()
 	}
 	return p, true
 }

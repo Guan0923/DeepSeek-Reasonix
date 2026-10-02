@@ -282,6 +282,9 @@ func (m *model) send(steer bool) tea.Cmd {
 		m.tr.AddNotice("info", "reasonix "+version)
 		return m.commit()
 	}
+	if cmd, ok := m.miscSlash(display); ok {
+		return cmd
+	}
 	text := m.pastes.expand(display)
 	m.history = append(m.history, display)
 	m.histAt = len(m.history)
