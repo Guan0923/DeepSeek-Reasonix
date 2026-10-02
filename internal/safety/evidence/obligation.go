@@ -46,8 +46,9 @@ const (
 // respelling or a wrapper is not a rewrite and the file's raw text is never the
 // identity.
 type CheckContract struct {
-	baseline []string
-	current  []string
+	baseline      []string
+	current       []string
+	capturedTests int
 }
 
 // CaptureCheckContract canonicalises both declarations into criterion
@@ -55,6 +56,12 @@ type CheckContract struct {
 // each time it is asked would be no provenance at all.
 func CaptureCheckContract(baseline, current []string) CheckContract {
 	return CheckContract{baseline: criterionIdentities(baseline), current: criterionIdentities(current)}
+}
+
+// WithCapturedTests preserves criteria even when their current bytes are unchanged.
+func (c CheckContract) WithCapturedTests(count int) CheckContract {
+	c.capturedTests = count
+	return c
 }
 
 // Baseline returns the captured identities, for a host that has to persist them
@@ -128,8 +135,38 @@ func (l *Ledger) Obligations(contract CheckContract) []Obligation {
 	if !changed {
 		return out
 	}
-	out = append(out, staleVerificationOf(l, at)...)
+	if !l.SupportingOnlyWithoutChecks(contract) {
+		out = append(out, staleVerificationOf(l, at)...)
+	}
 	return append(out, l.checkObligations(contract, at)...)
+}
+
+// SupportingOnlyWithoutChecks requires established scope for every mutation;
+// a watched subset cannot exempt effects the host never observed.
+func (l *Ledger) SupportingOnlyWithoutChecks(contract CheckContract) bool {
+	if l == nil || len(contract.baseline) != 0 || len(contract.current) != 0 || contract.capturedTests != 0 {
+		return false
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	changed := false
+	for _, r := range l.receipts {
+		if !r.Success || !r.Mutation {
+			continue
+		}
+		// Named-path writers establish scope by contract; other tools need a
+		// complete observation rather than a watched subset.
+		if r.MutationEvidence != MutationProven || len(r.Paths) == 0 || (!r.Write && !r.PathsComplete) {
+			return false
+		}
+		for _, path := range r.Paths {
+			if strings.TrimSpace(path) == "" || ClassifyPath(path) != PathSupporting {
+				return false
+			}
+		}
+		changed = true
+	}
+	return changed
 }
 
 // checkObligations owes every criterion either declaration named, baseline
