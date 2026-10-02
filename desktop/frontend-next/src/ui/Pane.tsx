@@ -20,7 +20,7 @@ import { initialTraj, reduceTraj } from "../state/trajectory";
 import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
 import { draftKey } from "./drafts";
-import { Queue } from "./Queue";
+import { Queue, waiting } from "./Queue";
 import { SlottedView } from "./SlottedView";
 import { key as slotKey, placement } from "./slots";
 import { Metrics } from "./Metrics";
@@ -324,14 +324,12 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   const jobs = status?.jobs ?? NO_JOBS;
   const counts = useMemo(() => {
     let steps = 0;
-    let steer = 0;
     let wrote = 0;
     for (const i of s.items) {
       if (i.t === "tool" && !i.running && !i.tool.readOnly) wrote++;
       if (i.t === "tool") steps++;
-      else if (i.t === "user" && i.pending) steer++;
     }
-    return { steps, steer, wrote };
+    return { steps, wrote };
   }, [s.revision]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -515,7 +513,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
     onReport(rt.id, {
       status,
       title,
-      steer: counts.steer,
+      steer: waiting(queue).filter((it) => it.intent === "steer").length,
       run,
       live: running || blocked,
       cost,
@@ -524,7 +522,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
       mcp,
       wallet: walletDisplay,
     });
-  }, [rt.id, onReport, status, title, counts.steer, run, running, blocked, cost, contextPercent, ctx, mcp, walletDisplay]);
+  }, [rt.id, onReport, status, title, queue, run, running, blocked, cost, contextPercent, ctx, mcp, walletDisplay]);
 
   return (
     <section
