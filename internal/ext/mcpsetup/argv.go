@@ -123,7 +123,7 @@ func putPair(dst *map[string]string, flag, pair string) error {
 }
 
 func looksLikeRemoteURL(raw string) bool {
-	raw = strings.TrimSpace(raw)
+	raw = strings.ToLower(strings.TrimSpace(raw))
 	return strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://")
 }
 
@@ -158,7 +158,7 @@ func NameFromArgv(command string, args []string) string {
 			candidate = operand
 		}
 	case "node":
-		if operand := firstCommandOperand(args); operand != "" {
+		if operand := nodeCommandOperand(args); operand != "" {
 			candidate = operand
 		}
 	case "uv":
@@ -217,6 +217,7 @@ func firstCommandOperand(args []string) string {
 	valueFlags := map[string]bool{
 		"-p": true, "--package": true, "-c": true, "--call": true,
 		"--node-options": true, "--python": true, "--from": true,
+		"-w": true, "--with": true, "--with-requirements": true,
 	}
 	options := true
 	for i := 0; i < len(args); i++ {
@@ -232,6 +233,27 @@ func firstCommandOperand(args []string) string {
 			continue
 		}
 		if arg != "" {
+			return arg
+		}
+	}
+	return ""
+}
+
+func nodeCommandOperand(args []string) string {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--":
+			if i+1 < len(args) {
+				return args[i+1]
+			}
+			return ""
+		case arg == "-", arg == "-e", arg == "--eval", arg == "-p", arg == "--print",
+			strings.HasPrefix(arg, "--eval="), strings.HasPrefix(arg, "--print="):
+			return ""
+		case arg == "-r", arg == "--require", arg == "--import":
+			i++
+		case arg != "" && !strings.HasPrefix(arg, "-"):
 			return arg
 		}
 	}
