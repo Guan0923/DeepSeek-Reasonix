@@ -117,7 +117,6 @@ type Messages struct {
 	ChatStatusCancellingViFmt       string // "%s stopping… (%ds)" — vi mode: Ctrl+C re-cancels instead of exiting, so the hint drops the exit key
 	ChatStatusIdle                  string // shortcuts hint when idle
 	ChatStatusYoloIdle              string // shortcuts hint when idle in YOLO/bypass mode
-	YoloConfirmHint                 string // Ctrl+Y before YOLO was ever confirmed: what it skips, press again
 	ChatStatusCycleHint             string // plan-toggle shortcut hint shown when no modal prompt owns the status row
 	ChatStatusCycleHintCompact      string // readable shortcut hint used by the persistent footer
 	ChatTurnReceiptLabel            string // compact per-turn usage receipt attached to the completed assistant response
@@ -292,77 +291,100 @@ type Messages struct {
 
 	// slash command + sub-command descriptions shown in the menu (CLI and desktop
 	// share these via i18n.M, so both frontends localize identically).
-	CmdNew              string // /new
-	CmdClear            string // /clear
-	CmdCls              string // /cls
-	CmdCompact          string // /compact
-	CmdContext          string // /context
-	CmdGraph            string // /graph
-	CmdRewind           string // /rewind
-	CmdTree             string // /tree
-	CmdBranch           string // /branch
-	CmdBrowser          string // /browser
-	CmdSwitchBranch     string // /switch
-	CmdResume           string // /resume
-	CmdRename           string // /rename
-	CmdModel            string // /model
-	CmdStatus           string // /status
-	CmdVersion          string // /version
-	CmdWorkMode         string // /work-mode
-	CmdDocs             string // /docs
-	CmdMemory           string // /memory
-	CmdMigrate          string // /migrate
-	CmdGoal             string // /goal
-	CmdRemember         string // /remember
-	CmdForget           string // /forget
-	CmdMcp              string // /mcp
-	CmdRemote           string // /remote
-	CmdHooks            string // /hooks
-	CmdFeedback         string // /feedback
-	CmdPlugins          string // /plugins
-	CmdPasteImage       string // /paste-image
-	CmdOutputStyle      string // /output-style
-	CmdTheme            string // /theme
-	CmdLanguage         string // /language
-	CmdCurrency         string // /currency
-	CmdSkill            string // /skills
-	CmdVerbose          string // /verbose
-	CmdReloadCmd        string // /reload-cmd
-	CmdReload           string // /reload
-	CmdDiffFold         string // /diff-fold
-	CmdSandbox          string // /sandbox
-	CmdEffort           string // /effort
-	CmdMouse            string // /mouse
-	CmdReasonLang       string // /reasoning-language
-	CmdHelp             string // /help
-	CmdWeb              string // /web
-	CmdTodo             string // /todo
-	CmdQuit             string // /quit (also accepts /exit as hidden alias)
-	CmdCopy             string // /copy
-	CmdExport           string // /export
-	SlashCopyDone       string // "/copy" succeeded
-	SlashCopyEmpty      string // no assistant response to copy
-	SlashCopyListHeader string // header shown before the numbered list
-	SlashExportDoneFmt  string // "/export" succeeded, %s = file path
-	SlashExportEmpty    string // no messages to export
-	ArgSkillShow        string // /skills show
-	ArgSkillNew         string // /skills new
-	ArgSkillPaths       string // /skills paths
-	ArgMcpAdd           string // /mcp add
-	ArgMcpRemove        string // /mcp remove
-	ArgMcpConnected     string // /mcp remove <server> tag
-	ArgHooksList        string // /hooks list
-	ArgModelCurrent     string // /model <ref> active tag
-	ArgEffortAuto       string // /effort auto
-	ArgEffortLow        string // /effort low
-	ArgEffortMedium     string // /effort medium
-	ArgEffortHigh       string // /effort high
-	ArgEffortXHigh      string // /effort xhigh
-	ArgEffortMax        string // /effort max
-	ArgThemeCurrent     string // /theme <style> active tag
-	ArgLanguageAuto     string // /language auto
-	ArgLanguageEn       string // /language en
-	ArgLanguageZh       string // /language zh
+	CmdNew               string // /new
+	CmdClear             string // /clear
+	CmdCls               string // /cls
+	CmdCompact           string // /compact
+	CmdContext           string // /context
+	CmdGraph             string // /graph
+	CmdRewind            string // /rewind
+	CmdTree              string // /tree
+	CmdBranch            string // /branch
+	CmdBrowser           string // /browser
+	CmdSwitchBranch      string // /switch
+	CmdResume            string // /resume
+	CmdRename            string // /rename
+	CmdModel             string // /model
+	CmdStatus            string // /status
+	CmdVersion           string // /version
+	CmdSetup             string
+	SetupTitle           string
+	SetupConfigure       string
+	SetupAPIKey          string
+	SetupEnterCredential string
+	SetupSaving          string
+	SetupTesting         string
+	SetupKeyHint         string
+	SetupPickHint        string
+	SetupNoMatches       string
+	SetupModels          string
+	SetupKeyRequired     string
+	SetupActive          string
+	SetupNoConnections   string
+	SetupNeedKeyToTest   string
+	SetupNeedKey         string
+	SetupTestOK          string
+	SetupTestFailed      string
+	SetupSaved           string
+	CmdWorkMode          string // /work-mode
+	CmdDocs              string // /docs
+	CmdMemory            string // /memory
+	CmdMigrate           string // /migrate
+	CmdGoal              string // /goal
+	CmdRemember          string // /remember
+	CmdForget            string // /forget
+	CmdMcp               string // /mcp
+	CmdRemote            string // /remote
+	CmdHooks             string // /hooks
+	CmdFeedback          string // /feedback
+	CmdPlugins           string // /plugins
+	CmdPasteImage        string // /paste-image
+	CmdOutputStyle       string // /output-style
+	CmdTheme             string // /theme
+	CmdLanguage          string // /language
+	CmdCurrency          string // /currency
+	CmdSkill             string // /skills
+	CmdVerbose           string // /verbose
+	CmdReloadCmd         string // /reload-cmd
+	CmdReload            string // /reload
+	CmdDiffFold          string // /diff-fold
+	CmdSandbox           string // /sandbox
+	CmdEffort            string // /effort
+	CmdMouse             string // /mouse
+	CmdReasonLang        string // /reasoning-language
+	CmdHelp              string // /help
+	CmdWeb               string // /web
+	CmdTodo              string // /todo
+	CmdQuit              string // /quit (also accepts /exit as hidden alias)
+	CmdCopy              string // /copy
+	CmdExport            string // /export
+	CmdQueue             string // /queue
+	CmdSteer             string // /steer
+	CmdTakeover          string // /takeover
+	TakeoverNoSteal      string // /takeover resumed a session without taking it from another process
+	SlashCopyDone        string // "/copy" succeeded
+	SlashCopyEmpty       string // no assistant response to copy
+	SlashCopyListHeader  string // header shown before the numbered list
+	SlashExportDoneFmt   string // "/export" succeeded, %s = file path
+	SlashExportEmpty     string // no messages to export
+	ArgSkillShow         string // /skills show
+	ArgSkillNew          string // /skills new
+	ArgSkillPaths        string // /skills paths
+	ArgMcpAdd            string // /mcp add
+	ArgMcpRemove         string // /mcp remove
+	ArgMcpConnected      string // /mcp remove <server> tag
+	ArgHooksList         string // /hooks list
+	ArgModelCurrent      string // /model <ref> active tag
+	ArgEffortAuto        string // /effort auto
+	ArgEffortLow         string // /effort low
+	ArgEffortMedium      string // /effort medium
+	ArgEffortHigh        string // /effort high
+	ArgEffortXHigh       string // /effort xhigh
+	ArgEffortMax         string // /effort max
+	ArgThemeCurrent      string // /theme <style> active tag
+	ArgLanguageAuto      string // /language auto
+	ArgLanguageEn        string // /language en
+	ArgLanguageZh        string // /language zh
 
 	// management listing notices (the Submit path: desktop / HTTP frontends)
 	ListModelsHeaderFmt string // "models (active: %s)"

@@ -17,6 +17,10 @@ const (
 	diffPreviewLines = 24
 )
 
+// diffFoldLines is the fold limit new diffs are drawn with; /diff-fold sets it
+// to 0, which shows every line.
+var diffFoldLines = diffPreviewLines
+
 // renderItem is a settled row as it goes into the scrollback. shown is how much
 // of an answer's text an earlier print already carried.
 func renderItem(it *Item, width, shown int, hideRail bool) string {
@@ -97,15 +101,15 @@ func thought(it *Item, width int) string {
 	switch it.Fold {
 	case foldShut:
 		mark = "▸"
-	case foldOpen:
+	case foldOpen, foldPinned:
 		mark = "▾"
 	}
 	hint := ""
-	if it.Fold != foldFixed {
+	if it.Fold == foldShut || it.Fold == foldOpen {
 		hint = " (Ctrl+O)"
 	}
 	lines := []string{termrender.Dim("  " + mark + " " + fmt.Sprintf(i18n.M.ChatThoughtForFmt, (it.ThoughtMs+500)/1000) + hint)}
-	if it.Fold == foldOpen {
+	if it.Fold == foldOpen || it.Fold == foldPinned {
 		// Styled per row: the transcript is split into rows after rendering, and
 		// one style spanning several would reach only the first of them.
 		for l := range strings.SplitSeq(termrender.Cells().Wrap(strings.TrimSpace(it.Reasoning), max(width-6, 10), ""), "\n") {
@@ -124,7 +128,7 @@ const (
 func renderTool(it *Item, width int) string {
 	t := it.Tool
 	if t.Diff != "" {
-		return "\n" + strings.Join(termrender.DiffBlock(t.Name, t.Args, event.FileDiff{Diff: t.Diff, Added: t.Added, Removed: t.Removed}, width, diffPreviewLines), "\n")
+		return "\n" + strings.Join(termrender.DiffBlock(t.Name, t.Args, event.FileDiff{Diff: t.Diff, Added: t.Added, Removed: t.Removed}, width, diffFoldLines), "\n")
 	}
 	lines := []string{termrender.ToolCard(t.Name, t.Args, width)}
 	avail := width - len([]rune(connector))
@@ -193,7 +197,7 @@ func outputSummary(name, out string, width int, f outputFold) []string {
 // fold to show more of it. The rows carry the card's "⎿" connector on the first
 // line and an aligned gutter after, matching every other tool card's body.
 func diffRows(out string, width int, f outputFold) []string {
-	maxLines := diffPreviewLines
+	maxLines := diffFoldLines
 	if f == foldOpen {
 		maxLines = shellExpandLines
 	}

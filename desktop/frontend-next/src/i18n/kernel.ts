@@ -160,6 +160,16 @@ const SAID: Record<string, string> = {
   "provider.key_too_large": "该 key 长度异常，可能粘贴了错误内容",
   "provider.setup_done": "已连接，无需重复配置",
   "provider.setup_failed": "远端配置未完成，请稍后重试",
+  "provider.unknown": "没有这个模型连接",
+  "provider.no_key_slot": "该连接没有可存放密钥的变量，请先在配置中为它指定 api_key_env",
+  "provider.key_invalid": "该 key 超长或含换行，请重新复制",
+  "provider.credentials_changed": "已保存的密钥在此期间被改动，请重新打开配置再试",
+  "provider.activation_failed": "密钥已保存，但连接尚未生效，请重试",
+  "provider.test_auth": "服务商拒绝了该 key，请检查是否复制完整",
+  "provider.test_timeout": "服务商没有及时应答，请稍后重试",
+  "provider.test_unreachable": "连不上服务商，请检查网络或服务地址",
+  "provider.test_upstream": "服务商返回了错误，请稍后重试",
+  "provider.test_failed": "连接测试未通过",
 
   "memory.unavailable": "该会话未启用记忆",
 

@@ -1008,9 +1008,8 @@ func (p Package) ThemeFiles() []ThemeRef {
 				continue
 			}
 			seen[match] = true
-			base := filepath.Base(match)
 			out = append(out, ThemeRef{
-				Name: strings.TrimSuffix(base, filepath.Ext(base)),
+				Name: themeFileName(match),
 				Path: match,
 			})
 		}

@@ -155,6 +155,14 @@ export const ACTIONS: UIAction[] = [
   { id: "account.reload", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "account.sign-in", kind: "kernel-mutation", target: "none", proof: "interaction" },
   { id: "account.sign-out", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "community.join", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.discord", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.issues", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.contributors", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.profile", kind: "shell-native", target: "entity", proof: "interaction" },
+  { id: "community.douyin-qr", kind: "view", target: "none", proof: "interaction" },
+  { id: "community.author", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.more", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.open", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.tab", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.category", kind: "view", target: "none", proof: "interaction" },
@@ -301,6 +309,7 @@ export const ACTIONS: UIAction[] = [
   { id: "remote.probe", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "remote.read", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "workspace.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
+  { id: "workspace.add-cancel", kind: "view", target: "none", proof: "interaction" },
   { id: "workspace.move", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
 
   // ── Taking a change back ─────────────────────────────────────────────────

@@ -253,6 +253,11 @@ func (b *builder) reportModelNotices() {
 	if ignored := cfg.IgnoredProjectDefaultModel(); ignored != "" {
 		report(b.sink, event.Event{Level: event.LevelWarn, Text: "Ignored the project config's default_model.", Detail: fmt.Sprintf("./reasonix.toml sets default_model = %q but no configured provider serves it; using %q from your user config instead. Edit or remove that default_model line to silence this notice.", ignored, cfg.DefaultModel)})
 	}
+	if b.model.skipped != "" {
+		report(b.sink, event.Event{Level: event.LevelWarn, Code: event.NoticeCodeDefaultModelUnavailable,
+			Text:   "The saved default model is not configured, so another configured model is in use.",
+			Detail: fmt.Sprintf("default_model = %q names no configured provider or model; using %q. Choosing a default model replaces it; until then the file keeps it as written.", b.model.skipped, b.model.ref)})
+	}
 	// Without RequireKey the UI stays reachable, so a missing key would
 	// otherwise surface only as a silently failing first request.
 	if !b.opts.RequireKey && entry.RequiresAPIKey() && entry.APIKey() == "" {
