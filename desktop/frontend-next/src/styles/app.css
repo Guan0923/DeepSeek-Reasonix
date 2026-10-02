@@ -5393,6 +5393,24 @@
 .uranges button:hover { color: var(--text) }
 .uranges button[aria-pressed="true"] { background: var(--raised); color: var(--text) }
 .uspan { color: var(--muted); font: var(--w-reg) var(--fs-ui) var(--mono) }
+.udates {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 10px;
+  align-items: end; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--overlay);
+}
+.udates label, .umonth {
+  display: flex; flex-direction: column; gap: 5px;
+  color: var(--muted); font: var(--w-med) var(--fs-meta) var(--ui);
+}
+.udates input, .umonth input {
+  min-width: 0; padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--raised); color: var(--text); font: var(--w-reg) var(--fs-ui) var(--mono); color-scheme: light dark;
+}
+.udates button, .umonth button {
+  min-height: 34px; padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--raised); color: var(--text); font: var(--w-med) var(--fs-ui) var(--ui); cursor: pointer;
+}
+.udates button:disabled { color: var(--faint); cursor: default }
+.umonth { max-width: 260px; margin-top: -4px }
 
 .uhero { padding: 22px 24px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--r-md) }
 .uhero-k { color: var(--muted); font: var(--w-med) var(--fs-meta) var(--ui); letter-spacing: var(--track-lead); text-transform: uppercase }
@@ -5445,14 +5463,36 @@
 .utip .d { color: var(--muted); font: var(--fs-meta) var(--mono) }
 .utip .v { margin-top: 1px; font: var(--w-med) var(--fs-ui) var(--mono); font-variant-numeric: tabular-nums }
 
+.udaily { padding-top: 14px }
+.utable-wrap { max-height: 320px; margin-top: 8px; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-sm) }
+.utable { width: 100%; min-width: 460px; border-collapse: collapse; font: var(--w-reg) var(--fs-meta) var(--mono); font-variant-numeric: tabular-nums }
+.utable th, .utable td { padding: 8px 10px; border-bottom: 1px solid var(--hair); text-align: right; white-space: nowrap }
+.utable th:first-child, .utable td:first-child { text-align: left }
+.utable th { position: sticky; top: 0; z-index: 1; background: var(--surface); color: var(--muted); font-weight: var(--w-med) }
+.utable tr:last-child td { border-bottom: 0 }
+.utable td:not(:first-child) { color: var(--fg-2, var(--muted)) }
+.utable .ud { color: var(--text) }
 .urows { display: flex; flex-direction: column; gap: 10px; margin-top: 8px }
 .urow-t { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px }
 .urow-t .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-ui) var(--mono) }
 .urow-t .v { flex: none; color: var(--muted); font: var(--fs-ui) var(--mono); font-variant-numeric: tabular-nums }
 .utrack { height: 6px; background: var(--hair); border-radius: var(--r-pill); overflow: hidden }
 
-.ufill { display: block; height: 100%; background: var(--chart); border-radius: var(--r-pill);
+.ufill { display: block; height: 100%; background: var(--row-color, var(--chart)); border-radius: var(--r-pill);
   transition: width var(--t-live) var(--ease-spring) }
+
+@media (max-width: 560px) {
+  .uhead { align-items: stretch }
+  .uranges { width: 100%; overflow-x: auto }
+  .uspan { width: 100%; text-align: center }
+  .uhero { padding: 18px 16px }
+  .uhero-v { font-size: 30px; overflow-wrap: anywhere }
+  .utiles { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .ucard { padding: 14px 12px 10px }
+  .udates { grid-template-columns: 1fr }
+  .udates button { width: 100% }
+  .umonth { max-width: none }
+}
 
 .memedit { display: flex; flex-direction: column; gap: 10px }
 .memedit label { display: flex; flex-direction: column; gap: 4px;
