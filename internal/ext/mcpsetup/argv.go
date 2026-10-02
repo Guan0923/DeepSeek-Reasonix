@@ -217,6 +217,7 @@ func firstCommandOperand(args []string) string {
 	valueFlags := map[string]bool{
 		"-p": true, "--package": true, "-c": true, "--call": true,
 		"--node-options": true, "--python": true, "--from": true,
+		"-w": true, "--with": true, "--with-requirements": true,
 	}
 	options := true
 	for i := 0; i < len(args); i++ {
