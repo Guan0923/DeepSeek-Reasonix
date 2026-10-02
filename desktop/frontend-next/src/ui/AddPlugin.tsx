@@ -41,8 +41,9 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
   const apply = useRef<HTMLButtonElement>(null);
   useEscape(true, () => { if (!updating || !plan || !busy) onClose(); });
   useEffect(() => {
-    if (updating?.name && !busy && (done || (error && plan))) apply.current?.focus();
-  }, [updating?.name, error, plan, done, busy]);
+    const readingUpdate = !!updating?.name && !done && !plan;
+    if (readingUpdate || (!busy && (done || (updating?.name && plan)))) apply.current?.focus();
+  }, [updating?.name, plan, done, busy, error]);
 
   const request = (planId?: string) => ({
     source: text.trim(),
@@ -123,7 +124,16 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
       <div className="addpkg" data-stage="done">
         <Outcome plan={done} />
         <div className="acts">
-          <button className="act" data-action="extensions.finish" ref={apply} onClick={onClose}>
+          {!done.ok && (
+            <button className="act" data-action={updating ? "extensions.inspect" : "extensions.back"} data-primary ref={apply} disabled={busy} onClick={() => {
+              setDone(null);
+              setPlan(null);
+              if (updating) void look();
+            }}>
+              {t(updating ? "重试" : "返回")}
+            </button>
+          )}
+          <button className="act" data-action="extensions.finish" ref={done.ok ? apply : undefined} onClick={onClose}>
             {t("完成")}
           </button>
         </div>
@@ -201,7 +211,8 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
           <span className="why">{error || updating.source}</span>
         </div>
         <div className="acts">
-          <button className="act" data-action="extensions.cancel" onClick={onClose}>
+          {error && <button className="act" data-action="extensions.inspect" data-primary ref={apply} disabled={busy} onClick={() => void look()}>{t("重试")}</button>}
+          <button className="act" data-action="extensions.cancel" ref={error ? undefined : apply} onClick={onClose}>
             {t(error ? "关掉" : "取消")}
           </button>
         </div>
