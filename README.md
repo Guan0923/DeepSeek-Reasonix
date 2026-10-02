@@ -52,6 +52,8 @@
 > **Community · 加入社区** — bilingual Discord for setup help (`#help` / `#求助`), workflow showcases, and feature ideas. → **<https://discord.gg/XF78rEME2D>**
 >
 > QQ group **DeepSeek-Reasonix官方群** (`1093562660`) → **<https://qm.qq.com/q/i59b0z2R8s>** ([QR code](./docs/assets/qq-group.svg))
+>
+> Douyin: **做游戏的小鱼** (Douyin ID `22703872788`) · [QR code](./docs/assets/douyin.png)
 
 <br/>
 
