@@ -363,7 +363,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.onCompletion(msg)
 		return m, nil
 	case tea.PasteMsg:
-		m.composer.InsertString(m.pastes.fold(msg.Content))
+		m.insertPaste(msg.Content)
 		return m, nil
 	case tea.KeyPressMsg:
 		return m.onKey(msg)
@@ -432,6 +432,7 @@ func (m *model) restore(msg historyMsg) tea.Cmd {
 		return m.commit()
 	}
 	m.tr.Restore(msg.msgs)
+	m.pastes.seed(msg.msgs)
 	m.sayShown = map[int]int{}
 	if !msg.reprint {
 		m.committed = map[int]bool{}
