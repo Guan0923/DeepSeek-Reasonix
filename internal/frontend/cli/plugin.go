@@ -14,6 +14,7 @@ import (
 	"reasonix/internal/ext/hook"
 	"reasonix/internal/ext/installsource"
 	"reasonix/internal/ext/pluginpkg"
+	"reasonix/internal/ext/theme"
 )
 
 func pluginCommand(args []string) int {
@@ -463,6 +464,7 @@ func pluginDoctorCommand(args []string) int {
 			return 1
 		}
 	}
+	warnings = append(warnings, theme.PluginWarnings(pkg)...)
 	for _, warning := range warnings {
 		fmt.Println("warning:", warning)
 	}

@@ -613,3 +613,14 @@ Studio drives plugin packages through these kernel routes:
 - `POST /extensions/reload` rebuilds the runtime from what is on disk
 
 `reasonix plugin doctor` has no route; run it from the CLI.
+
+Both `reasonix plugin doctor <name>` and `GET /plugins` report warnings for
+declared `theme.json` files that the theme reader rejects, and for individual
+tokens it drops. Warnings include the file's path relative to the package root.
+They also appear for disabled packages, so authors can diagnose a theme before
+enabling it.
+
+Theme warnings do not reject an otherwise valid plugin or change the doctor's
+exit status. A rejected theme is absent from the theme picker; a pack with some
+invalid tokens still loads with its valid tokens. Other declared theme files
+are not `theme.json` packs and are not validated by this reader.
