@@ -52,7 +52,7 @@
 > **加入社区 · Community** — 双语 Discord，提供安装答疑（`#help` / `#求助`）、工作流展示与功能想法。→ **<https://discord.gg/XF78rEME2D>**
 >
 > QQ 群 **DeepSeek-Reasonix官方群**（群号 `1093562660`）→ **<https://qm.qq.com/q/i59b0z2R8s>**（[二维码](./docs/assets/qq-group.svg)）
->
+
 > 抖音：**做游戏的小鱼**（抖音号 `22703872788`）· [二维码](./docs/assets/douyin.png)
 
 ## 版本
