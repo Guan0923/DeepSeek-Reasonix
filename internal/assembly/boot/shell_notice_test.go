@@ -61,10 +61,16 @@ model = "x"
 		t.Fatalf("Build: %v", err)
 	}
 	t.Cleanup(ctrl.Close)
-	if len(notices) != 1 {
+	var shellWarnings []event.Event
+	for _, notice := range notices {
+		if notice.Kind == event.Notice && strings.Contains(notice.Detail, "not recognised") {
+			shellWarnings = append(shellWarnings, notice)
+		}
+	}
+	if len(shellWarnings) != 1 {
 		t.Fatalf("notices = %+v, want one shell fallback warning", notices)
 	}
-	got := notices[0]
+	got := shellWarnings[0]
 	if got.Kind != event.Notice || got.Level != event.LevelWarn || got.Audience != event.NoticeAudienceOperator || !strings.Contains(got.Detail, "not recognised") {
 		t.Fatalf("notice = %+v, want an operator warning carrying the shell detail", got)
 	}

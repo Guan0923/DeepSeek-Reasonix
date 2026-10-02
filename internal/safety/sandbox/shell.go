@@ -58,10 +58,9 @@ type Shell struct {
 	Path string
 }
 
-// ResolveShell picks the interpreter the shell tool runs commands under. Auto
-// favours bash; Windows uses PowerShell only when bash is absent. A forced kind
-// uses path over the PATH lookup and falls back to auto if it is unusable, so a
-// typo or missing shell can never leave the tool broken.
+// ResolveShell picks the interpreter the shell tool runs commands under: auto
+// favours bash; a forced kind overrides the PATH lookup with path and falls back
+// to auto if unusable, so a typo cannot leave the tool broken.
 func ResolveShell(prefer, path string, warn io.Writer) Shell {
 	return resolveShell(prefer, path, warn, runtime.GOOS, exec.LookPath, fileExists, windowsBashCandidates(), windowsPowerShellCandidates(), probeBash, isWindowsWSLBash, powerShellLaunches)
 }
