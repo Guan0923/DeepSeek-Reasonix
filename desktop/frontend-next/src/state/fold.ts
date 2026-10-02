@@ -14,9 +14,12 @@ const merge = (prev: Tool, next: Tool): Tool => ({ ...prev, ...next, partial: ne
 
 export function foldTool(items: Item[], tool: Tool, running: boolean): Item[] {
   // A subagent's calls carry parentId; they belong inside the task that spawned
-  // them, not as siblings in the main flow.
+  // them, not as siblings in the main flow. A fleet worker's parent is itself a
+  // child card, so the owning card is the one that holds the parent as a child.
   if (tool.parentId) {
-    const at = items.findIndex((i) => i.t === "tool" && i.tool.id === tool.parentId);
+    const at = items.findIndex(
+      (i) => i.t === "tool" && (i.tool.id === tool.parentId || i.children.some((c) => c.id === tool.parentId)),
+    );
     if (at >= 0) {
       const parent = items[at] as Extract<Item, { t: "tool" }>;
       const kids = parent.children.slice();
