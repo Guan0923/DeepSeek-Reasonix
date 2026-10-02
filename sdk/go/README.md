@@ -89,6 +89,10 @@ copyable first extension: it includes a Manifest v2 file, a minimal sidecar,
 cross-platform build commands, linked installation, `/reload`, and a visible
 input-rewrite check.
 
+[`examples/toolextension`](examples/toolextension/README.md) is the smallest
+tool-serving package: manifest declarations, `Options.Tools`, catalog
+discovery, and an observable word-count result through the real host.
+
 [`examples/fullsidecar`](examples/fullsidecar/README.md) is the reference
 extension: protocol-level input rewriting, tool interception
 (block + argument rewrite), system-prompt strategy replacement, a fake

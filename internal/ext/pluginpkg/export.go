@@ -209,6 +209,9 @@ func envVarName(key string) string {
 		}
 	}
 	if name := strings.Trim(b.String(), "_"); name != "" {
+		if name[0] >= '0' && name[0] <= '9' {
+			return "_" + name
+		}
 		return name
 	}
 	return "SECRET"
