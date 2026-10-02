@@ -121,6 +121,7 @@ func pluginViewFor(home, workspaceRoot string, p pluginpkg.InstalledPlugin) plug
 		return view
 	}
 	view.Warnings = append(warnings, theme.PluginWarnings(pkg)...)
+	view.Warnings = append(view.Warnings, hook.PackageWarnings(pkg)...)
 	view.Compatibility = pkg.Compatibility.Status
 	view.Skipped = pkg.Compatibility.Skipped
 
