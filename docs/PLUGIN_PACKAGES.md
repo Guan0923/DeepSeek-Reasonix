@@ -16,6 +16,8 @@ The [multi-file skill example](../examples/release-note-kit/README.md) shows
 how a plugin keeps a required reference file with its skill.
 For an issue-to-PR-draft exercise with a deliberately failing local fixture,
 see the [repository workflow example](../examples/issue-fix-kit/README.md).
+For a packaged read-only subagent, local inputs and lifecycle verification,
+see the [repository orientation example](../examples/repo-map-kit/README.md).
 For a frontend task with a brief, sample data, and browser acceptance steps,
 see the [local interface example](../examples/frontend-page-kit/README.md).
 
@@ -119,7 +121,6 @@ For a workspace-wide capability report (skills, hooks, MCP merge, package roots)
 
 ```bash
 reasonix doctor capabilities --json
-# Desktop: Settings → Diagnostics
 # Agent:   /reasonix-guide
 ```
 
@@ -162,8 +163,9 @@ reopen `/skills` to verify the current session sees the expected skills.
 
 ## Desktop Settings
 
-Open **Settings -> Plugins** to install and manage plugin packages without using
-the CLI.
+Open **Settings → Extension → Installed** (**扩展 → 已安装**) to install and
+manage plugin packages. In **Plugin packages**, choose **Add** to open the
+installer.
 
 ### Install Plugins
 
@@ -175,45 +177,52 @@ The installer takes one source:
   folder).
 
 A local `.zip` archive, such as one made by **Export**, installs through the CLI
-(`reasonix plugin install ./pkg.zip`) and the `install_source` tool.
+(`reasonix plugin install ./pkg.zip --dry-run`, then rerun with `--yes` after
+reviewing the plan) and the `install_source` tool.
 
-Installing is always two steps: the installer first reads the source and shows
-what it will add and what it needs, without writing anything; **Install**
-then applies exactly that plan. A changed source between the two is refused
-rather than installed.
+Installing is always two steps: enter or choose the source, then select
+**See what it is** (**查看内容**) to read its contributions and requirements
+without writing anything. **Install** then applies exactly that plan. A changed
+source between the two is refused rather than installed.
 
-Installer options:
+The Studio installer copies local packages into the user's plugin storage.
 
-- **Overwrite same-name plugin** allows the current source to replace an
-  installed plugin with the same name. Leave it off when duplicate-name installs
-  should fail instead of replacing existing content.
-- **Developer mode: link source folder** appears for **Local folder** installs.
-  It links the selected directory instead of copying it into Reasonix's plugin
-  storage. Use it while developing or debugging a plugin. Moving or deleting the
-  selected directory will break the linked plugin.
+To replace an installed package from its recorded source, choose **Update** on
+its row and review the new plan before applying it.
+
+For a different replacement source or a development link, use the CLI's
+`--replace` or `--link` flags
+described above; these are not checkbox options in the Studio installer.
 
 Preview is the safest first step for a new Git source or local plugin directory.
 
 ### Manage Installed Plugins
 
-The installed-plugin list shows each plugin package and its exported skills,
-hooks, and MCP servers. Use **Refresh plugins** after editing plugin files or
-changing config outside the app.
+The installed-plugin list shows each package's contributions and executable
+capabilities.
+
+After editing plugin files outside the app, use **Reload runtime**
+in the **Runtime** group above the package list. A successful reload refreshes
+the list and makes the new extensions available for the next turn; a refused
+reload reports its reason.
 
 Expand a plugin row to manage it:
 
 - Enable or disable the plugin.
-- Read **How to use** for the plugin's exported skills, hooks, and MCP servers.
+- Read its contribution rows, including the qualified invocations for skills,
+  commands, and agents, and the details of hooks, servers, and runtimes.
 - **Update** pulls or refreshes an installed plugin when an update source is
   available.
-- **Doctor** checks the plugin manifest and reports warnings or diagnostics.
-- **Remove plugin** uninstalls the package after confirmation.
+- Read package errors and warnings in the expanded row. For CLI diagnostics,
+  run `reasonix plugin doctor <name>`; there is no per-package Doctor button.
+- **Export** packages the plugin for sharing, with credentials stripped.
+- **Remove** uninstalls the package after confirmation.
 
 ### Use Installed Plugins From Desktop
 
 The desktop settings page uses the same runtime model as the CLI:
 
-- Expand an installed plugin to see its **How to use** section.
+- Expand an installed plugin to read its contribution rows and warnings.
 - In any desktop session, type `/plugins` to list installed plugins, or
   `/plugins show <name>` to see the same usage details from the chat surface.
 - Skills are shown with package-qualified direct commands such as
@@ -224,8 +233,9 @@ The desktop settings page uses the same runtime model as the CLI:
 - Hooks and MCP servers are listed for transparency. They do not need a manual
   "run" button: enabled hooks trigger automatically, and MCP tools are available
   through ordinary tool use.
-- If a currently open session does not reflect a plugin change, refresh the
-  plugin list and open a new session.
+- If an install or update reports that files were saved but the runtime did not
+  reload, use **Reload runtime** to retry and follow any refusal it reports.
+  A successful reload takes effect on the next turn.
 
 ## Native Manifest
 
@@ -267,6 +277,10 @@ third-party install scripts during plugin installation.
 
 Plugin hook execution is explicit:
 
+- A hook with `contextFile` reads that package-relative file directly; it
+  does not run a command. The [session-start context example](../examples/review-context-kit/README.md)
+  includes a complete package, copy/link instructions, and provider-boundary
+  verification of first-turn delivery and session rotation.
 - When `args` is present, including `"args": []`, the hook uses **exec form**.
   `command` is the executable and every argument is passed literally, without
   shell parsing or interpolation.
@@ -607,3 +621,14 @@ Studio drives plugin packages through these kernel routes:
 - `POST /extensions/reload` rebuilds the runtime from what is on disk
 
 `reasonix plugin doctor` has no route; run it from the CLI.
+
+Both `reasonix plugin doctor <name>` and `GET /plugins` report warnings for
+declared `theme.json` files that the theme reader rejects, and for individual
+tokens it drops. Warnings include the file's path relative to the package root.
+They also appear for disabled packages, so authors can diagnose a theme before
+enabling it.
+
+Theme warnings do not reject an otherwise valid plugin or change the doctor's
+exit status. A rejected theme is absent from the theme picker; a pack with some
+invalid tokens still loads with its valid tokens. Other declared theme files
+are not `theme.json` packs and are not validated by this reader.

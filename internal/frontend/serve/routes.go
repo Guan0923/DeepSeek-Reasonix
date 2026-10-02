@@ -112,6 +112,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /todos", s.todos)
 	mux.HandleFunc("GET /changes", s.changes)
 	mux.HandleFunc("GET /changes/diff", s.changeDiff)
+	mux.HandleFunc("GET /workspace/git", s.workspaceGit)
 	mux.HandleFunc("GET /workspace/files", s.workspaceFiles)
 	mux.HandleFunc("GET /workspace/file", s.workspaceFileRead)
 	mux.HandleFunc("GET /workspace/image", s.workspaceImage)

@@ -328,6 +328,7 @@ body { background: var(--page); }
 .onb-stage {
   height: calc(100dvh / var(--zoom, 1));
   scroll-padding-top: 64px;
+  container: onboarding / inline-size;
   display: flex;
   flex-direction: column;
   background:
@@ -1151,7 +1152,7 @@ body { background: var(--page) !important; }
 .turntools .studio-branch { max-width: 160px; }
 .turntools .studio-branch .lb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turntools .model-picker { max-width: 180px; }
-.turntools .model-picker .nm { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turntools .model-picker .nm { max-width: 130px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compose .mode {
   min-height: 28px;
   border-color: transparent;
@@ -1201,7 +1202,7 @@ body { background: var(--page) !important; }
 .studio-meterrail > .studio-meter-cost {
   height: 25px; display: inline-flex; align-items: center; gap: 5px; padding: 0 6px;
   border: 0; border-radius: 5px; background: transparent; color: var(--faint);
-  white-space: nowrap; font: 500 10px/1 var(--ui);
+  white-space: nowrap; font: 500 10px/1 var(--ui); font-variant-numeric: tabular-nums;
 }
 .studio-meterrail > button,
 .studio-meterrail .studio-context-anchor > button,
@@ -1212,7 +1213,8 @@ body { background: var(--page) !important; }
   background: color-mix(in srgb, var(--text) 7%, transparent);
   color: var(--text);
 }
-.studio-meterrail b { color: inherit; font: 500 10px/1 var(--ui); }
+.studio-meterrail b { color: inherit; font: 500 10px/1 var(--ui); font-variant-numeric: tabular-nums; }
+.studio-meterrail .studio-meter-speed b { min-width: 5ch; text-align: right; }
 .studio-meterrail .studio-icon { width: 13px; height: 13px; }
 /* The line reads before the figure: the shape answers "is it moving" at a
    glance, and the number is what you look at once it has. It takes no room
@@ -1431,7 +1433,7 @@ body { background: var(--page) !important; }
 .workbench-filelist em { color: var(--warn); font-style: normal; }
 .workbench-no-files { margin: 18px 12px; color: var(--faint); font: 500 10px/1.4 var(--ui); text-align: center; }
 .workbench-filebar { min-height: 39px; padding: 0 10px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; border-bottom: 1px solid var(--hair); }
-.workbench-filebar strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px/1 var(--mono); }
+.workbench-filebar strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px/1.5 var(--mono); }
 .workbench-filebar [role="group"] { display: flex; padding: 2px; background: var(--page); border: 1px solid var(--hair); border-radius: 5px; }
 .workbench-filebar button { min-height: 25px; padding: 0 8px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font: 600 10px/1 var(--ui); }
 .workbench-filebar button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
@@ -1680,6 +1682,11 @@ body { background: var(--page) !important; }
 @media (max-width: 760px) {
   .app { --nav-w: 44px; }
   .studio-brand > span:nth-child(2) small { display: none; }
+  .flow { width: calc(100% - 20px); margin-inline: auto; padding-inline: 0; }
+  .compose { width: calc(100% - 20px); margin-inline: auto; }
+}
+
+@container onboarding (max-width: 760px) {
   .onb-shell { width: min(560px, calc(100% - 24px)); grid-template-columns: 1fr; }
   .onb-progress { padding: 18px 20px; border-right: 0; border-bottom: 1px solid var(--hair); }
   .onb-progress ol { margin-top: 14px; display: flex; gap: 10px; }
@@ -1687,8 +1694,6 @@ body { background: var(--page) !important; }
   .onb-progress li span small,
   .onb-progress p { display: none; }
   .onb { padding: 26px 22px 24px; }
-  .flow { width: calc(100% - 20px); margin-inline: auto; padding-inline: 0; }
-  .compose { width: calc(100% - 20px); margin-inline: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2173,7 +2178,7 @@ body { font-size: 14px; line-height: 1.75; }
 }
 .studio-user-foot .acctrow { width: 30px; min-width: 30px; height: 30px; margin: 0; padding: 0; overflow: hidden; }
 .studio-user-foot .ini { width: 28px; height: 28px; }
-.studio-workspace-kind { color: var(--faint); font: 500 11px/1 var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-workspace-kind { color: var(--faint); font: 500 11px/1.5 var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .turntools > .attach { order: 1 !important; }
 .turntools > .studio-mode-control { order: 2 !important; }
@@ -2212,7 +2217,7 @@ body { font-size: 14px; line-height: 1.75; }
 .studio-mode-picker .studio-icon:last-child,
 .studio-effort-picker .studio-icon:last-child,
 .model-picker .studio-icon:last-child { width: 11px; height: 11px; color: var(--ghost); }
-.studio-model-control .model-picker .nm { max-width: 125px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-model-control .model-picker .nm { max-width: 125px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .studio-model-control .model-picker {
   min-height: 28px;
   justify-content: flex-start;

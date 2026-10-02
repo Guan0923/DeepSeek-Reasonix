@@ -13,6 +13,7 @@ import (
 	"reasonix/internal/ext/hook"
 	"reasonix/internal/ext/installsource"
 	"reasonix/internal/ext/pluginpkg"
+	"reasonix/internal/ext/theme"
 )
 
 // A package's capabilities are assembled at boot, so every write here ends
@@ -119,7 +120,7 @@ func pluginViewFor(home, workspaceRoot string, p pluginpkg.InstalledPlugin) plug
 		view.Error = err.Error()
 		return view
 	}
-	view.Warnings = warnings
+	view.Warnings = append(warnings, theme.PluginWarnings(pkg)...)
 	view.Compatibility = pkg.Compatibility.Status
 	view.Skipped = pkg.Compatibility.Skipped
 

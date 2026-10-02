@@ -229,6 +229,24 @@ func (c *Client) Balance(ctx context.Context) (display string, ok bool, err erro
 	return out.Display, out.Display != "", nil
 }
 
+// GitInfo is the workspace's repository identity as the kernel reads it; Repo
+// is false when the workspace is not version-controlled.
+type GitInfo struct {
+	Repo      bool   `json:"repo"`
+	Name      string `json:"name"`
+	Branch    string `json:"branch"`
+	Detached  bool   `json:"detached"`
+	Added     int    `json:"added"`
+	Removed   int    `json:"removed"`
+	Untracked int    `json:"untracked"`
+}
+
+func (c *Client) WorkspaceGit(ctx context.Context) (GitInfo, error) {
+	var out GitInfo
+	err := c.do(ctx, http.MethodGet, "/workspace/git", nil, &out)
+	return out, err
+}
+
 // Compaction is where the session folds its history.
 type Compaction struct {
 	Ratio   float64 `json:"ratio"`

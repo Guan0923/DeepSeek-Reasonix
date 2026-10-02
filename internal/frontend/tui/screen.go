@@ -125,6 +125,9 @@ func (m *model) settledRow(row Item, shown int) settledPrint {
 	if m.scr != nil && (row.Kind == ItemTool || row.Kind == ItemSay && row.Reasoning != "" && shown == 0) {
 		row.Fold = foldShut
 	}
+	if m.verbose && row.Kind == ItemSay && row.Reasoning != "" && shown == 0 {
+		row.Fold = m.verboseFold()
+	}
 	return settledPrint{render: func(w int, hideRail bool) string { return renderItem(&row, w, shown, hideRail) }, row: &row}
 }
 
@@ -194,7 +197,7 @@ func (b *block) foldable() bool {
 
 // thinks reports a block that carries an answer's thinking behind its marker.
 func (b *block) thinks() bool {
-	return b.row != nil && b.row.Kind == ItemSay && b.row.Fold != foldFixed
+	return b.row != nil && b.row.Kind == ItemSay && (b.row.Fold == foldShut || b.row.Fold == foldOpen)
 }
 
 func (b *block) toggle() {

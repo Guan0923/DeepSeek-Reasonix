@@ -13,21 +13,20 @@ import (
 	"reasonix/internal/base/i18n"
 )
 
-// A paste this large stands in the composer as one token, the way the reader
-// would describe it, and goes to the model whole.
+// A paste this large stands in the composer as one token and goes to the
+// model whole, with the thresholds 1.x folds at.
 const (
-	pasteFoldChars = 800
-	pasteFoldLines = 3
+	pasteFoldChars = 1000
+	pasteFoldLines = 5
 )
 
-var (
-	pasteToken = regexp.MustCompile(`\[Pasted text #(\d+) \+\d+ lines\]`)
-	imageToken = regexp.MustCompile(`\[image #(\d+)\]`)
-)
+var imageToken = regexp.MustCompile(`\[image #(\d+)\]`)
+
+type pasteBlock struct{ label, text string }
 
 type pasteStore struct {
 	next   int
-	texts  map[int]string
+	blocks []pasteBlock
 	images []string
 }
 
@@ -38,23 +37,48 @@ func (p *pasteStore) image(ref string) string {
 	return fmt.Sprintf("[image #%d]", len(p.images))
 }
 
-// fold returns what the composer shows for a paste: the text itself, or a
-// token for it when it would bury the line being written.
-func (p *pasteStore) fold(text string) string {
-	text = strings.ReplaceAll(text, "\r\n", "\n")
-	lines := strings.Count(text, "\n") + 1
-	if len(text) < pasteFoldChars && lines <= pasteFoldLines {
-		return text
+// pastedLines counts rows the way a terminal ends them: LF, CRLF or a bare CR.
+func pastedLines(text string) int {
+	if text == "" {
+		return 0
 	}
-	if p.texts == nil {
-		p.texts = map[int]string{}
-	}
-	p.next++
-	p.texts[p.next] = text
-	return fmt.Sprintf("[Pasted text #%d +%d lines]", p.next, lines)
+	return strings.Count(text, "\n") + 1
 }
 
-// expand replaces each paste token with the text it stands for.
+func foldedPasteLabel(id, lines int) string {
+	return fmt.Sprintf("[Pasted text #%d · %d lines]", id, lines)
+}
+
+// fold returns what the composer shows for a paste: the text itself, or a
+// labelled token for it when it would bury the line being written.
+func (p *pasteStore) fold(text string) string {
+	text = strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
+	lines := pastedLines(text)
+	if len([]rune(text)) < pasteFoldChars && lines < pasteFoldLines {
+		return text
+	}
+	p.next++
+	label := foldedPasteLabel(p.next, lines)
+	p.blocks = append(p.blocks, pasteBlock{label: label, text: text})
+	return label + " "
+}
+
+// seed moves the numbering past every label the session already carries, so a
+// resumed conversation never gets a second paste with the same label.
+func (p *pasteStore) seed(history []HistoryMessage) {
+	for _, h := range history {
+		for _, m := range foldedLabel.FindAllStringSubmatch(h.Content, -1) {
+			if n, err := strconv.Atoi(m[1]); err == nil && n > p.next {
+				p.next = n
+			}
+		}
+	}
+}
+
+var foldedLabel = regexp.MustCompile(`\[Pasted text #(\d+) · \d+ lines\]`)
+
+// expand replaces each label with the block 1.x sends: the label, then the
+// text between Begin and End markers that name it.
 func (p *pasteStore) expand(s string) string {
 	s = imageToken.ReplaceAllStringFunc(s, func(tok string) string {
 		n, _ := strconv.Atoi(imageToken.FindStringSubmatch(tok)[1])
@@ -63,13 +87,22 @@ func (p *pasteStore) expand(s string) string {
 		}
 		return tok
 	})
-	return pasteToken.ReplaceAllStringFunc(s, func(tok string) string {
-		n, _ := strconv.Atoi(pasteToken.FindStringSubmatch(tok)[1])
-		if text, ok := p.texts[n]; ok {
-			return text
+	for _, b := range p.blocks {
+		if strings.Contains(s, b.label) {
+			s = strings.ReplaceAll(s, b.label, fmt.Sprintf("%s\n\n--- Begin %s ---\n%s\n--- End %s ---", b.label, b.label, b.text, b.label))
 		}
-		return tok
-	})
+	}
+	return s
+}
+
+// insertPaste puts pasted text in the composer, folded unless a panel is
+// taking the keys: what is typed into one is an answer, not a message.
+func (m *model) insertPaste(text string) {
+	if m.tr.OpenPrompt() != nil || m.picker != nil || m.rewind != nil || m.clearing != nil {
+		m.composer.InsertString(text)
+		return
+	}
+	m.composer.InsertString(m.pastes.fold(text))
 }
 
 func (m *model) onKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -249,6 +282,9 @@ func (m *model) send(steer bool) tea.Cmd {
 		m.tr.AddNotice("info", "reasonix "+version)
 		return m.commit()
 	}
+	if cmd, ok := m.miscSlash(display); ok {
+		return cmd
+	}
 	text := m.pastes.expand(display)
 	m.history = append(m.history, display)
 	m.histAt = len(m.history)
@@ -284,7 +320,6 @@ func (m *model) escape(empty bool) tea.Cmd {
 		return m.call("cancel", m.client.Cancel)
 	case !empty:
 		m.composer.Reset()
-		m.pastes = pasteStore{}
 		return nil
 	case m.shell:
 		m.shell = false
