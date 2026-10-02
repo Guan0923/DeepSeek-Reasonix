@@ -3,13 +3,16 @@ package shellparse
 import "mvdan.cc/sh/v3/syntax"
 
 type DeleteCall struct {
-	Name string   `json:"name"`
-	Args []string `json:"args"`
+	Name   string   `json:"name"`
+	Args   []string `json:"args"`
+	Unsafe bool     `json:"unsafe"`
 }
 
 type DeleteAnalysis struct {
-	Standalone bool         `json:"standalone"`
-	Calls      []DeleteCall `json:"calls"`
+	Standalone  bool         `json:"standalone"`
+	Calls       []DeleteCall `json:"calls"`
+	SyntaxError string       `json:"syntax_error"`
+	HostError   bool         `json:"host_error"`
 }
 
 func AnalyzeDeleteCalls(command string) (DeleteAnalysis, error) {
@@ -17,19 +20,44 @@ func AnalyzeDeleteCalls(command string) (DeleteAnalysis, error) {
 	if err != nil {
 		return DeleteAnalysis{}, err
 	}
-	out := DeleteAnalysis{}
-	if len(file.Stmts) == 1 {
-		stmt := file.Stmts[0]
-		call, ok := stmt.Cmd.(*syntax.CallExpr)
-		out.Standalone = ok && len(call.Assigns) == 0 && len(stmt.Redirs) == 0 && !stmt.Background
+	out := DeleteAnalysis{Standalone: true}
+	safe := make(map[*syntax.CallExpr]bool)
+	var sequence func(*syntax.Stmt)
+	sequence = func(stmt *syntax.Stmt) {
+		if stmt.Background || stmt.Negated {
+			return
+		}
+		switch expr := stmt.Cmd.(type) {
+		case *syntax.CallExpr:
+			safe[expr] = len(expr.Assigns) == 0
+		case *syntax.BinaryCmd:
+			if expr.Op == syntax.AndStmt || expr.Op == syntax.OrStmt {
+				sequence(expr.X)
+				sequence(expr.Y)
+			}
+		}
+	}
+	for _, stmt := range file.Stmts {
+		sequence(stmt)
 	}
 	syntax.Walk(file, func(node syntax.Node) bool {
+		if stmt, ok := node.(*syntax.Stmt); ok {
+			switch stmt.Cmd.(type) {
+			case nil, *syntax.CallExpr, *syntax.BinaryCmd:
+			default:
+				out.Calls = append(out.Calls, DeleteCall{Unsafe: true})
+			}
+		}
 		call, ok := node.(*syntax.CallExpr)
-		if !ok || len(call.Args) == 0 {
+		if !ok {
+			return true
+		}
+		if len(call.Args) == 0 {
+			out.Calls = append(out.Calls, DeleteCall{Unsafe: true})
 			return true
 		}
 		name, _ := StaticWord(call.Args[0])
-		parsed := DeleteCall{Name: name}
+		parsed := DeleteCall{Name: name, Unsafe: !safe[call]}
 		for _, arg := range call.Args[1:] {
 			value, _ := StaticWord(arg)
 			parsed.Args = append(parsed.Args, value)
@@ -37,39 +65,5 @@ func AnalyzeDeleteCalls(command string) (DeleteAnalysis, error) {
 		out.Calls = append(out.Calls, parsed)
 		return true
 	})
-	out.Standalone = out.Standalone && len(out.Calls) == 1
 	return out, nil
 }
-
-// PowerShellDeleteAnalysis parses stdin as data; it never invokes the supplied script.
-const PowerShellDeleteAnalysis = `
-$ErrorActionPreference = 'Stop'
-[Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
-$source = [Console]::In.ReadToEnd()
-$tokens = $null
-$parseErrors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$parseErrors)
-if ($parseErrors.Count -ne 0) { exit 2 }
-$calls = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true))
-$result = @()
-foreach ($call in $calls) {
- $arguments = @()
- foreach ($element in $call.CommandElements | Select-Object -Skip 1) {
-  if ($element -is [System.Management.Automation.Language.CommandParameterAst]) {
-   $arguments += '-' + $element.ParameterName
-   if ($null -ne $element.Argument) { $arguments += '' }
-  } elseif ($element -is [System.Management.Automation.Language.StringConstantExpressionAst]) {
-   $arguments += $element.Value
-  } elseif ($element -is [System.Management.Automation.Language.ExpandableStringExpressionAst] -and $element.NestedExpressions.Count -eq 0) {
-   $arguments += $element.Value
-  } else { $arguments += '' }
- }
- $result += @{name=$call.GetCommandName(); args=@($arguments)}
-}
-$standalone = $false
-if ($ast.EndBlock.Statements.Count -eq 1 -and $calls.Count -eq 1) {
- $statement = $ast.EndBlock.Statements[0]
- $standalone = $statement -is [System.Management.Automation.Language.PipelineAst] -and $statement.PipelineElements.Count -eq 1 -and $statement.PipelineElements[0] -eq $calls[0] -and $calls[0].Redirections.Count -eq 0
-}
-@{standalone=$standalone; calls=@($result)} | ConvertTo-Json -Depth 5 -Compress
-`

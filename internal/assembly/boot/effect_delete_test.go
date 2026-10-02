@@ -29,10 +29,14 @@ func TestEffectDestructiveDeleteNeverExecutes(t *testing.T) {
 			writeFile(t, target, "keep.txt", "neutral fixture")
 			marker := filepath.Join(root, "executed.txt")
 			command := `rm -rf '` + filepath.ToSlash(target) + `'; printf executed > executed.txt`
+			code := "shell.destructive_target"
 			shellConfig := ""
 			if runtime.GOOS == "windows" {
 				shellConfig = "\n[tools.shell]\nprefer = \"powershell\"\n"
-				command = `$target = '` + target + `'; Remove-Item -Recurse -Force $target; Set-Content executed.txt executed`
+				t.Setenv("USERPROFILE", target)
+				t.Setenv("HOME", target)
+				command = `$home = Join-Path $env:TEMP 'cf-p6-manual'; if (Test-Path $home) { Remove-Item -Recurse -Force $home }; Set-Content executed.txt executed`
+				code = "shell.delete_sequence"
 			}
 			writeUserConfig(t, userModel+"\n[sandbox]\nbash = \"off\"\n"+shellConfig)
 			approveWorkspace(t, root)
@@ -58,7 +62,7 @@ func TestEffectDestructiveDeleteNeverExecutes(t *testing.T) {
 				t.Fatalf("following statement executed: %v", err)
 			}
 			result := toolResults(prov.Requests())["delete"]
-			if !strings.Contains(result, "(refusal: shell.destructive_target)") {
+			if !strings.Contains(result, "(refusal: "+code+")") {
 				t.Fatalf("model did not receive refusal identity: %q", result)
 			}
 		})

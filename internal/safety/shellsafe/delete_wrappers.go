@@ -1,9 +1,14 @@
 package shellsafe
 
 import (
-	"reasonix/internal/base/shellparse"
 	"strings"
+
+	"reasonix/internal/base/shellparse"
 )
+
+func UnwrapDeleteCommand(name string, args []string) (string, []string, bool) {
+	return unwrapDeleteCommand(name, args)
+}
 
 func unwrapDeleteCommand(name string, args []string) (string, []string, bool) {
 	base := ExecutableBase(name)
@@ -27,8 +32,23 @@ func unwrapDeleteCommand(name string, args []string) (string, []string, bool) {
 				args = args[1:]
 				continue
 			}
-			if arg == "" || strings.HasPrefix(arg, "-") {
-				return "", nil, false
+			if arg == "" {
+				return "", args, false
+			}
+			if strings.HasPrefix(arg, "-") {
+				switch arg {
+				case "-E", "-n", "-i", "--ignore-environment", "--non-interactive":
+					args = args[1:]
+					continue
+				case "-u", "-g", "--user", "--group":
+					if len(args) < 2 {
+						return "", args, false
+					}
+					args = args[2:]
+					continue
+				default:
+					return "", args, false
+				}
 			}
 			break
 		}

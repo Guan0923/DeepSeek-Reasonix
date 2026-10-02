@@ -27,21 +27,22 @@ func TestBashDestructiveTargetGate(t *testing.T) {
 	cases := []struct {
 		command string
 		ps      bool
+		code    string
 	}{
-		{`rm -rf "$HOME"`, false}, {`rm -rf ~`, false}, {`rm -rf /`, false},
-		{`rm -rf "$target"`, false}, {`rm -rf "${target}/child"`, false},
-		{`rm --recursive '` + filepath.ToSlash(outside) + `'`, false}, {`rm -rf ..`, false},
-		{`rm -rf .`, false}, {`cd ..; rm -rf child`, false},
-		{`Remove-Item -Recurse -Force $HOME`, true},
-		{`Remove-Item -Recurse -Force $env:USERPROFILE`, true},
-		{`Remove-Item -Recurse -Force $target`, true},
-		{`Remove-Item -Recurse -Force ~`, true},
-		{`Remove-Item -Recurse -Force 'C:\'`, true},
-		{`Remove-Item -Recurse -Force '` + outside + `'`, true},
-		{`Remove-Item -Recurse -Force ..`, true},
-		{`Remove-Item -Recurse -Force .`, true},
-		{`rm -r -fo $target`, true}, {`del /s %USERPROFILE%`, true}, {`rd /s C:\`, true},
-		{`$home = Join-Path $env:TEMP 'cf-p6-manual'; if (Test-Path $home) { Remove-Item -Recurse -Force $home }`, true},
+		{`rm -rf "$HOME"`, false, CodeDeleteNonliteral}, {`rm -rf ~`, false, CodeDeleteNonliteral}, {`rm -rf /`, false, CodeDestructiveTarget},
+		{`rm -rf "$target"`, false, CodeDeleteNonliteral}, {`rm -rf "${target}/child"`, false, CodeDeleteNonliteral},
+		{`rm --recursive '` + filepath.ToSlash(outside) + `'`, false, CodeDestructiveTarget}, {`rm -rf ..`, false, CodeDestructiveTarget},
+		{`rm -rf .`, false, CodeDestructiveTarget}, {`cd ..; rm -rf child`, false, CodeDestructiveTarget},
+		{`Remove-Item -Recurse -Force $HOME`, true, CodeDeleteNonliteral},
+		{`Remove-Item -Recurse -Force $env:USERPROFILE`, true, CodeDeleteNonliteral},
+		{`Remove-Item -Recurse -Force $target`, true, CodeDeleteNonliteral},
+		{`Remove-Item -Recurse -Force ~`, true, CodeDeleteNonliteral},
+		{`Remove-Item -Recurse -Force 'C:\'`, true, CodeDestructiveTarget},
+		{`Remove-Item -Recurse -Force '` + outside + `'`, true, CodeDestructiveTarget},
+		{`Remove-Item -Recurse -Force ..`, true, CodeDestructiveTarget},
+		{`Remove-Item -Recurse -Force .`, true, CodeDestructiveTarget},
+		{`rm -r -fo $target`, true, CodeDeleteNonliteral}, {`del /s %USERPROFILE%`, true, CodeDeleteNonliteral}, {`rd /s C:\`, true, CodeDestructiveTarget},
+		{`$home = Join-Path $env:TEMP 'cf-p6-manual'; if (Test-Path $home) { Remove-Item -Recurse -Force $home }`, true, CodeDeleteSequence},
 	}
 	for _, tc := range cases {
 		t.Run(tc.command, func(t *testing.T) {
@@ -54,8 +55,8 @@ func TestBashDestructiveTargetGate(t *testing.T) {
 			args, _ := json.Marshal(map[string]string{"command": tc.command})
 			res, err := b.ExecuteDetailed(t.Context(), args)
 			var refusal tool.Refusal
-			if !errors.As(err, &refusal) || refusal.Code != "shell.destructive_target" {
-				t.Fatalf("want typed destructive-target refusal, got %v", err)
+			if !errors.As(err, &refusal) || refusal.Code != tc.code {
+				t.Fatalf("want %s refusal, got %v", tc.code, err)
 			}
 			if terminal.calls != 0 || res.Execution.State != tool.ShellStateNotRun || res.Execution.MutationRisk != tool.ShellMutationNotStarted {
 				t.Fatalf("command reached execution: calls=%d, execution=%+v", terminal.calls, res.Execution)
@@ -95,7 +96,11 @@ func TestBashDeleteGateRejectsAlternateScopes(t *testing.T) {
 		args, _ := json.Marshal(map[string]string{"command": command})
 		_, err := b.ExecuteDetailed(t.Context(), args)
 		var refusal tool.Refusal
-		if !errors.As(err, &refusal) || refusal.Code != "shell.destructive_target" {
+		code := CodeDestructiveTarget
+		if sh.Kind == sandbox.ShellBash {
+			code = CodeDeleteNonliteral
+		}
+		if !errors.As(err, &refusal) || refusal.Code != code {
 			t.Errorf("%s: expected refusal, got %v", command, err)
 		}
 	}
@@ -117,7 +122,7 @@ func TestBashDeleteGateRejectsNestedDirectoryChange(t *testing.T) {
 	args, _ := json.Marshal(map[string]string{"command": `echo "$(cd ..; rm -rf child)"`})
 	_, err := b.ExecuteDetailed(t.Context(), args)
 	var refusal tool.Refusal
-	if !errors.As(err, &refusal) || refusal.Code != "shell.destructive_target" || terminal.calls != 0 {
+	if !errors.As(err, &refusal) || refusal.Code != CodeDeleteSequence || terminal.calls != 0 {
 		t.Fatalf("nested delete reached execution: err=%v calls=%d", err, terminal.calls)
 	}
 }

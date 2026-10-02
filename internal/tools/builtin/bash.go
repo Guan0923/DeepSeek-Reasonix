@@ -208,14 +208,10 @@ func (b bash) ExecuteDetailed(ctx context.Context, args json.RawMessage) (tool.D
 			"conditional chaining, or issue the commands as separate calls"))
 	}
 
-	if err := b.refuseCommand(ctx, sh, p.Command); err != nil {
-		return refusedBeforeLaunch(ex, start, tool.ShellPhaseAuthorization, err)
-	}
-
 	// Pin the session-private temporary generation before any launch path so
 	// foreground, background, and host-terminal runs share one directory, and
 	// so a failed start still releases the lease.
-	prepared, probe, lease, err := b.prepareLaunch(ctx, sh, p, args)
+	prepared, probe, lease, err := b.prepareGuardedLaunch(ctx, sh, p, args)
 	if err != nil {
 		phase := tool.ShellPhaseAuthorization
 		if errors.Is(err, errSessionTemp) {

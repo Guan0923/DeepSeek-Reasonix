@@ -3,6 +3,15 @@
 // code adds one here. i18n.test.ts is what stops one from being forgotten.
 
 export const EN_KERNEL: Record<string, string> = {
+  "递归删除目标受保护或超出授权范围；请使用工作区或授权目录内的字面路径": "The recursive delete target is protected or outside the granted roots; use a literal path inside the workspace or a granted directory",
+  "无法确定递归删除范围；请使用字面命令名、路径和解释器内容": "The recursive delete extent is unknown; use a literal command name, path and interpreter payload",
+  "请拆分命令；递归删除前只能使用字面路径切换目录，不能依赖变量赋值": "Split the call; only literal directory changes may precede a recursive delete, without relying on variable assignments",
+  "请使用授权目录内的字面删除路径，不要使用变量、展开、通配符或未知管道输入": "Use a literal delete path inside a granted directory, without variables, expansions, globs or unknown pipeline input",
+  "删除选项无法识别；请使用已知选项并提供公共参数的值": "The delete option is unknown; use known options and supply common parameter values",
+  "命令语法有误；请修正后重试": "The command has a syntax error; correct it and retry",
+  "主机命令解析器不可用；请在主机恢复后重试": "The host shell parser is unavailable; retry after the host parser is restored",
+  "主机命令解析超时或被取消；请重试": "The host shell parser timed out or was canceled; retry the call",
+  "命令超过主机长度限制；请拆分命令或从文件读取长文本": "The command exceeds the host length limit; split it or read long text from a file",
   "反馈通道今日已满，请明天再试": "Feedback is at capacity for today - try again tomorrow",
   "这份反馈的回复次数已到上限，或回复太频繁了，请稍后再试": "This report has reached its reply limit, or you replied too often - try again later",
   "这份反馈现在不接收回复": "This report takes no reply right now",

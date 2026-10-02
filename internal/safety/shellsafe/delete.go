@@ -2,70 +2,118 @@ package shellsafe
 
 import "strings"
 
-// RecursiveDeleteTargets returns empty targets for extents static analysis cannot establish.
-func RecursiveDeleteTargets(name string, args []string, powerShell bool) ([]string, bool) {
+type DeleteExtent struct {
+	Targets        []string
+	Recursive      bool
+	UnknownOption  bool
+	DynamicCommand bool
+}
+
+func AnalyzeRecursiveDelete(name string, args []string, powerShell bool) DeleteExtent {
 	base, args, known := unwrapDeleteCommand(name, args)
 	if !known {
-		return []string{""}, true
+		return recursiveArgumentDelete(args, powerShell)
 	}
 	switch base {
-	case "rm", "remove-item", "ri", "del", "erase", "rd", "rmdir":
+	case "cmd":
+		return cmdDelete(args)
+	case "xargs":
+		return recursiveArgumentDelete(args, powerShell)
+	case "find":
+		return findDelete(args)
+	case "rm", "remove-item", "ri", "del", "erase", "rd", "rmdir", "":
+		return directDelete(base, args, powerShell)
 	default:
-		return nil, false
+		return DeleteExtent{}
 	}
-	recursive := false
-	var targets []string
-	options := true
+}
+
+func recursiveArgumentDelete(args []string, powerShell bool) DeleteExtent {
+	for i, arg := range args {
+		e := AnalyzeRecursiveDelete(arg, args[i+1:], powerShell)
+		if e.Recursive {
+			e.Targets = []string{""}
+			return e
+		}
+	}
+	return DeleteExtent{}
+}
+
+func cmdDelete(args []string) DeleteExtent {
+	if len(args) == 0 || !strings.EqualFold(args[0], "/c") {
+		return DeleteExtent{}
+	}
+	if len(args) == 2 {
+		args = strings.Fields(args[1])
+	} else {
+		args = args[1:]
+	}
+	if len(args) == 0 {
+		return DeleteExtent{}
+	}
+	recursive, complex := false, false
 	for _, arg := range args {
-		lower := strings.ToLower(arg)
-		if options && arg == "--" {
-			options = false
-			continue
-		}
-		if arg == "" {
-			return []string{""}, true
-		}
-		if options && strings.HasPrefix(arg, "-") {
-			if powerShell {
-				flag := strings.TrimPrefix(lower, "-")
-				switch {
-				case flag != "" && strings.HasPrefix("recurse", flag):
-					recursive = true
-				case flag != "" && strings.HasPrefix("force", flag):
-				case flag == "literalpath", flag == "path":
-				default:
-					return []string{""}, true
-				}
-			} else {
-				if strings.HasPrefix(arg, "--") {
-					if strings.HasPrefix("--recursive", arg) {
-						recursive = true
-					} else if arg != "--force" && arg != "--verbose" {
-						return []string{""}, true
-					}
-				} else if strings.ContainsAny(arg[1:], "rR") {
-					recursive = true
+		recursive = recursive || strings.EqualFold(arg, "/s")
+		complex = complex || strings.ContainsAny(arg, "^%&|\r\n")
+	}
+	if recursive && complex {
+		return DeleteExtent{Recursive: true, DynamicCommand: true}
+	}
+	return AnalyzeRecursiveDelete(args[0], args[1:], true)
+}
+
+func findDelete(args []string) DeleteExtent {
+	e := DeleteExtent{}
+	var extra []string
+	for i, arg := range args {
+		switch arg {
+		case "-delete":
+			e.Recursive = true
+		case "-follow", "-L":
+			e.UnknownOption = true
+		case "-exec", "-execdir":
+			if i+1 >= len(args) {
+				continue
+			}
+			nested := findExecDelete(args[i+1:])
+			e.Recursive = e.Recursive || nested.Recursive
+			e.UnknownOption = e.UnknownOption || nested.UnknownOption
+			if nested.Recursive {
+				extra = append(extra, nested.Targets...)
+				if arg == "-execdir" {
+					extra = append(extra, "")
 				}
 			}
-			continue
 		}
-		if (base == "del" || base == "erase" || base == "rd" || base == "rmdir") && strings.HasPrefix(lower, "/") {
-			switch lower {
-			case "/s":
-				recursive = true
-			case "/q", "/f":
-			default:
-				return []string{""}, true
-			}
-			continue
+	}
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			break
 		}
-		targets = append(targets, arg)
+		e.Targets = append(e.Targets, arg)
 	}
-	if !recursive {
-		return nil, false
+	if len(e.Targets) == 0 {
+		e.Targets = []string{"."}
 	}
-	if len(targets) == 0 {
-		targets = []string{""}
+	e.Targets = append(e.Targets, extra...)
+	return e
+}
+
+func findExecDelete(args []string) DeleteExtent {
+	tail := args[1:]
+	for j, v := range tail {
+		if v == ";" || v == "+" {
+			tail = tail[:j]
+			break
+		}
 	}
-	return targets, true
+	e := AnalyzeRecursiveDelete(args[0], tail, false)
+	var targets []string
+	for _, target := range e.Targets {
+		if target != "{}" {
+			targets = append(targets, target)
+		}
+	}
+	e.Targets = targets
+	return e
 }
