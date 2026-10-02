@@ -339,6 +339,10 @@ type Messages struct {
 	CmdQuit             string // /quit (also accepts /exit as hidden alias)
 	CmdCopy             string // /copy
 	CmdExport           string // /export
+	CmdQueue            string // /queue
+	CmdSteer            string // /steer
+	CmdTakeover         string // /takeover
+	TakeoverNoSteal     string // /takeover resumed a session without taking it from another process
 	SlashCopyDone       string // "/copy" succeeded
 	SlashCopyEmpty      string // no assistant response to copy
 	SlashCopyListHeader string // header shown before the numbered list
