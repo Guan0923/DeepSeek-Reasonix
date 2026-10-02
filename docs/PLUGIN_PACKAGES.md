@@ -24,6 +24,9 @@ see the [local interface example](../examples/frontend-page-kit/README.md).
 The [API documentation example](../examples/api-notes-kit/README.md) adds local
 OpenAPI inputs, a reference checker, and a source-linked guide format.
 
+The [stdio MCP example](../examples/mcp-line-counter-kit/README.md) bundles a
+local Go server with build, connection, tool-call, and lifecycle checks.
+
 ## CLI Mode
 
 Use `reasonix plugin` when installing or managing plugin packages from a
