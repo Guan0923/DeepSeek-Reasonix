@@ -201,15 +201,15 @@ func (b bash) ExecuteDetailed(ctx context.Context, args json.RawMessage) (tool.D
 	if p.Command == "" {
 		return notRun(ex, start, fmt.Errorf("command is required"))
 	}
-	if err := b.refuseExternalRef(p.Command); err != nil {
-		return notRun(ex, start, err)
-	}
-
 	sh := b.resolved()
 	if !sh.SupportsChaining() && (hasUnquotedSeq(p.Command, "&&") || hasUnquotedSeq(p.Command, "||")) {
 		return notRun(ex, start, fmt.Errorf("this shell is Windows PowerShell, which does not parse '&&' or '||'. "+
 			"Sequence with ';' (both run regardless of the first's result), use 'if ($?) { ... }' for "+
 			"conditional chaining, or issue the commands as separate calls"))
+	}
+
+	if err := b.refuseCommand(ctx, sh, p.Command); err != nil {
+		return refusedBeforeLaunch(ex, start, tool.ShellPhaseAuthorization, err)
 	}
 
 	// Pin the session-private temporary generation before any launch path so

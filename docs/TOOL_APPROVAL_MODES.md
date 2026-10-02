@@ -104,6 +104,15 @@ requirement. It still does not bypass explicit `deny` rules or the sandbox.
 - Select Ask or Auto directly to leave Yolo.
 - When entered via shortcut, Reasonix remembers the previous Ask/Auto baseline and restores it on the next toggle.
 
+## Recursive shell deletes
+
+The shell launch guard refuses recursive deletes of a home directory, filesystem root, workspace ancestor, or target outside the workspace and explicitly granted write roots.
+
+Variable targets, compound deletes, and other extents it cannot establish are refused with `shell.destructive_target`, including in Auto and Yolo.
+
+Use a separate command with literal targets strictly inside a granted root. Parser failures and dynamic command names carry `shell.analysis_unknown`.
+
+This guard inspects shell syntax before execution; it is not an OS sandbox. Deletion performed inside scripts or arbitrary programs and filesystem races remain outside this guard.
 ## Combining with collaboration modes
 
 | Combination | Behavior |
