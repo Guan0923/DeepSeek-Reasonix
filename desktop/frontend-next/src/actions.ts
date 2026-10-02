@@ -248,6 +248,7 @@ export const ACTIONS: UIAction[] = [
   { id: "market.signin", kind: "navigation", target: "none", proof: "interaction" },
   { id: "market.draft", kind: "view", target: "none", proof: "interaction" },
   { id: "market.publish", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "market.prepare-version", kind: "view", target: "none", proof: "interaction" },
   { id: "market.publish-again", kind: "view", target: "none", proof: "interaction" },
   // The account's own packages: a preview, an install pinned to that preview's
   // digest, and sending a private one to review.
