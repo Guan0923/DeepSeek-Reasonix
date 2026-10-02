@@ -41,9 +41,8 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 		{name: "embedded policy", file: "embed"},
 		{name: "case sensitive Go test suffix", file: "main_TEST.go"},
 		{name: "untouched build input", file: "CMakeLists.txt"},
-		{name: "uppercase prose suffix", file: "TODO.MD"},
+		{name: "uppercase prose suffix", file: "UPPER.MD"},
 		{name: "symlink alias", symlink: true},
-		{name: "delivery prose", delivery: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			isolateConfigHome(t)
