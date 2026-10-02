@@ -346,8 +346,7 @@ type Registry struct {
 	canon       map[string]json.RawMessage
 	suspended   map[string]bool
 	disabledMCP map[string]bool
-	// disabledMCPByServer keeps the provenance needed to replace or clear one
-	// server's policy without leaving stale aliases behind.
+	// disabledMCPByServer keeps per-server policy so aliases can be replaced or cleared.
 	disabledMCPByServer map[string]map[string]bool
 	// providerVisible, when non-nil, restricts Schemas/ContractEntries to the
 	// listed tool names. Get/Execute still resolve every registered tool so

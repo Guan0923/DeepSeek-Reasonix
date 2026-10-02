@@ -6,9 +6,9 @@ import (
 	"reasonix/internal/contract/tool"
 )
 
-// resolveDisabled turns a configuration-disabled MCP target into the same
-// typed refusal direct calls receive, instead of the generic "not registered"
-// error that made child/use_capability paths look like an unknown tool.
+// resolveDisabled turns a configuration-disabled MCP target into the same typed
+// refusal direct calls receive, so child and use_capability paths carry the
+// disabled-tool identity.
 func (t *UseCapabilityTool) resolveDisabled(base tool.ResolvedCall, id, name string) (tool.ResolvedCall, bool) {
 	if t.registry == nil {
 		return base, false
