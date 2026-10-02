@@ -123,7 +123,7 @@ func putPair(dst *map[string]string, flag, pair string) error {
 }
 
 func looksLikeRemoteURL(raw string) bool {
-	raw = strings.TrimSpace(raw)
+	raw = strings.ToLower(strings.TrimSpace(raw))
 	return strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://")
 }
 
