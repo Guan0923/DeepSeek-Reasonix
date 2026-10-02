@@ -137,6 +137,8 @@ export function Sidebar({
         run: () => onFeedback("send") },
       { id: "feedback-mine", label: t("我的反馈"), icon: "feedback", keywords: "feedback receipt status my reply 反馈 回执 进展 我的 回复",
         status: feedbackUnread > 0 ? t("{n} 项待查看", { n: feedbackUnread }) : undefined, run: () => onFeedback("mine") },
+      { id: "community", label: t("社区与贡献者"), icon: "globe", keywords: "community discord qq group contributors 社区 交流群 加群 贡献者",
+        run: () => onSettings("versions:community") },
       { id: "settings", label: t("设置"), icon: "settings", keywords: "settings preferences 设置 偏好",
         run: () => onSettings() },
     ],
