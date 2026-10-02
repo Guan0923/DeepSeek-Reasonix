@@ -19,6 +19,7 @@ import { nameTurnStart, othersSteer } from "./turn_start";
 import { appendText, foldMessage, sealSay } from "./say";
 import { nextId } from "./ids";
 import { foldStall } from "./stall";
+import { nameQueued } from "./queued";
 import { dropTool, foldLastRead, foldTool, mergeReads } from "./fold";
 export { quoteAmount };
 export { setShowsReceipt, showsReceipt };
@@ -233,17 +234,7 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
       items: [...s.items, { t: "user", id, text: ev.text, pending: ev.pending }],
     };
   }
-  // The kernel answers a queued line with the id it queued it under. The row
-  // is already on screen by then — this is what gives it a name to be taken
-  // back by, and losing that name is the same as losing the button.
-  if (ev.kind === "__queued") {
-    return {
-      ...s,
-      items: s.items.map((i) =>
-        i.t === "user" && i.id === ev.id ? { ...i, itemId: ev.itemId, queued: ev.queued, pending: true } : i,
-      ),
-    };
-  }
+  if (ev.kind === "__queued") return nameQueued(s, ev.id, ev.itemId, ev.queued);
   // A line the kernel never took is not part of what happened, so it leaves the
   // transcript rather than sitting there looking sent. Either name identifies
   // it: the row the composer minted, or the entry the kernel queued it as —
