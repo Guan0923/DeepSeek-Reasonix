@@ -54,7 +54,8 @@ func TestEffectDisabledMCPToolsStayOutOfTheProviderAndCatalogAfterRestart(t *tes
 	for _, load := range []string{"always", "deferred"} {
 		t.Run(load, func(t *testing.T) {
 			home := isolateConfigHome(t)
-			t.Setenv("REASONIX_HOME", filepath.Join(home, ".reasonix"))
+			reasonixHome := filepath.Join(home, ".reasonix")
+			t.Setenv("REASONIX_HOME", reasonixHome)
 			workspace := robustTempDir(t)
 			t.Chdir(workspace)
 			server := disabledToolsMCPServer(t)
@@ -80,7 +81,7 @@ disabled_tools = ["write"]
 			approveProjectServer(t, workspace, "filtered")
 			for _, phase := range []string{"fresh", "cached restart"} {
 				rec = &capabilityCallProvider{call: `{"action":"inspect","capability_id":"mcp-server:filtered"}`}
-				ctrl, err := Build(t.Context(), Options{Sink: event.Discard})
+				ctrl, err := Build(t.Context(), Options{Sink: event.Discard, Home: reasonixHome, WorkspaceRoot: workspace})
 				if err != nil {
 					t.Fatal(err)
 				}
