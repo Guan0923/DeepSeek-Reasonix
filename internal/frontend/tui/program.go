@@ -110,6 +110,7 @@ type model struct {
 	rewind        *rewindPicker
 	copying       *copyPicker
 	clearing      *clearConfirm
+	setup         *connectionSetup
 	lastEsc       time.Time // an idle Esc on an empty composer, arming the second
 	// frameRows is how tall the last inline frame was: a print has only the
 	// rows above it to land in.
@@ -182,7 +183,7 @@ func newModel(ctx context.Context, opts Options) *model {
 
 func (m *model) Init() tea.Cmd {
 	m.updates = m.client.Subscribe(m.ctx)
-	cmds := []tea.Cmd{m.waitUpdate(), m.fetchStatus(), tickStatus(), m.fetchMeters()}
+	cmds := []tea.Cmd{m.waitUpdate(), m.fetchStatus(), tickStatus(), m.fetchMeters(), m.checkSetup()}
 	if m.opts.Restore {
 		cmds = append(cmds, m.fetchHistory(true))
 	}
@@ -392,6 +393,14 @@ func (m *model) onScreenMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onClipText(msg), true
 	case helpMsg:
 		return m.onHelp(msg), true
+	case setupStateMsg:
+		return m.onSetupState(msg), true
+	case connectionsMsg:
+		return m.onConnections(msg), true
+	case connectionTestedMsg:
+		return m.onConnectionTested(msg), true
+	case connectionSavedMsg:
+		return m.onConnectionSaved(msg), true
 	case sessionsMsg:
 		return m.onSessions(msg), true
 	case resumedMsg:

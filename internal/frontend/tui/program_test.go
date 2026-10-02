@@ -66,6 +66,13 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode([]map[string]any{{"role": "user", "content": "write the docs"}})
 	case "/inbox/items":
 		_ = json.NewEncoder(w).Encode(map[string]string{"itemId": "q-7"})
+	case "/provider-setup":
+		_ = json.NewEncoder(w).Encode(map[string]any{"required": true})
+	case "/provider-setup/connections":
+		_ = json.NewEncoder(w).Encode(map[string]any{"revision": "r1", "connections": []map[string]any{
+			{"name": "alpha", "kind": "openai", "models": 2, "keyRequired": true},
+			{"name": "beta", "kind": "anthropic", "models": 1, "active": true},
+		}})
 	case "/checkpoints":
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"turn": 0, "prompt": "read the code"}, {"turn": 1, "prompt": "fix the bug", "files": 2},

@@ -98,6 +98,10 @@ func (p *pasteStore) expand(s string) string {
 // insertPaste puts pasted text in the composer, folded unless a panel is
 // taking the keys: what is typed into one is an answer, not a message.
 func (m *model) insertPaste(text string) {
+	if m.setup != nil {
+		m.pasteIntoSetup(text)
+		return
+	}
 	if m.tr.OpenPrompt() != nil || m.picker != nil || m.rewind != nil || m.copying != nil || m.clearing != nil {
 		m.composer.InsertString(text)
 		return
@@ -196,6 +200,9 @@ func (m *model) screenKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 	if m.scrollKey(msg.String()) {
 		return nil, true
 	}
+	if cmd, handled := m.setupKey(msg); handled {
+		return cmd, true
+	}
 	if cmd, handled := m.pickerKey(msg); handled {
 		return cmd, true
 	}
@@ -279,6 +286,10 @@ func (m *model) send(steer bool) tea.Cmd {
 		m.composer.Reset()
 		m.tr.AddEcho(display)
 		return tea.Batch(m.commit(), m.askClear())
+	case isSetup(display) && !m.tr.Running:
+		m.composer.Reset()
+		m.tr.AddEcho(display)
+		return tea.Batch(m.commit(), m.openSetup())
 	case display == "/version":
 		m.composer.Reset()
 		version := m.opts.Version

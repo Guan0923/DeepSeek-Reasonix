@@ -121,7 +121,8 @@ func (m *model) localCommands(line string) []CompletionItem {
 	} {
 		cmds = append(cmds, CompletionItem{Label: c.name, Insert: c.name, Hint: c.hint})
 	}
-	cmds = append(cmds, CompletionItem{Label: "/version", Insert: "/version", Hint: i18n.M.CmdVersion},
+	cmds = append(cmds, CompletionItem{Label: "/setup", Insert: "/setup", Hint: i18n.M.CmdSetup},
+		CompletionItem{Label: "/version", Insert: "/version", Hint: i18n.M.CmdVersion},
 		CompletionItem{Label: "/help", Insert: "/help", Hint: i18n.M.CmdHelp})
 	cmds = append(cmds,
 		CompletionItem{Label: "/cls", Insert: "/cls", Hint: i18n.M.CmdCls},
