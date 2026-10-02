@@ -241,3 +241,19 @@ func TestLanguageNeverWritesIntoAProjectFile(t *testing.T) {
 		t.Fatalf("user config missing the language:\n%s", raw)
 	}
 }
+
+func TestLanguageWarnsWhenTheProjectConfigOverridesIt(t *testing.T) {
+	c, _ := settingsController(t)
+	if err := os.WriteFile(filepath.Join(c.WorkspaceRoot(), "reasonix.toml"), []byte("language = \"en\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var got []event.Event
+	c.sink = event.FuncSink(func(e event.Event) { got = append(got, e) })
+	c.managementNotice("/language zh")
+	for _, e := range got {
+		if e.Code == event.NoticeCodeLanguageOverridden && e.Level == event.LevelWarn && e.Detail == "en" {
+			return
+		}
+	}
+	t.Fatalf("no typed override warning among %d events", len(got))
+}

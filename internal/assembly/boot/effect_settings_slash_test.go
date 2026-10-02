@@ -3,6 +3,7 @@ package boot
 import (
 	"context"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -84,9 +85,9 @@ model = "x"
 }
 
 func lastUserOf(req provider.Request) string {
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == "user" {
-			return req.Messages[i].Content
+	for _, m := range slices.Backward(req.Messages) {
+		if m.Role == "user" {
+			return m.Content
 		}
 	}
 	return ""

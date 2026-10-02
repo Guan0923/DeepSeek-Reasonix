@@ -212,6 +212,10 @@ func (c *Controller) languageNotice(fields []string) {
 	}
 	c.SetResponseLanguage(lang)
 	c.notice(fmt.Sprintf(i18n.M.LanguageChangedFmt, languageDisplay(lang), i18n.DetectLanguage(lang)))
+	if cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot()); err == nil && cfg.Language != lang {
+		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Code: event.NoticeCodeLanguageOverridden,
+			Text: "this project's config sets language = " + languageDisplay(cfg.Language) + ", which overrides your choice in new sessions", Detail: cfg.Language})
+	}
 }
 
 // saveLanguage stores the choice in the user config: a language is a personal

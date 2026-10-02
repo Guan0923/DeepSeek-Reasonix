@@ -57,4 +57,6 @@ const (
 	NoticeCodeContextBudget = "context_budget"
 	// The display currency preference changed; Detail is the stored value, "" for auto.
 	NoticeCodeDisplayCurrency = "display_currency"
+	// A saved language choice is overridden by the project config; Detail is the language in effect.
+	NoticeCodeLanguageOverridden = "language_overridden"
 )
