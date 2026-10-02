@@ -275,6 +275,22 @@ Reasonix plugins can declare `reasonix-plugin.json` at the plugin root:
 Relative paths are resolved inside the plugin root. Reasonix does not run
 third-party install scripts during plugin installation.
 
+A `SessionStart` hook can load packaged text without launching a command:
+
+```json
+"hooks": {
+  "SessionStart": [{"contextFile": "context/startup.md"}]
+}
+```
+
+Put this block inside `contributes` and include the referenced file in the
+package. Reasonix reads the installed copy and adds its text to the first user
+turn as hook context. It keeps that text out of the cached system prompt.
+
+Disabling or removing the package stops this context in newly built sessions.
+Use the existing reload flow to refresh an already running session's hooks;
+earlier conversation messages keep context that was already sent.
+
 Plugin hook execution is explicit:
 
 - A hook with `contextFile` reads that package-relative file directly; it
