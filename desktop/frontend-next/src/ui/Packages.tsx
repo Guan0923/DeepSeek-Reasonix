@@ -228,8 +228,8 @@ function Package({
         <Contributions items={p.agents} />
         <Contributions items={p.prompts} />
         <Contributions items={p.themes} />
-        {p.skipped?.map((s) => (
-          <div className="row" key={s.capability + s.reason}>
+        {p.skipped?.map((s, index) => (
+          <div className="row" key={index}>
             <span className="d">·</span>
             <span>{s.capability}</span>
             <span className="sc">{t("用不了：{why}", { why: s.reason })}</span>
