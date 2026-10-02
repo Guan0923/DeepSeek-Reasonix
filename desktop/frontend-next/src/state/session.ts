@@ -20,7 +20,7 @@ import { appendText, foldMessage, sealSay } from "./say";
 import { nextId } from "./ids";
 import { foldStall } from "./stall";
 import { nameQueued } from "./queued";
-import { dropTool, foldLastRead, foldTool, mergeReads } from "./fold";
+import { dropTool, foldLastRead, foldTool, isSubagentProgress, mergeReads, notePhase } from "./fold";
 export { quoteAmount };
 export { setShowsReceipt, showsReceipt };
 
@@ -52,7 +52,7 @@ export const initialState: SessionState = {
   waiting: {},
   running: false,
   doing: "空闲",
-  steerQueue: [],
+  steerQueue: [], subagentPhase: {},
   awaitingTurnStart: [],
   queueMoved: 0,
   browserTabsMoved: 0,
@@ -367,6 +367,7 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
         : s;
 
     case "tool_progress":
+      if (ev.tool && isSubagentProgress(ev.tool.name)) return { ...s, subagentPhase: notePhase(s.subagentPhase, ev.tool) };
       return ev.tool
         ? { ...s, executions: noteTool(s.executions, ev.tool, false), items: foldTool(s.items, ev.tool, true) }
         : s;

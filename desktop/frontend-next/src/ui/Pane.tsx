@@ -312,7 +312,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   // `s.revision` is the narrower truth. Same for the rail's two panels below.
   /* eslint-disable react-hooks/exhaustive-deps */
   const paired = useMemo(() => pairCheckpoints(s.items, checkpoints), [s.revision, checkpoints]);
-  const rail = useMemo(() => railOf(s.items, s.executions), [s.revision, s.executions]);
+  const rail = useMemo(() => railOf(s.items, s.executions, s.subagentPhase), [s.revision, s.executions, s.subagentPhase]);
 
   // Sub-agents and background processes: built as panels, never drawn.
   const [deck, setDeck] = useState<Deck>("");
