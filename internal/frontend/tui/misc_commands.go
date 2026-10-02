@@ -11,9 +11,9 @@ import (
 	"reasonix/internal/frontend/termrender"
 )
 
-// localSlash answers the commands that only change how this terminal draws:
+// miscSlash answers the commands that only change how this terminal draws:
 // the kernel holds no state for them, so Submit would call them unknown.
-func (m *model) localSlash(display string) (tea.Cmd, bool) {
+func (m *model) miscSlash(display string) (tea.Cmd, bool) {
 	name, arg, _ := strings.Cut(display, " ")
 	switch name {
 	case "/cls", "/todo", "/verbose", "/diff-fold":
@@ -103,12 +103,9 @@ func (m *model) setTheme(name string) {
 	}
 }
 
-func prefsPath() string {
-	if p := config.SourcePath(); p != "" {
-		return p
-	}
-	return config.UserConfigPath()
-}
+// prefsPath is the user config: theme and verbosity are personal, and a project
+// reasonix.toml is committed and shared.
+func prefsPath() string { return config.UserConfigPath() }
 
 func storedVerbose() bool {
 	cfg, err := config.Load()

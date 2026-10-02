@@ -2,12 +2,11 @@ package control
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"reasonix/internal/base/i18n"
 	"reasonix/internal/contract/config"
+	"reasonix/internal/contract/event"
 	"reasonix/internal/runtime/outputstyle"
 	"reasonix/internal/safety/sandbox"
 	"reasonix/internal/state/sessionstore"
@@ -28,9 +27,9 @@ func (c *Controller) settingsNotice(fields []string, trimmed string) bool {
 	case "/rename":
 		c.renameNotice(rest)
 	case "/sandbox":
-		c.notice(sandboxStatusText())
+		c.notice(c.sandboxStatusText())
 	case "/output-style", "/output-styles":
-		c.notice(outputStylesText())
+		c.notice(c.outputStylesText())
 	case "/reasoning-language":
 		c.reasoningLanguageNotice(fields)
 	case "/language":
@@ -44,7 +43,7 @@ func (c *Controller) settingsNotice(fields []string, trimmed string) bool {
 }
 
 func (c *Controller) effortStatusText() string {
-	cfg, err := config.Load()
+	cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot())
 	if err != nil {
 		return "effort: " + err.Error()
 	}
@@ -89,8 +88,8 @@ func (c *Controller) renameNotice(title string) {
 	c.notice(fmt.Sprintf(i18n.M.RenameDoneFmt, title))
 }
 
-func sandboxStatusText() string {
-	cfg, err := config.Load()
+func (c *Controller) sandboxStatusText() string {
+	cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot())
 	if err != nil {
 		return "sandbox: config not loaded"
 	}
@@ -117,13 +116,13 @@ func sandboxStatusText() string {
 	return b.String()
 }
 
-func outputStylesText() string {
+func (c *Controller) outputStylesText() string {
 	styles := outputstyle.List(outputstyle.Dirs())
 	if len(styles) == 0 {
 		return i18n.M.OutputStyleNone
 	}
 	active := ""
-	if cfg, err := config.Load(); err == nil {
+	if cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot()); err == nil {
 		active = cfg.Agent.OutputStyle
 	}
 	var b strings.Builder
@@ -146,7 +145,7 @@ func outputStylesText() string {
 func (c *Controller) reasoningLanguageNotice(fields []string) {
 	const usage = "usage: /reasoning-language auto|zh|en"
 	if len(fields) < 2 {
-		cfg, err := config.Load()
+		cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot())
 		if err != nil {
 			c.notice("reasoning-language: " + err.Error())
 			return
@@ -190,7 +189,7 @@ func (c *Controller) reasoningLanguageNotice(fields []string) {
 
 func (c *Controller) languageNotice(fields []string) {
 	if len(fields) < 2 {
-		cfg, err := config.Load()
+		cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot())
 		if err != nil {
 			c.notice("language: " + err.Error())
 			return
@@ -215,70 +214,14 @@ func (c *Controller) languageNotice(fields []string) {
 	c.notice(fmt.Sprintf(i18n.M.LanguageChangedFmt, languageDisplay(lang), i18n.DetectLanguage(lang)))
 }
 
-// saveLanguage writes the choice where the config was loaded from and drops a
-// stale user-level override, so a project's language is not shadowed by it.
+// saveLanguage stores the choice in the user config: a language is a personal
+// preference and must not land in a project file that is committed and shared.
 func saveLanguage(lang string) error {
-	userPath := config.UserConfigPath()
-	path := config.SourcePath()
-	if path == "" {
-		path = userPath
-	}
+	path := config.UserConfigPath()
 	if path == "" {
 		return fmt.Errorf("cannot resolve config path")
 	}
-	paths := []string{path}
-	if userPath != "" && !sameConfigPath(path, userPath) {
-		paths = append(paths, userPath)
-	}
-	unlock, err := config.LockConfigFilesEdits(paths...)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	edit, err := config.LoadForEditReadOnlyStrict(path)
-	if err != nil {
-		return err
-	}
-	if err := edit.SetLanguage(lang); err != nil {
-		return err
-	}
-	if err := edit.SaveTo(path); err != nil {
-		return err
-	}
-	if lang != "" || len(paths) == 1 {
-		return nil
-	}
-	return clearUserLanguage(userPath)
-}
-
-func clearUserLanguage(userPath string) error {
-	if _, err := os.Stat(userPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	edit, err := config.LoadForEditReadOnlyStrict(userPath)
-	if err != nil {
-		return err
-	}
-	if strings.TrimSpace(edit.Language) == "" {
-		return nil
-	}
-	if err := edit.SetLanguage(""); err != nil {
-		return err
-	}
-	return edit.SaveTo(userPath)
-}
-
-func sameConfigPath(a, b string) bool {
-	if abs, err := filepath.Abs(a); err == nil {
-		a = abs
-	}
-	if abs, err := filepath.Abs(b); err == nil {
-		b = abs
-	}
-	return filepath.Clean(a) == filepath.Clean(b)
+	return config.EditConfigFile(path, func(cfg *config.Config) error { return cfg.SetLanguage(lang) })
 }
 
 func normalizeLanguageArg(s string) (string, bool) {
@@ -359,7 +302,7 @@ func describeCurrencies(current, resolved string) string {
 
 func (c *Controller) currencyNotice(fields []string) {
 	if len(fields) < 2 {
-		cfg, err := config.Load()
+		cfg, err := config.LoadForRootReadOnly(c.WorkspaceRoot())
 		if err != nil {
 			c.notice("currency: " + err.Error())
 			return
@@ -393,5 +336,6 @@ func (c *Controller) currencyNotice(fields []string) {
 		c.notice("currency: " + err.Error())
 		return
 	}
-	c.notice(fmt.Sprintf(i18n.M.CurrencyChangedFmt, currencyDisplay(mode), resolved))
+	c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Code: event.NoticeCodeDisplayCurrency,
+		Text: fmt.Sprintf(i18n.M.CurrencyChangedFmt, currencyDisplay(mode), resolved), Detail: mode})
 }

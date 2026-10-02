@@ -211,3 +211,33 @@ func TestRenameWritesTheSessionTitle(t *testing.T) {
 		t.Fatalf("meta = %+v ok=%v err=%v", meta, ok, err)
 	}
 }
+
+func TestSandboxReadsTheControllersWorkspaceNotTheProcessCwd(t *testing.T) {
+	c, take := settingsController(t)
+	if err := os.WriteFile(filepath.Join(c.WorkspaceRoot(), "reasonix.toml"), []byte("[sandbox]\nnetwork = false\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(testenv.TempDir(t))
+	c.managementNotice("/sandbox")
+	if got := lastNotice(t, take()); !strings.Contains(got, "network     false") {
+		t.Fatalf("status did not come from the controller's workspace:\n%s", got)
+	}
+}
+
+func TestLanguageNeverWritesIntoAProjectFile(t *testing.T) {
+	c, take := settingsController(t)
+	project := filepath.Join(c.WorkspaceRoot(), "reasonix.toml")
+	const body = "# shared\n[agent]\nmax_steps = 7\n"
+	if err := os.WriteFile(project, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(c.WorkspaceRoot())
+	c.managementNotice("/language zh")
+	take()
+	if raw, _ := os.ReadFile(project); string(raw) != body {
+		t.Fatalf("project file was rewritten:\n%s", raw)
+	}
+	if raw, _ := os.ReadFile(config.UserConfigPath()); !strings.Contains(string(raw), `"zh"`) {
+		t.Fatalf("user config missing the language:\n%s", raw)
+	}
+}

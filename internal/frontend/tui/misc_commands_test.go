@@ -11,7 +11,7 @@ import (
 	"reasonix/internal/frontend/termrender"
 )
 
-func localModel(t *testing.T) (*model, *recordingKernel, string) {
+func miscModel(t *testing.T) (*model, *recordingKernel, string) {
 	t.Helper()
 	home := testenv.TempDir(t)
 	t.Setenv("REASONIX_HOME", home)
@@ -37,7 +37,7 @@ func notices(m *model) string {
 }
 
 func TestTodoDismissesTheListWithoutAskingTheKernel(t *testing.T) {
-	m, k, _ := localModel(t)
+	m, k, _ := miscModel(t)
 	m.todos = []TodoItem{{Content: "fix", Status: "in_progress"}}
 	sendLine(m, "/todo")
 	if len(m.todos) != 0 || strings.Contains(m.View().Content, "To-dos") {
@@ -52,7 +52,7 @@ func TestTodoDismissesTheListWithoutAskingTheKernel(t *testing.T) {
 }
 
 func TestDiffFoldTogglesTheFoldLimit(t *testing.T) {
-	m, k, _ := localModel(t)
+	m, k, _ := miscModel(t)
 	t.Cleanup(func() { diffFoldLines = diffPreviewLines })
 	sendLine(m, "/diff-fold")
 	if diffFoldLines != 0 || !strings.Contains(notices(m), i18n.M.DiffFoldDisabled) {
@@ -68,7 +68,7 @@ func TestDiffFoldTogglesTheFoldLimit(t *testing.T) {
 }
 
 func TestVerboseKeepsThinkingOpenAndIsRemembered(t *testing.T) {
-	m, _, cfgPath := localModel(t)
+	m, _, cfgPath := miscModel(t)
 	row := Item{Kind: ItemSay, Text: "the answer", Reasoning: "because of the cache", Done: true}
 	if got := m.settledRow(row, 0).render(80, false); strings.Contains(got, "because of the cache") {
 		t.Fatal("thinking was open before /verbose")
@@ -94,7 +94,7 @@ func TestVerboseKeepsThinkingOpenAndIsRemembered(t *testing.T) {
 }
 
 func TestThemeListsSwitchesAndPersists(t *testing.T) {
-	m, k, cfgPath := localModel(t)
+	m, k, cfgPath := miscModel(t)
 	prev := termrender.ActiveTheme()
 	t.Cleanup(func() { termrender.SetThemeStyle(prev.Style) })
 	sendLine(m, "/theme")
@@ -119,7 +119,7 @@ func TestThemeListsSwitchesAndPersists(t *testing.T) {
 }
 
 func TestClsRedrawsWithoutTouchingTheConversation(t *testing.T) {
-	m, k, _ := localModel(t)
+	m, k, _ := miscModel(t)
 	m.tr.AddUser("hello")
 	m.commit()
 	m.todos = []TodoItem{{Content: "fix", Status: "in_progress"}}
@@ -138,7 +138,7 @@ func TestClsRedrawsWithoutTouchingTheConversation(t *testing.T) {
 }
 
 func TestLocalCommandsAreOfferedByCompletionAndHelp(t *testing.T) {
-	m, _, _ := localModel(t)
+	m, _, _ := miscModel(t)
 	var labels []string
 	for _, c := range m.localCommands("/") {
 		labels = append(labels, c.Label)
@@ -151,5 +151,26 @@ func TestLocalCommandsAreOfferedByCompletionAndHelp(t *testing.T) {
 		if !found {
 			t.Errorf("%s not offered: %v", want, labels)
 		}
+	}
+}
+
+func TestThemeAndVerboseNeverWriteIntoAProjectFile(t *testing.T) {
+	m, _, userPath := miscModel(t)
+	t.Cleanup(func() { termrender.SetThemeStyle("graphite") })
+	dir := t.TempDir()
+	project := filepath.Join(dir, "reasonix.toml")
+	const body = "# shared\n[agent]\nmax_steps = 7\n"
+	if err := os.WriteFile(project, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	sendLine(m, "/theme glacier")
+	sendLine(m, "/verbose")
+	if raw, _ := os.ReadFile(project); string(raw) != body {
+		t.Fatalf("project file was rewritten:\n%s", raw)
+	}
+	raw, _ := os.ReadFile(userPath)
+	if !strings.Contains(string(raw), "glacier") || !strings.Contains(string(raw), "show_reasoning = true") {
+		t.Fatalf("user config missing the preferences:\n%s", raw)
 	}
 }

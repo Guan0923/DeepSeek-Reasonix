@@ -548,32 +548,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	if refuseNetworkShell(w, r, trimmed) {
 		return
 	}
-	// Intercept /model <ref> for runtime model switching (the controller's
-	// Submit path only lists models — switching is frontend-specific).
-	if strings.HasPrefix(trimmed, "/model ") {
-		ref := strings.TrimSpace(strings.TrimPrefix(trimmed, "/model"))
-		if ref != "" {
-			if err := s.switchModel(r.Context(), ref); err != nil {
-				writeErr(w, http.StatusInternalServerError, err)
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-	}
-	// Intercept /effort <level> for reasoning effort switching.
-	if strings.HasPrefix(trimmed, "/effort ") {
-		level := strings.TrimSpace(strings.TrimPrefix(trimmed, "/effort"))
-		if level != "" {
-			if err := s.switchEffort(r.Context(), level); err != nil {
-				writeErr(w, http.StatusInternalServerError, err)
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-	}
-	if s.reloadCommand(w, r, trimmed) {
+	if s.interceptSlash(w, r, trimmed) {
 		return
 	}
 	// Serialize turn admission with controller-generation rebuilds. Admission
@@ -613,7 +588,6 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	submitOrShell(ctrl, r, body.Input, body.Format, body.RefuseUnknownSlash, body.LocalShell)
-	s.afterSubmitCommand(trimmed)
 	// After synchronous admission, a successful start sets Running. A silent
 	// drop (rotating/closed) leaves Running false — return 409 instead of 202.
 	// Finishing-window park also leaves Running false briefly; prefer 202 only

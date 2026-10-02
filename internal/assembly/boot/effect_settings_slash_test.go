@@ -45,8 +45,15 @@ model = "x"
 	}
 	defer ctrl.Close()
 
+	if err := ctrl.Run(context.Background(), "hello"); err != nil {
+		t.Fatalf("first turn: %v", err)
+	}
+	before := agentRequests(rec.requests())
 	for _, line := range []string{"/sandbox", "/output-style", "/reasoning-language zh", "/currency usd"} {
 		ctrl.Submit(line)
+	}
+	if err := ctrl.Run(context.Background(), "hello"); err != nil {
+		t.Fatalf("second turn: %v", err)
 	}
 	mu.Lock()
 	joined := strings.Join(notices, "\n---\n")
@@ -56,8 +63,16 @@ model = "x"
 			t.Errorf("sink never saw %q:\n%s", want, joined)
 		}
 	}
-	if n := len(agentRequests(rec.requests())); n != 0 {
-		t.Fatalf("%d slash verbs were sent to the model", n)
+	after := agentRequests(rec.requests())
+	if len(before) != 1 || len(after) != 2 {
+		t.Fatalf("slash verbs reached the model: %d requests before, %d after two turns", len(before), len(after))
+	}
+	first, second := before[0], after[1]
+	if systemOf(first) != systemOf(second) {
+		t.Error("changing the reasoning language moved the cache-stable system prefix")
+	}
+	if lastUserOf(first) == lastUserOf(second) || !strings.Contains(lastUserOf(second), "hello") {
+		t.Errorf("the reasoning language never reached the next request:\nbefore: %q\nafter:  %q", lastUserOf(first), lastUserOf(second))
 	}
 	raw, err := os.ReadFile(config.UserConfigPath())
 	if err != nil {
@@ -66,4 +81,13 @@ model = "x"
 	if !strings.Contains(string(raw), "USD") || !strings.Contains(string(raw), "zh") {
 		t.Errorf("settings were not stored:\n%s", raw)
 	}
+}
+
+func lastUserOf(req provider.Request) string {
+	for i := len(req.Messages) - 1; i >= 0; i-- {
+		if req.Messages[i].Role == "user" {
+			return req.Messages[i].Content
+		}
+	}
+	return ""
 }

@@ -282,7 +282,7 @@ func (m *model) send(steer bool) tea.Cmd {
 		m.tr.AddNotice("info", "reasonix "+version)
 		return m.commit()
 	}
-	if cmd, ok := m.localSlash(display); ok {
+	if cmd, ok := m.miscSlash(display); ok {
 		return cmd
 	}
 	text := m.pastes.expand(display)
