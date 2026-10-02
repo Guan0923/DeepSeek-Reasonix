@@ -244,8 +244,8 @@ function Contributions({ items }: { items?: PluginItem[] }) {
   if (!items?.length) return null;
   return (
     <>
-      {items.map((it) => (
-        <div className="row" key={it.invocation || it.name}>
+      {items.map((it, index) => (
+        <div className="row" key={index}>
           <span className="d">·</span>
           <span>{it.invocation || it.name}</span>
           <span className="sc">{it.description}</span>
