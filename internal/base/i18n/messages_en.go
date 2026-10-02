@@ -102,7 +102,7 @@ var English = Messages{
 	ChatStatusWorkLabel:             "WORK",
 	ChatStatusCacheLabel:            "CACHE",
 	ChatStatusContextLabel:          "CTX",
-	ChatStatusCompactLabel:          "TO COMPACT",
+	ChatStatusCompactLabel:          "COMPACT",
 	ChatStatusJobsLabel:             "JOBS",
 	ChatStatusBalanceLabel:          "BAL",
 	ChatStatusCostLabel:             "COST",

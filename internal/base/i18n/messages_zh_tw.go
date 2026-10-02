@@ -99,7 +99,7 @@ var ChineseTraditional = Messages{
 	ChatStatusWorkLabel:             "模式",
 	ChatStatusCacheLabel:            "快取",
 	ChatStatusContextLabel:          "上下文",
-	ChatStatusCompactLabel:          "距壓縮",
+	ChatStatusCompactLabel:          "壓縮",
 	ChatStatusJobsLabel:             "任務",
 	ChatStatusBalanceLabel:          "餘額",
 	ChatStatusCostLabel:             "費用",

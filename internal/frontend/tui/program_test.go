@@ -22,6 +22,7 @@ import (
 type recordingKernel struct {
 	mu    sync.Mutex
 	calls []string
+	git   bool
 }
 
 func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +44,12 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// "看 @no": the token starts after one CJK rune and a space, two UTF-16 units.
 		_ = json.NewEncoder(w).Encode(map[string]any{"kind": "ref", "from": 2, "to": 5,
 			"items": []map[string]any{{"label": "notes.md", "insert": "@notes.md "}, {"label": "notes/", "insert": "@notes/"}}})
+	case "/workspace/git":
+		if k.git {
+			_ = json.NewEncoder(w).Encode(k.gitReply())
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"repo": false})
 	case "/todos":
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"content": "read the code", "status": "completed"},

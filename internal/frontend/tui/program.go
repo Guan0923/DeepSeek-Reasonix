@@ -104,6 +104,7 @@ type model struct {
 	balance       string
 	statusline    string
 	compaction    Compaction
+	git           GitInfo
 	scr           *screen
 	picker        *sessionPicker
 	rewind        *rewindPicker
@@ -249,16 +250,20 @@ type metersMsg struct {
 	balance    string
 	compaction *Compaction
 	statusline *string
+	git        *GitInfo
 }
 
 // fetchMeters reads what the footer shows that changes only between turns:
-// the wallet and where the session folds.
+// the wallet, where the session folds and the work tree's branch.
 func (m *model) fetchMeters() tea.Cmd {
 	return func() tea.Msg {
 		var out metersMsg
 		out.balance, _, _ = m.client.Balance(m.ctx)
 		if c, err := m.client.Compaction(m.ctx); err == nil {
 			out.compaction = &c
+		}
+		if g, err := m.client.WorkspaceGit(m.ctx); err == nil {
+			out.git = &g
 		}
 		if run := m.opts.Statusline; run != nil {
 			if s, err := m.client.Status(m.ctx); err == nil {
@@ -324,6 +329,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.statusline != nil {
 			m.statusline = *msg.statusline
+		}
+		if msg.git != nil {
+			m.git = *msg.git
 		}
 		return m, nil
 	case spinMsg:

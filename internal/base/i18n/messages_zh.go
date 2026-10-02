@@ -103,7 +103,7 @@ var Chinese = Messages{
 	ChatStatusWorkLabel:             "模式",
 	ChatStatusCacheLabel:            "缓存",
 	ChatStatusContextLabel:          "上下文",
-	ChatStatusCompactLabel:          "距压缩",
+	ChatStatusCompactLabel:          "压缩",
 	ChatStatusJobsLabel:             "任务",
 	ChatStatusBalanceLabel:          "余额",
 	ChatStatusCostLabel:             "费用",
