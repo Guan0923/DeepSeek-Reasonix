@@ -113,6 +113,7 @@ func runTUI(args []string, version string) int {
 	hub := serve.NewHub(serve.HubOptions{Serve: serveCfg, Surface: surface.CLI})
 	defer hub.Shutdown()
 	adoptFirstPane(hub, ctrl, bc, bc, serveCfg, leases)
+	hub.EnableProviderSetupInProcess()
 
 	err = tui.Run(ctx, tui.Options{
 		Client:        &tui.Client{HTTP: hub.InProcessClient(), Base: tuiBase},
