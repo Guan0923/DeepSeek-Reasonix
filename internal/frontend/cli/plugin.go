@@ -446,6 +446,12 @@ func pluginDoctorCommand(args []string) int {
 			return 1
 		}
 	}
+	for _, agentRoot := range pkg.AgentRoots() {
+		if st, err := os.Stat(agentRoot); err != nil || !st.IsDir() {
+			fmt.Fprintf(os.Stderr, "missing agent root: %s\n", agentRoot)
+			return 1
+		}
+	}
 	for _, commandRoot := range pkg.CommandRoots() {
 		if st, err := os.Stat(commandRoot); err != nil || !st.IsDir() {
 			fmt.Fprintf(os.Stderr, "missing command root: %s\n", commandRoot)
