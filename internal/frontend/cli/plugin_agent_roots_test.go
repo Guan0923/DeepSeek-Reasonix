@@ -64,13 +64,6 @@ func TestPluginDoctorRejectsUnavailableDeclaredAgentRoots(t *testing.T) {
 						t.Fatalf("%s rc=%d", op, rc)
 					}
 				})
-				if failure == "file" {
-					out, errOut := doctor(0)
-					if !strings.Contains(out, "ok: agent-roots") || !strings.Contains(out, `warning: agents path "profiles" is not a directory`) || errOut != "" {
-						t.Errorf("%s: doctor stdout=%s stderr=%s", op, out, errOut)
-					}
-					continue
-				}
 				out, errOut := doctor(1)
 				if strings.Contains(out, "ok: agent-roots") || !strings.Contains(errOut, "missing agent root: "+path) {
 					t.Errorf("%s: doctor stdout=%s stderr=%s", op, out, errOut)
