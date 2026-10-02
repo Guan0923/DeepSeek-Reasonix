@@ -106,11 +106,11 @@ func (w *scanWalk) dir(path string) {
 	w.mu.Unlock()
 }
 
-func (scan workspaceScan) proseOnly() bool {
-	if !scan.complete || len(scan.state) >= workspaceScanLimit {
+func (before workspaceScan) proseOnly() bool {
+	if !before.complete || len(before.state) >= workspaceScanLimit {
 		return false
 	}
-	for path, state := range scan.state {
+	for path, state := range before.state {
 		if !state.mode.IsRegular() {
 			return false
 		}
