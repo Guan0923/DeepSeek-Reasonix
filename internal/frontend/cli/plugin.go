@@ -465,6 +465,7 @@ func pluginDoctorCommand(args []string) int {
 		}
 	}
 	warnings = append(warnings, theme.PluginWarnings(pkg)...)
+	warnings = append(warnings, hook.PackageWarnings(pkg)...)
 	for _, warning := range warnings {
 		fmt.Println("warning:", warning)
 	}
