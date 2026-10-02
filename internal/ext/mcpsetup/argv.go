@@ -199,7 +199,7 @@ func NameFromArgv(command string, args []string) string {
 func firstCommandOperand(args []string) string {
 	valueFlags := map[string]bool{
 		"-p": true, "--package": true, "-c": true, "--call": true,
-		"--node-options": true, "--python": true,
+		"--node-options": true, "--python": true, "--from": true,
 	}
 	options := true
 	for i := 0; i < len(args); i++ {
