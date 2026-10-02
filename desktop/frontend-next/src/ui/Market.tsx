@@ -368,6 +368,8 @@ export function MarketGroup({ port, onInstalled, onViewInstalled, account, onSig
   const [applying, setApplying] = useState(false);
   const applyingChanged = useCallback((busy: boolean) => { setApplying(busy); onApplying?.(busy); }, [onApplying]);
   const handle = account?.signedIn ? account.user?.handle : undefined;
+  const [draft, setDraft] = useState<{ port: AgentPort; handle: string; pkg: MarketPackage } | null>(null);
+  if (draft && (draft.port !== port || draft.handle !== handle)) setDraft(null);
   const at = handle ? view : "browse";
   return (
     <Group id="market" title={t("社区市场")}
@@ -375,7 +377,7 @@ export function MarketGroup({ port, onInstalled, onViewInstalled, account, onSig
       {handle ? (
         <div className="seg mkt-views" data-text role="radiogroup" aria-label={t("社区市场")}>
           {VIEWS.map(([id, name]) => (
-            <button key={id} role="radio" aria-checked={at === id} disabled={applying} data-action="market.view" data-value={id} onClick={() => setView(id)}>
+            <button key={id} role="radio" aria-checked={at === id} disabled={applying} data-action="market.view" data-value={id} onClick={() => { if (id === "publish" && at !== "publish") setDraft(null); setView(id); }}>
               {t(name)}
             </button>
           ))}
@@ -393,8 +395,11 @@ export function MarketGroup({ port, onInstalled, onViewInstalled, account, onSig
       {at === "browse" && <Market port={port} onInstalled={onInstalled} onViewInstalled={onViewInstalled} onSignIn={onSignIn} />}
       {at === "mine" && <MyPackages key={handle} port={port} onInstalled={() => {
         if (connection.current === owner) onInstalled();
-      }} onViewInstalled={onViewInstalled} onApplying={applyingChanged} />}
-      {at === "publish" && handle && <PublishForm port={port} handle={handle} onMine={() => setView("mine")} />}
+      }} onViewInstalled={onViewInstalled} onApplying={applyingChanged} onPublish={(pkg) => {
+        if (!handle) return;
+        setDraft({ port, handle, pkg }); setView("publish");
+      }} />}
+      {at === "publish" && handle && <PublishForm port={port} handle={handle} initial={draft?.pkg} onMine={() => { setDraft(null); setView("mine"); }} />}
     </Group>
   );
 }
