@@ -573,6 +573,9 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if s.reloadCommand(w, r, trimmed) {
+		return
+	}
 	// Serialize turn admission with controller-generation rebuilds. Admission
 	// marks an ordinary turn running synchronously, so a reload that follows
 	// observes the busy state; a submit that follows a reload targets only the
@@ -610,6 +613,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	submitOrShell(ctrl, r, body.Input, body.Format, body.RefuseUnknownSlash, body.LocalShell)
+	s.afterSubmitCommand(trimmed)
 	// After synchronous admission, a successful start sets Running. A silent
 	// drop (rotating/closed) leaves Running false — return 409 instead of 202.
 	// Finishing-window park also leaves Running false briefly; prefer 202 only
