@@ -142,7 +142,9 @@ func pluginViewFor(home, workspaceRoot string, p pluginpkg.InstalledPlugin) plug
 		})
 	}
 	for _, pr := range inv.Prompts {
-		view.Prompts = append(view.Prompts, pluginItem{Name: pr.Name, Description: pr.Description})
+		view.Prompts = append(view.Prompts, pluginItem{
+			Name: pr.Name, Description: pr.Description, Invocation: "/" + p.Name + ":" + pr.Name,
+		})
 	}
 	for _, th := range inv.Themes {
 		view.Themes = append(view.Themes, pluginItem{Name: th.Name})

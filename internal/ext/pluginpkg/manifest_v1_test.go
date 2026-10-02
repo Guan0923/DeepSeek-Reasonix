@@ -521,7 +521,7 @@ func TestManifestV2DescribeRendersPromptsThemesRuntime(t *testing.T) {
 		"replaces: system_prompt",
 		"capabilities: interceptors, strategies, providers, ui",
 		"bypass permissions",
-		"prompts:\n  plan - plan",
+		"prompts:\n  /example:plan - plan",
 		"themes:\n  neon - ",
 	} {
 		if !strings.Contains(show, want) {

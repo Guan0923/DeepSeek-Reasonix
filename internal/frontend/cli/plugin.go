@@ -292,10 +292,11 @@ func printPluginInventory(pluginName string, inv pluginpkg.Inventory) {
 			if desc == "" {
 				desc = "(no description)"
 			}
+			invocation := "/" + pluginName + ":" + pr.Name
 			if pr.ArgHint != "" {
-				fmt.Printf("  %s %s\t%s\n", pr.Name, pr.ArgHint, desc)
+				fmt.Printf("  %s %s\t%s\n", invocation, pr.ArgHint, desc)
 			} else {
-				fmt.Printf("  %s\t%s\n", pr.Name, desc)
+				fmt.Printf("  %s\t%s\n", invocation, desc)
 			}
 		}
 	}
