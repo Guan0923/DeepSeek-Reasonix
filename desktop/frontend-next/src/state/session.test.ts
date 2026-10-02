@@ -584,3 +584,21 @@ describe("which model wrote a reply", () => {
     expect(says(st)[0].model).toBe("deepseek/deepseek-pro");
   });
 });
+
+describe("a receipt that arrives after the delivery it is for", () => {
+  const sent = { kind: "__user", text: "换个思路", pending: true, id: "row-1" } as SessionEvent;
+  const delivered = { kind: "steer", text: "换个思路", itemId: "it1" } as SessionEvent;
+  const receipt = { kind: "__queued", id: "row-1", itemId: "it1", queued: "steer" } as SessionEvent;
+  const users = (st: SessionState) => st.items.filter((i): i is Extract<Item, { t: "user" }> => i.t === "user");
+
+  it("leaves one delivered line and nothing waiting", () => {
+    const rows = users(run([sent, delivered, receipt]));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ steer: true, itemId: "it1" });
+    expect(rows.some((r) => r.pending)).toBe(false);
+  });
+
+  it("still names a line the kernel has not delivered yet", () => {
+    expect(users(run([sent, receipt]))[0]).toMatchObject({ pending: true, itemId: "it1" });
+  });
+});

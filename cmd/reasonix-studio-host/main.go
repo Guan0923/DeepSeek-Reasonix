@@ -321,6 +321,8 @@ func assemble(ctx context.Context, logs, handshakeTo io.Writer, shell shellIdent
 		Stderr:          logs,
 		StatsSource:     surface.Desktop,
 		FeedbackSurface: feedback.SurfaceStudio,
+		// A stale default_model must not keep the window from opening to fix it.
+		OpenOnFallbackModel: true,
 
 		CleanupPendingReconciler: serve.BackgroundCleanupReconciler,
 	})

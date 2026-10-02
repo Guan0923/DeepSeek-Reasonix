@@ -80,14 +80,13 @@ func ParseMCPServersJSON(body []byte) ([]PluginEntry, error) {
 		if err := json.Unmarshal(body, &bare); err != nil {
 			return nil, err
 		}
-		// A bare map only counts when its values actually describe servers; an
-		// arbitrary JSON object decodes into empty specs without erroring.
-		for name, spec := range bare {
-			if spec.Command == "" && spec.URL == "" {
-				delete(bare, name)
-			}
-		}
 		specs = bare
+	}
+	// Either shape needs a command or URL to describe an installable server.
+	for name, spec := range specs {
+		if spec.Command == "" && spec.URL == "" {
+			delete(specs, name)
+		}
 	}
 	if len(specs) == 0 {
 		return nil, fmt.Errorf("no MCP server found in this JSON")

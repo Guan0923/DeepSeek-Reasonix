@@ -44,7 +44,7 @@
 <br/>
 
 <p align="center"><strong>Open source · MIT · a single Go binary</strong></p>
-<h3 align="center">A coding agent you can leave running.</h3>
+<h3 align="center">A reliable coding agent for complex software engineering tasks.</h3>
 <p align="center">One local engine, four ways in — terminal, desktop app, browser, or your editor over ACP. Plan mode, permissions, a workspace sandbox and per-turn checkpoints keep a long autonomous run something you can still read and undo.</p>
 <p align="center">Maintained by <strong>Huahui Yu</strong>.</p>
 
@@ -52,6 +52,8 @@
 > **Community · 加入社区** — bilingual Discord for setup help (`#help` / `#求助`), workflow showcases, and feature ideas. → **<https://discord.gg/XF78rEME2D>**
 >
 > QQ group **DeepSeek-Reasonix官方群** (`1093562660`) → **<https://qm.qq.com/q/i59b0z2R8s>** ([QR code](./docs/assets/qq-group.svg))
+
+> Douyin: **做游戏的小鱼** (Douyin ID `22703872788`) · [QR code](./docs/assets/douyin.png)
 
 <br/>
 
@@ -270,8 +272,9 @@ coffee, not a contract — donations don't buy feature priority or change how
 issues get triaged.
 
 - **International** — PayPal: [paypal.me/yuhuahui](https://paypal.me/yuhuahui)
-- **国内** — 微信支付（扫码）
+- **国内** — 微信支付 / 支付宝（扫码）
 
 <p align="center">
   <img src=".github/sponsor/wechat-pay.jpg" alt="WeChat Pay QR code" width="180"/>
+  <img src=".github/sponsor/alipay.jpg" alt="Alipay QR code" width="180"/>
 </p>

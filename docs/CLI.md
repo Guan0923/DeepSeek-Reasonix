@@ -497,8 +497,7 @@ folder alone:
   `permission_denials`.
 
 In the terminal UI, Shift+Tab cycles read-only → ask → auto → YOLO → plan
-(YOLO joins once confirmed). Ctrl+Y toggles YOLO and returns to the posture it
-left.
+Ctrl+Y toggles YOLO at once and returns to the posture it left.
 
 For unattended execution with ordinary writer fallback enabled, use
 `reasonix run --auto ...` (or `-y`). Neither it nor `--yolo` can be combined
