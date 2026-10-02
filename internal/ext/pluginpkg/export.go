@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 
+	fileencoding "reasonix/internal/base/fileutil/encoding"
 	"reasonix/internal/base/secrets"
 )
 
@@ -132,7 +133,7 @@ func credentialBearing(rel string) bool {
 // leaks it, while a false positive costs one variable to fill in.
 func StripCredentials(raw []byte) ([]byte, []string, error) {
 	var doc any
-	if err := json.Unmarshal(raw, &doc); err != nil {
+	if err := json.Unmarshal(fileencoding.DecodeToUTF8(raw), &doc); err != nil {
 		return nil, nil, err
 	}
 	required := map[string]bool{}
