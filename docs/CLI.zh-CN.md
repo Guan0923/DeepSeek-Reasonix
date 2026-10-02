@@ -434,7 +434,7 @@ reasonix --allowed-tools "Bash(go test ./...)" --allowed-tools read_file
 - 信任跟着文件夹路径走，不看内容：以后在同一路径检出的任何东西也被信任。
 - 无头运行从不询问；`ask` 下写入被拒，并列在 `permission_denials` 中。
 
-终端界面里 Shift+Tab 按 只读 → 询问 → 自动 → YOLO → 计划 循环（YOLO 确认过后才进入循环）；
+终端界面里 Shift+Tab 按 只读 → 询问 → 自动 → YOLO → 计划 循环；
 Ctrl+Y 切换 YOLO，再按回到进入前的档位。
 
 无人值守执行需要放行普通 writer fallback 时，使用 `reasonix run --auto ...`

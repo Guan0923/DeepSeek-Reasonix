@@ -117,7 +117,6 @@ type Messages struct {
 	ChatStatusCancellingViFmt       string // "%s stopping… (%ds)" — vi mode: Ctrl+C re-cancels instead of exiting, so the hint drops the exit key
 	ChatStatusIdle                  string // shortcuts hint when idle
 	ChatStatusYoloIdle              string // shortcuts hint when idle in YOLO/bypass mode
-	YoloConfirmHint                 string // Ctrl+Y before YOLO was ever confirmed: what it skips, press again
 	ChatStatusCycleHint             string // plan-toggle shortcut hint shown when no modal prompt owns the status row
 	ChatStatusCycleHintCompact      string // readable shortcut hint used by the persistent footer
 	ChatTurnReceiptLabel            string // compact per-turn usage receipt attached to the completed assistant response

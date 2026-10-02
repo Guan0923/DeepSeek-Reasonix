@@ -22,6 +22,7 @@ import (
 type recordingKernel struct {
 	mu    sync.Mutex
 	calls []string
+	git   bool
 }
 
 func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +44,12 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// "看 @no": the token starts after one CJK rune and a space, two UTF-16 units.
 		_ = json.NewEncoder(w).Encode(map[string]any{"kind": "ref", "from": 2, "to": 5,
 			"items": []map[string]any{{"label": "notes.md", "insert": "@notes.md "}, {"label": "notes/", "insert": "@notes/"}}})
+	case "/workspace/git":
+		if k.git {
+			_ = json.NewEncoder(w).Encode(k.gitReply())
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"repo": false})
 	case "/todos":
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"content": "read the code", "status": "completed"},
@@ -263,15 +270,87 @@ func TestApprovalPanelAnswersTheRowUnderTheCursor(t *testing.T) {
 
 func TestLargePasteFoldsAndExpandsOnSend(t *testing.T) {
 	m, k := testModel(t)
-	big := strings.Repeat("line\n", 10)
+	big := strings.Repeat("line\n", 12) + "line"
 	m.Update(tea.PasteMsg{Content: big})
-	if v := m.composer.Value(); v != "[Pasted text #1 +11 lines]" {
+	if v := m.composer.Value(); v != "[Pasted text #1 · 13 lines] " {
 		t.Fatalf("composer = %q", v)
 	}
 	run(m, press(m, "enter"))
-	raw, _ := json.Marshal(map[string]string{"input": big})
+	label := "[Pasted text #1 · 13 lines]"
+	want := label + "\n\n--- Begin " + label + " ---\n" + big + "\n--- End " + label + " ---"
+	raw, _ := json.Marshal(map[string]string{"input": want})
 	if calls := strings.Join(k.seen(), "\n"); !strings.Contains(calls, strings.TrimSuffix(string(raw), "}")) {
-		t.Fatalf("the paste did not go whole:\n%s", calls)
+		t.Fatalf("the paste did not go as the block 1.x sends:\n%s", calls)
+	}
+	var shown string
+	for _, it := range m.tr.Items {
+		if it.Kind == ItemUser {
+			shown = it.Text
+		}
+	}
+	if shown != "[Pasted text #1 · 13 lines]" {
+		t.Fatalf("the transcript keeps the label the person saw, got %q", shown)
+	}
+}
+
+// A terminal that ends rows with a bare carriage return still pastes lines.
+func TestPasteCountsLinesWhateverTheTerminalEndsThemWith(t *testing.T) {
+	for name, sep := range map[string]string{"cr": "\r", "crlf": "\r\n", "lf": "\n"} {
+		m, _ := testModel(t)
+		m.Update(tea.PasteMsg{Content: strings.Join([]string{"a", "b", "c", "d", "e", "f"}, sep)})
+		if v := m.composer.Value(); v != "[Pasted text #1 · 6 lines] " {
+			t.Errorf("%s: composer = %q", name, v)
+		}
+	}
+}
+
+// Four short lines stay as typed; five fold, as does one very long line.
+func TestPasteFoldsAtFiveLinesOrAThousandCharacters(t *testing.T) {
+	cases := []struct {
+		text string
+		want string
+	}{
+		{"a\nb\nc\nd", "a\nb\nc\nd"},
+		{"a\nb\nc\nd\ne", "[Pasted text #1 · 5 lines] "},
+		{strings.Repeat("x", 999), strings.Repeat("x", 999)},
+		{strings.Repeat("x", 1000), "[Pasted text #1 · 1 lines] "},
+	}
+	for _, c := range cases {
+		m, _ := testModel(t)
+		m.Update(tea.PasteMsg{Content: c.text})
+		if v := m.composer.Value(); v != c.want {
+			t.Errorf("paste of %d bytes: composer = %q, want %q", len(c.text), v, c.want)
+		}
+	}
+}
+
+// Labels count up through the session, and one the person edited is no longer
+// the paste, so it goes as typed.
+func TestPasteLabelsCountUpAndAnEditedLabelStaysLiteral(t *testing.T) {
+	m, k := testModel(t)
+	five := "1\n2\n3\n4\n5"
+	m.Update(tea.PasteMsg{Content: five})
+	m.Update(tea.PasteMsg{Content: "6\n7\n8\n9\n10"})
+	if v := m.composer.Value(); v != "[Pasted text #1 · 5 lines] [Pasted text #2 · 5 lines] " {
+		t.Fatalf("composer = %q", v)
+	}
+	m.composer.SetValue("[Pasted text #2 · 9 lines]")
+	run(m, press(m, "enter"))
+	if calls := strings.Join(k.seen(), "\n"); strings.Contains(calls, "--- Begin") {
+		t.Fatalf("a label nothing stands behind must go literally:\n%s", calls)
+	}
+}
+
+// Over an open panel the paste is the answer being typed, so it lands as text.
+func TestPasteOverAnOpenPanelIsNotFolded(t *testing.T) {
+	m, _ := testModel(t)
+	apply(m, eventwire.Event{Kind: "approval_request", Approval: &eventwire.Approval{ID: "ap1", Tool: "bash", Subject: "rm x"}})
+	if m.tr.OpenPrompt() == nil {
+		t.Fatal("the approval did not open")
+	}
+	m.Update(tea.PasteMsg{Content: "a\nb\nc\nd\ne\nf"})
+	if strings.Contains(m.composer.Value(), "Pasted text") {
+		t.Fatalf("composer = %q", m.composer.Value())
 	}
 }
 
@@ -723,5 +802,17 @@ func TestViewportHoldsOnShrink(t *testing.T) {
 	m.View()
 	if m.scr.yoff <= held {
 		t.Fatalf("viewport did not scroll on growth: yoff %d -> %d", held, m.scr.yoff)
+	}
+}
+
+// A resumed conversation already holds labels; the next paste must not reuse one.
+func TestPasteNumberingContinuesPastWhatTheResumedSessionHolds(t *testing.T) {
+	m, _ := testModel(t)
+	run(m, func() tea.Msg {
+		return historyMsg{msgs: []HistoryMessage{{Role: "user", Content: "[Pasted text #4 · 9 lines]\n\n--- Begin [Pasted text #4 · 9 lines] ---\nx\n--- End [Pasted text #4 · 9 lines] ---"}}, reprint: true}
+	})
+	m.Update(tea.PasteMsg{Content: "1\n2\n3\n4\n5"})
+	if v := m.composer.Value(); v != "[Pasted text #5 · 5 lines] " {
+		t.Fatalf("composer = %q", v)
 	}
 }
