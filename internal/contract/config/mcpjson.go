@@ -277,11 +277,14 @@ func (c *Config) mergeMCPJSON(entries []PluginEntry) {
 	}
 	for _, e := range entries {
 		if i, exists := index[e.Name]; exists {
-			// Project configuration always wins over user-global configuration.
-			// Within one project, reasonix.toml remains more specific than the
-			// Claude-compatible .mcp.json file.
+			// Project configuration wins; within one project, reasonix.toml
+			// remains more specific than .mcp.json. Keep the union of
+			// disabled_tools so a later source cannot re-enable a restriction.
+			e.DisabledTools = mergeDisabledToolPolicies(c.Plugins[i].DisabledTools, e.DisabledTools)
 			if e.Source == MCPSourceProjectMCPJSON && !c.Plugins[i].Source.ProjectScoped() {
 				c.Plugins[i] = e
+			} else {
+				c.Plugins[i].DisabledTools = e.DisabledTools
 			}
 			continue
 		}

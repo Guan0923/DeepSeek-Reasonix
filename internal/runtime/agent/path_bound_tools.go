@@ -168,6 +168,7 @@ func BindWritePaths(reg *tool.Registry, grant *writeclaim.WriteGrant, gate Gate,
 	if reg == nil {
 		return bound, nil
 	}
+	bound.CopyDisabledMCPFrom(reg)
 	claims := grant.Declared()
 	if claims.Empty() {
 		for _, name := range reg.Names() {
