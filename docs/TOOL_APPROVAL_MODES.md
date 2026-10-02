@@ -108,6 +108,8 @@ requirement. It still does not bypass explicit `deny` rules or the sandbox.
 
 The shell launch guard refuses recursive deletes of a home directory, filesystem root, workspace ancestor, or target outside the workspace, explicitly granted write roots, and the host's session-private temporary directory. Targets must be strictly below an allowed root, never the root itself.
 
+Workspace-root cleanups such as `rm -rf .` and `rm -rf *` are refused. The model should name a specific subdirectory, for example `rm -rf build`, instead of clearing the workspace root.
+
 These are hard refusals in every approval mode, including Ask after human approval, Auto, and Yolo. A dynamic executable name alone and a non-recursive delete do not trigger this guard.
 
 Literal bounded cleanup can be followed by other commands. Before a recursive delete, only literal directory changes are accepted; assignments are never propagated into a claim of safety. The guard checks possible directories even if a directory change fails.

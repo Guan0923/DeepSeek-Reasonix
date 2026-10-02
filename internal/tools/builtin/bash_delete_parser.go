@@ -73,6 +73,8 @@ func analyzePowerShellDelete(ctx context.Context, sh sandbox.Shell, command stri
 			_, err = p.input.Write(append(data, '\n'))
 		}
 		if err == nil {
+			// The persistent protocol needs exactly one stdout line per request
+			// so diagnostics cannot be mistaken for the next analysis response.
 			data, err = p.output.ReadBytes('\n')
 		}
 		done <- response{data, err}
