@@ -146,7 +146,7 @@ func NameFromURL(raw string) string {
 // NameFromArgv derives a server name from the command that starts it, looking
 // through the runner (npx/uvx/python -m/…) to the package it actually launches.
 func NameFromArgv(command string, args []string) string {
-	runner := strings.ToLower(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(filepath.Base(command), ".exe"), ".cmd"), ".bat"))
+	runner := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(strings.ToLower(filepath.Base(command)), ".exe"), ".cmd"), ".bat")
 	candidate := command
 	switch runner {
 	case "npx", "bunx", "uvx":
