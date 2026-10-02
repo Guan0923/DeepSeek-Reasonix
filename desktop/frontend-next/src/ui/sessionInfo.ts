@@ -10,7 +10,6 @@ function parentPath(path: string): string {
   return at > 0 ? path.slice(0, at) : path;
 }
 
-/** The clipboard block that names one conversation's files and workspace. */
 export function sessionInfoText(session: SessionInfo, taskPath: string): string {
   return [
     `${t("会话 ID")}: ${session.name}`,
