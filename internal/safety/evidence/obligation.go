@@ -46,9 +46,17 @@ const (
 // respelling or a wrapper is not a rewrite and the file's raw text is never the
 // identity.
 type CheckContract struct {
-	baseline      []string
-	current       []string
-	capturedTests int
+	baseline           []string
+	current            []string
+	capturedTests      int
+	workspaceProseOnly bool
+	delivery           bool
+}
+
+func (c CheckContract) WithWorkspaceProseOnly(proseOnly, delivery bool) CheckContract {
+	c.workspaceProseOnly = proseOnly
+	c.delivery = delivery
+	return c
 }
 
 // CaptureCheckContract canonicalises both declarations into criterion
@@ -135,16 +143,16 @@ func (l *Ledger) Obligations(contract CheckContract) []Obligation {
 	if !changed {
 		return out
 	}
-	if !l.SupportingOnlyWithoutChecks(contract) {
+	if !l.ProseOnlyWithoutChecks(contract) {
 		out = append(out, staleVerificationOf(l, at)...)
 	}
 	return append(out, l.checkObligations(contract, at)...)
 }
 
-// SupportingOnlyWithoutChecks requires established scope for every mutation;
+// ProseOnlyWithoutChecks requires established scope for every mutation;
 // a watched subset cannot exempt effects the host never observed.
-func (l *Ledger) SupportingOnlyWithoutChecks(contract CheckContract) bool {
-	if l == nil || len(contract.baseline) != 0 || len(contract.current) != 0 || contract.capturedTests != 0 {
+func (l *Ledger) ProseOnlyWithoutChecks(contract CheckContract) bool {
+	if l == nil || !contract.workspaceProseOnly || contract.delivery || len(contract.baseline) != 0 || len(contract.current) != 0 || contract.capturedTests != 0 {
 		return false
 	}
 	l.mu.Lock()
@@ -160,7 +168,7 @@ func (l *Ledger) SupportingOnlyWithoutChecks(contract CheckContract) bool {
 			return false
 		}
 		for _, path := range r.Paths {
-			if strings.TrimSpace(path) == "" || ClassifyPath(path) != PathSupporting {
+			if strings.TrimSpace(path) == "" {
 				return false
 			}
 		}

@@ -67,6 +67,14 @@ func TestRunUnverifiedFinishExitsZeroUnlessAsked(t *testing.T) {
 	}
 }
 
+func TestRunProseOnlyFinishHasNoReadinessDebt(t *testing.T) {
+	runToolCallFixture(t, "write_file", `{"path":"notes.md","content":"A neutral note."}`)
+	code, result, stderr := runCLIJSONResult(t, "run", "-y", "--fail-on-unverified", "--output-format", "json", "write a note")
+	if code != 0 || result["is_error"] != false || result["readiness"] != nil {
+		t.Fatalf("prose finish exited %d with %v; stderr: %s", code, result, stderr)
+	}
+}
+
 // A write the headless policy refuses is not a failed run, but it is not
 // silent either: the result lists it the way permission_denials readers expect.
 func TestRunReportsPermissionDenials(t *testing.T) {
