@@ -384,6 +384,10 @@ New resource types:
     with the plugin;
   - any other file listed under `themes` is ignored.
 
+The [native prompt example](../examples/work-note-kit/README.md) shows a
+template-only package, nested names, argument substitution, and the
+install/update/disable/remove lifecycle without a compiler or sidecar.
+
 The `runtime` block declares a code extension — a sidecar process Reasonix
 launches and talks to over the Extension Protocol (JSON-RPC 2.0 over stdio;
 see `docs/EXTENSION_PROTOCOL.generated.md` for the method index and

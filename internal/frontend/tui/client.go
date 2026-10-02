@@ -198,7 +198,9 @@ type Status struct {
 	SessionPath      string `json:"sessionPath"`
 	WorkspaceRoot    string `json:"workspaceRoot"`
 	Plan             bool   `json:"plan"`
-	LastUsage        *struct {
+	// Jobs is how many background jobs the session runs; only the count shows.
+	Jobs      []json.RawMessage `json:"jobs"`
+	LastUsage *struct {
 		CacheHitTokens  int
 		CacheMissTokens int
 	} `json:"lastUsage"`

@@ -121,6 +121,7 @@ func pluginViewFor(home, workspaceRoot string, p pluginpkg.InstalledPlugin) plug
 		return view
 	}
 	view.Warnings = append(warnings, theme.PluginWarnings(pkg)...)
+	view.Warnings = append(view.Warnings, hook.PackageWarnings(pkg)...)
 	view.Compatibility = pkg.Compatibility.Status
 	view.Skipped = pkg.Compatibility.Skipped
 
@@ -141,7 +142,9 @@ func pluginViewFor(home, workspaceRoot string, p pluginpkg.InstalledPlugin) plug
 		})
 	}
 	for _, pr := range inv.Prompts {
-		view.Prompts = append(view.Prompts, pluginItem{Name: pr.Name, Description: pr.Description})
+		view.Prompts = append(view.Prompts, pluginItem{
+			Name: pr.Name, Description: pr.Description, Invocation: "/" + p.Name + ":" + pr.Name,
+		})
 	}
 	for _, th := range inv.Themes {
 		view.Themes = append(view.Themes, pluginItem{Name: th.Name})

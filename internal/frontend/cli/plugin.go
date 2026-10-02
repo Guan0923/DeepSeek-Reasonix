@@ -292,10 +292,11 @@ func printPluginInventory(pluginName string, inv pluginpkg.Inventory) {
 			if desc == "" {
 				desc = "(no description)"
 			}
+			invocation := "/" + pluginName + ":" + pr.Name
 			if pr.ArgHint != "" {
-				fmt.Printf("  %s %s\t%s\n", pr.Name, pr.ArgHint, desc)
+				fmt.Printf("  %s %s\t%s\n", invocation, pr.ArgHint, desc)
 			} else {
-				fmt.Printf("  %s\t%s\n", pr.Name, desc)
+				fmt.Printf("  %s\t%s\n", invocation, desc)
 			}
 		}
 	}
@@ -445,6 +446,12 @@ func pluginDoctorCommand(args []string) int {
 			return 1
 		}
 	}
+	for _, agentRoot := range pkg.AgentRoots() {
+		if st, err := os.Stat(agentRoot); err != nil || !st.IsDir() {
+			fmt.Fprintf(os.Stderr, "missing agent root: %s\n", agentRoot)
+			return 1
+		}
+	}
 	for _, commandRoot := range pkg.CommandRoots() {
 		if st, err := os.Stat(commandRoot); err != nil || !st.IsDir() {
 			fmt.Fprintf(os.Stderr, "missing command root: %s\n", commandRoot)
@@ -465,6 +472,7 @@ func pluginDoctorCommand(args []string) int {
 		}
 	}
 	warnings = append(warnings, theme.PluginWarnings(pkg)...)
+	warnings = append(warnings, hook.PackageWarnings(pkg)...)
 	for _, warning := range warnings {
 		fmt.Println("warning:", warning)
 	}

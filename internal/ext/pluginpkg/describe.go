@@ -220,10 +220,11 @@ func appendInventoryText(b *strings.Builder, pluginName string, inv Inventory) {
 			if desc == "" {
 				desc = "(no description)"
 			}
+			invocation := "/" + pluginName + ":" + pr.Name
 			if pr.ArgHint != "" {
-				fmt.Fprintf(b, "  %s %s - %s\n", pr.Name, pr.ArgHint, desc)
+				fmt.Fprintf(b, "  %s %s - %s\n", invocation, pr.ArgHint, desc)
 			} else {
-				fmt.Fprintf(b, "  %s - %s\n", pr.Name, desc)
+				fmt.Fprintf(b, "  %s - %s\n", invocation, desc)
 			}
 		}
 	}

@@ -115,7 +115,14 @@ func (m *model) localCommands(line string) []CompletionItem {
 		return nil
 	}
 	cmds := []CompletionItem{{Label: "/resume", Insert: "/resume", Hint: i18n.M.CmdResume}}
-	cmds = append(cmds, CompletionItem{Label: "/version", Insert: "/version", Hint: i18n.M.CmdVersion},
+	for _, c := range []struct{ name, hint string }{
+		{"/queue", i18n.M.CmdQueue}, {"/steer", i18n.M.CmdSteer}, {"/takeover", i18n.M.CmdTakeover},
+		{"/status", i18n.M.CmdStatus}, {"/export", i18n.M.CmdExport}, {"/copy", i18n.M.CmdCopy},
+	} {
+		cmds = append(cmds, CompletionItem{Label: c.name, Insert: c.name, Hint: c.hint})
+	}
+	cmds = append(cmds, CompletionItem{Label: "/setup", Insert: "/setup", Hint: i18n.M.CmdSetup},
+		CompletionItem{Label: "/version", Insert: "/version", Hint: i18n.M.CmdVersion},
 		CompletionItem{Label: "/help", Insert: "/help", Hint: i18n.M.CmdHelp})
 	cmds = append(cmds,
 		CompletionItem{Label: "/cls", Insert: "/cls", Hint: i18n.M.CmdCls},

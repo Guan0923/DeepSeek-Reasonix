@@ -160,7 +160,7 @@ func (s *Server) initTitleProvider() {
 	if err != nil {
 		return
 	}
-	ref, _, ok := cfg.ResolveNewSessionChatModel()
+	ref, _, ok := cfg.ResolveStartupChatModel()
 	if !ok {
 		return
 	}

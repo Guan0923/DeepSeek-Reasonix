@@ -36,6 +36,10 @@ type Options struct {
 	MaxStepsKey string
 	RequireKey  bool
 	Sink        event.Sink
+	// OpenOnFallbackModel lets an unnamed build pass over a default_model nothing
+	// configured serves. Only a window sets it: it must open to be fixed, while a
+	// headless run must not move to another provider and its billing unasked.
+	OpenOnFallbackModel bool
 	// EffortOverride is a session-local reasoning effort override. Nil means use
 	// the resolved provider config; a non-nil empty string means provider default.
 	EffortOverride *string
