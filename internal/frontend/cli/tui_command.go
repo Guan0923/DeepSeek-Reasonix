@@ -126,8 +126,6 @@ func runTUI(args []string, version string) int {
 		AutoSubmit:    cfg != nil && cfg.AutoSubmit,
 		CommandMode:   cfg != nil && cfg.UICommandMode(),
 		Statusline:    statuslineRunner(cfg),
-		YoloConfirmed: config.YoloAcknowledged(home),
-		ConfirmYolo:   func() error { return config.AcknowledgeYolo(home) },
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
