@@ -154,16 +154,8 @@ func NameFromArgv(command string, args []string) string {
 			candidate = operand
 		}
 	case "python", "python3", "py":
-		for i, arg := range args {
-			if arg == "-m" && i+1 < len(args) {
-				candidate = args[i+1]
-				break
-			}
-		}
-		if candidate == command {
-			if operand := firstCommandOperand(args); operand != "" {
-				candidate = operand
-			}
+		if operand := pythonCommandOperand(args); operand != "" {
+			candidate = operand
 		}
 	case "node":
 		if operand := firstCommandOperand(args); operand != "" {
@@ -194,6 +186,28 @@ func NameFromArgv(command string, args []string) string {
 		}
 	}
 	return name
+}
+
+func pythonCommandOperand(args []string) string {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--" || arg == "-m":
+			if i+1 < len(args) {
+				return args[i+1]
+			}
+			return ""
+		case arg == "-" || strings.HasPrefix(arg, "-c"):
+			return ""
+		case strings.HasPrefix(arg, "-m"):
+			return strings.TrimPrefix(arg, "-m")
+		case arg == "-W" || arg == "-X" || arg == "--check-hash-based-pycs":
+			i++
+		case arg != "" && !strings.HasPrefix(arg, "-"):
+			return arg
+		}
+	}
+	return ""
 }
 
 func firstCommandOperand(args []string) string {
