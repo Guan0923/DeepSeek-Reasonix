@@ -17,6 +17,8 @@ import (
 
 func settingsController(t *testing.T) (*Controller, func() []string) {
 	t.Helper()
+	prev := i18n.CurrentLanguage()
+	t.Cleanup(func() { i18n.DetectLanguage(prev) })
 	home := testenv.TempDir(t)
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
