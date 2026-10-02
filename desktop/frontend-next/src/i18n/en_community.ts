@@ -10,4 +10,11 @@ export const EN_COMMUNITY: Record<string, string> = {
   "按提交数排序，名单随版本更新": "Sorted by commits; the list is refreshed with each release",
   "查看全部贡献者": "View all contributors",
   "显示全部 {n} 位": "Show all {n}",
+  "抖音": "Douyin",
+  "抖音号": "Douyin ID",
+  "复制抖音号": "Copy Douyin ID",
+  "显示二维码": "Show QR code",
+  "收起二维码": "Hide QR code",
+  "抖音二维码": "Douyin QR code",
+  "作者与维护者": "Author and maintainer",
 };

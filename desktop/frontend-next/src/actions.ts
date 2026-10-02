@@ -160,6 +160,8 @@ export const ACTIONS: UIAction[] = [
   { id: "community.issues", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "community.contributors", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "community.profile", kind: "shell-native", target: "entity", proof: "interaction" },
+  { id: "community.douyin-qr", kind: "view", target: "none", proof: "interaction" },
+  { id: "community.author", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "community.more", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.open", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.tab", kind: "view", target: "none", proof: "interaction" },

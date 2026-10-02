@@ -26,3 +26,10 @@
 }
 .comm-list a:hover { color: var(--text); border-color: var(--faint); }
 .comm-list a:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.comm-dy { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: var(--w-reg) var(--fs-meta) var(--ui); color: var(--muted); }
+.comm-dy code { font: var(--w-reg) var(--fs-meta) var(--mono); color: var(--muted); user-select: all; }
+.comm-dy-qr { align-self: flex-start; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--r-md); }
+.comm-author { display: flex; align-items: baseline; gap: 10px; padding: 0 0 14px; }
+.comm-author a { font: var(--w-med) var(--fs-ui) var(--mono); color: var(--text); text-decoration: none; }
+.comm-author a:hover { text-decoration: underline; }
+.comm-author a:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }

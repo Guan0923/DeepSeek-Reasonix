@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import type { AgentPort } from "../port/port";
 import contributors from "../data/contributors.json";
 import qrSrc from "../assets/qq-group-qr.svg";
+import douyinSrc from "../assets/douyin-qr.jpg";
 import { CopyButton } from "./CopyButton";
 import { COMMUNITY, profileUrl } from "./communityLinks";
 
@@ -11,6 +12,7 @@ const COLLAPSED = 24;
 export function Community({ port, logins = contributors }: { port: Pick<AgentPort, "openExternal">; logins?: string[] }) {
   const [all, setAll] = useState(false);
   const [failed, setFailed] = useState("");
+  const [douyinQr, setDouyinQr] = useState(false);
 
   const open = (url: string) =>
     void port.openExternal(url).then(() => setFailed(""), () => setFailed(t("无法打开浏览器，请手动访问 {at}", { at: url })));
@@ -40,6 +42,20 @@ export function Community({ port, logins = contributors }: { port: Pick<AgentPor
           </span>
         </div>
       </div>
+
+      <div className="comm-dy">
+        <span className="comm-k">{t("抖音")}</span>
+        <span className="comm-dy-name">{COMMUNITY.douyinName}</span>
+        <span className="comm-k">{t("抖音号")}</span>
+        <code>{COMMUNITY.douyinId}</code>
+        <CopyButton text={COMMUNITY.douyinId} iconOnly showFeedback label={t("复制抖音号")} />
+        <button type="button" className="btn sm" data-action="community.douyin-qr" aria-expanded={douyinQr} aria-controls="comm-dy-qr" onClick={() => setDouyinQr((v) => !v)}>
+          {douyinQr ? t("收起二维码") : t("显示二维码")}
+        </button>
+      </div>
+      {douyinQr && (
+        <img id="comm-dy-qr" className="comm-dy-qr" src={douyinSrc} alt={t("抖音二维码")} width={180} height={269} />
+      )}
 
       {failed && <p className="comm-fail" role="alert">{failed}</p>}
 

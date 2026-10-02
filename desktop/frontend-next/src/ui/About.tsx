@@ -1,5 +1,6 @@
 import { t } from "../i18n";
 import type { AgentPort } from "../port/port";
+import { AuthorLine } from "./AuthorLine";
 import { Community } from "./Community";
 import { Group } from "./Group";
 import { Versions } from "./Versions";
@@ -13,6 +14,7 @@ export function About({ port }: { port: AgentPort }) {
       >
         <Versions port={port} />
       </Group>
+      <AuthorLine port={port} />
       <Group id="community"
         title={t("社区与贡献者")}
         hint={t("遇到问题、想交流用法或想参与进来，可以加入社区；下面是为 Reasonix 提交过代码的人。")}
