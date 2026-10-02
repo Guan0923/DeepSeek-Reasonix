@@ -396,17 +396,20 @@ func ParseDir(root string) (Package, []string, error) {
 	// error (a v1 typo names its field path); only a missing file falls
 	// through to the next manifest kind.
 	if pkg, warnings, err := parseNative(filepath.Join(root, NativeManifest), root); err == nil {
-		return pkg, append(warnings, pkg.skillNameWarnings()...), nil
+		warnings = append(warnings, pkg.skillNameWarnings()...)
+		return pkg, append(warnings, pkg.agentNameWarnings()...), nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return Package{}, nil, err
 	}
 	if pkg, warnings, err := parseCodex(filepath.Join(root, CodexManifest), root); err == nil {
-		return pkg, append(warnings, pkg.skillNameWarnings()...), nil
+		warnings = append(warnings, pkg.skillNameWarnings()...)
+		return pkg, append(warnings, pkg.agentNameWarnings()...), nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return Package{}, nil, err
 	}
 	if pkg, warnings, err := parseClaudePlugin(filepath.Join(root, ClaudeManifest), root); err == nil {
-		return pkg, append(warnings, pkg.skillNameWarnings()...), nil
+		warnings = append(warnings, pkg.skillNameWarnings()...)
+		return pkg, append(warnings, pkg.agentNameWarnings()...), nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return Package{}, nil, err
 	}

@@ -3,6 +3,7 @@
 package pluginpkg
 
 import (
+	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -15,6 +16,12 @@ func TestAgentInventorySkipsNamedPipeSources(t *testing.T) {
 	writeTestFile(t, filepath.Join(root, NativeManifest), `{"apiVersion":"reasonix.io/plugin/v2","name":"pipe-agents","contributes":{"agents":["agents"]}}`)
 	writeTestFile(t, filepath.Join(root, "agents", "ordinary.md"), "---\ndescription: Ordinary profile\n---\nORDINARY")
 	if err := syscall.Mkfifo(filepath.Join(root, "agents", "pipe.md"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "agents", "directory-pipe"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(filepath.Join(root, "agents", "directory-pipe", "SKILL.md"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	pkg, _, err := ParseDir(root)

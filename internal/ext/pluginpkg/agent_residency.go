@@ -17,8 +17,14 @@ func applyClaudeAgentDirs(path string, manifest *Manifest) {
 	}
 	defer root.Close()
 	for _, rel := range claudeConventionAgentDirs {
-		if len(loadAgentRefs(root, filepath.FromSlash(rel))) > 0 && !containsPathEntry(manifest.Agents, rel) {
-			manifest.Agents = append(manifest.Agents, rel)
+		if containsPathEntry(manifest.Agents, rel) {
+			continue
+		}
+		for _, ref := range loadAgentRefs(root, filepath.FromSlash(rel)) {
+			if filepath.Dir(ref.Path) == filepath.Join(path, filepath.FromSlash(rel)) {
+				manifest.Agents = append(manifest.Agents, rel)
+				break
+			}
 		}
 	}
 }

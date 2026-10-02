@@ -28,6 +28,17 @@ func TestLinkedPackageAgentInventorySkipsNonresidentSources(t *testing.T) {
 			if err := os.Symlink(filepath.Join(outside, "profile.md"), filepath.Join(source, "agents", "outside.md")); err != nil {
 				t.Fatal(err)
 			}
+			directorySource := filepath.Join(source, "agents", "outside-directory", "SKILL.md")
+			if err := os.MkdirAll(filepath.Dir(directorySource), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			target, err := filepath.Rel(filepath.Dir(directorySource), filepath.Join(outside, "profile.md"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(target, directorySource); err != nil {
+				t.Fatal(err)
+			}
 			pkg, _, err := pluginpkg.ParseDir(source)
 			if err != nil {
 				t.Fatal(err)
