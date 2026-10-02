@@ -10,10 +10,9 @@ import (
 // configuration explicitly disabled that MCP tool.
 const CodeMCPToolDisabled = "mcp.tool_disabled_by_config"
 
-// ReplaceDisabledMCP replaces one server's disabled-tool policy. Replacing the
-// whole set, rather than adding to it, prevents a removed, renamed, or
-// reconnected server from leaving stale aliases that blame configuration for an
-// actually-unknown tool.
+// ReplaceDisabledMCP replaces one server's disabled-tool policy so a removed,
+// renamed, or reconnected server cannot leave stale aliases that blame
+// configuration for a tool that no longer exists.
 func (r *Registry) ReplaceDisabledMCP(server string, bindings []MCPBinding) {
 	if r == nil {
 		return

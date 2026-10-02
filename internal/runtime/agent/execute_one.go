@@ -344,6 +344,9 @@ func (a *Agent) applyPlanModeAndProxy(ctx context.Context, plan *toolCallPlan) (
 		if rc.Target != nil {
 			plan.execTool = rc.Target
 		}
+		if outcome, blocked := a.typedUnavailableOutcome(rc, call.Name, json.RawMessage(call.Arguments)); blocked {
+			return outcome, true
+		}
 		if outcome, blocked := contextualToolGateOutcome(ctx, plan.execTool, plan.permName); blocked {
 			return outcome, true
 		}
