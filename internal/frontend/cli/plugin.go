@@ -440,26 +440,28 @@ func pluginDoctorCommand(args []string) int {
 			fmt.Printf("  %s/%s/%s@%s\n", c.Namespace, c.Kind, c.ID, c.Version)
 		}
 	}
+	// ParseDir reports non-directory contribution roots as warnings, but a
+	// missing declared root still makes doctor fail.
 	for _, skillRoot := range pkg.SkillRoots() {
-		if st, err := os.Stat(skillRoot); err != nil || !st.IsDir() {
+		if _, err := os.Stat(skillRoot); err != nil {
 			fmt.Fprintf(os.Stderr, "missing skill root: %s\n", skillRoot)
 			return 1
 		}
 	}
 	for _, agentRoot := range pkg.AgentRoots() {
-		if st, err := os.Stat(agentRoot); err != nil || !st.IsDir() {
+		if _, err := os.Stat(agentRoot); err != nil {
 			fmt.Fprintf(os.Stderr, "missing agent root: %s\n", agentRoot)
 			return 1
 		}
 	}
 	for _, commandRoot := range pkg.CommandRoots() {
-		if st, err := os.Stat(commandRoot); err != nil || !st.IsDir() {
+		if _, err := os.Stat(commandRoot); err != nil {
 			fmt.Fprintf(os.Stderr, "missing command root: %s\n", commandRoot)
 			return 1
 		}
 	}
 	for _, promptRoot := range pkg.PromptRoots() {
-		if st, err := os.Stat(promptRoot); err != nil || !st.IsDir() {
+		if _, err := os.Stat(promptRoot); err != nil {
 			fmt.Fprintf(os.Stderr, "missing prompt root: %s\n", promptRoot)
 			return 1
 		}
