@@ -506,16 +506,18 @@ func loadAgentRefs(root *os.Root, dir string) []AgentRef {
 	}
 	var out []AgentRef
 	var seen []os.FileInfo
-	scanAgentRefs(root, dir, 1, &seen, &out)
+	scanProfileSources(root, dir, 1, &seen, func(path, stem string, body []byte, depth int) bool {
+		ref, ok := parseAgentRef(root, path, stem, body)
+		if ok && (depth == 1 || ref.Description != "") {
+			out = append(out, ref)
+		}
+		return ok
+	})
 	return out
 }
 
-func parseAgentRef(root *os.Root, path, stem string) (AgentRef, bool) {
+func parseAgentRef(root *os.Root, path, stem string, body []byte) (AgentRef, bool) {
 	if !config.IsValidSkillName(stem) {
-		return AgentRef{}, false
-	}
-	body := agentSourceBody(root, path)
-	if body == nil {
 		return AgentRef{}, false
 	}
 	content := strings.TrimPrefix(strings.ReplaceAll(string(body), "\r\n", "\n"), "\uFEFF")

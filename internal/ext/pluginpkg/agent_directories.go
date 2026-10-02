@@ -9,7 +9,7 @@ import (
 	"reasonix/internal/contract/config"
 )
 
-func scanAgentRefs(root *os.Root, dir string, depth int, seen *[]os.FileInfo, out *[]AgentRef) {
+func scanProfileSources(root *os.Root, dir string, depth int, seen *[]os.FileInfo, visit func(path, stem string, body []byte, depth int) bool) {
 	info, source := agentPathInfo(root, dir)
 	if source == nil {
 		return
@@ -36,21 +36,19 @@ func scanAgentRefs(root *os.Root, dir string, depth int, seen *[]os.FileInfo, ou
 			continue
 		}
 		handle.Close()
-		var ref AgentRef
-		var ok bool
+		var profile, stem string
 		if entryInfo.IsDir() {
-			ref, ok = parseAgentRef(root, filepath.Join(path, "SKILL.md"), entry.Name())
+			profile, stem = filepath.Join(path, "SKILL.md"), entry.Name()
 		} else if strings.EqualFold(filepath.Ext(entry.Name()), ".md") {
-			ref, ok = parseAgentRef(root, path, strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())))
+			profile, stem = path, strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
 		}
-		if ok {
-			if depth == 1 || ref.Description != "" {
-				*out = append(*out, ref)
+		if profile != "" && config.IsValidSkillName(stem) {
+			if body := agentSourceBody(root, profile); body != nil && visit(profile, stem, body, depth) {
+				continue
 			}
-			continue
 		}
 		if entryInfo.IsDir() && depth < (&config.Config{}).SkillMaxDepth() && !shouldSkipSkillScanDir(entry.Name()) {
-			scanAgentRefs(root, path, depth+1, seen, out)
+			scanProfileSources(root, path, depth+1, seen, visit)
 		}
 	}
 }
