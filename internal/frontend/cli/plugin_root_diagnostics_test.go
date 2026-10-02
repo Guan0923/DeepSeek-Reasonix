@@ -20,13 +20,23 @@ func TestPluginDoctorWarnsAboutFileAgentRootWhenDisabled(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, subcommand := range []string{"doctor", "show"} {
-			out := captureStdout(t, func() {
-				if rc := pluginCommand([]string{subcommand, "root-warning-kit"}); rc != 0 {
-					t.Fatalf("%s rc=%d", subcommand, rc)
-				}
+			wantRC := 0
+			if subcommand == "doctor" {
+				wantRC = 1
+			}
+			var out string
+			errOut := captureStderr(t, func() {
+				out = captureStdout(t, func() {
+					if rc := pluginCommand([]string{subcommand, "root-warning-kit"}); rc != wantRC {
+						t.Errorf("%s rc=%d, want %d", subcommand, rc, wantRC)
+					}
+				})
 			})
 			if !strings.Contains(out, `warning: agents path "agents/reviewer.md" is not a directory`) {
 				t.Errorf("enabled=%v %s omits root warning:\n%s", enabled, subcommand, out)
+			}
+			if subcommand == "doctor" && !strings.Contains(errOut, "missing agent root: "+filepath.Join(root, "agents", "reviewer.md")) {
+				t.Errorf("enabled=%v doctor omits root rejection:\n%s", enabled, errOut)
 			}
 		}
 	}
