@@ -103,6 +103,7 @@ type toolStage struct {
 func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	b := &builder{timer: newPhaseTimer()}
 	opts = observeOverrides(opts)
+	b.timer.observe = opts.OnPhase
 	// The runtime outlives the request that built it (Studio opens a pane with
 	// one), and its MCP servers and sidecars start on that context later.
 	b.ctx, b.opts, b.owner, b.fileWriteReceipt = bindRuntimeOwner(context.WithoutCancel(ctx), opts)
