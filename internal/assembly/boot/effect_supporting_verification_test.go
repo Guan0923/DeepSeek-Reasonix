@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,14 +22,20 @@ import (
 
 func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		code     bool
-		check    bool
-		file     string
-		delivery bool
-		symlink  bool
+		name       string
+		code       bool
+		check      bool
+		file       string
+		delivery   bool
+		symlink    bool
+		incomplete bool
+		prose      string
 	}{
 		{name: "markdown only"},
+		{name: "reStructuredText only", prose: "notes.rst"},
+		{name: "text input keeps debt", file: "notes.txt"},
+		{name: "MDX component keeps debt", file: "notes.mdx"},
+		{name: "incomplete prose scan keeps debt", incomplete: true},
 		{name: "markdown and code", code: true},
 		{name: "markdown with declared check", check: true},
 		{name: "embedded policy", file: "embed"},
@@ -40,11 +47,24 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			isolateConfigHome(t)
-			dir := robustTempDir(t)
+			home, err := filepath.EvalSymlinks(robustTempDir(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("REASONIX_HOME", home)
+			dir, err := filepath.EvalSymlinks(robustTempDir(t))
+			if err != nil {
+				t.Fatal(err)
+			}
 			t.Chdir(dir)
 			writeUserConfig(t, userModel+"\n[codegraph]\nenabled = false\n")
 			registerBootTokenProfileTestProvider()
 			writeFile(t, dir, "todo.md", "A neutral task.\n")
+			if tc.incomplete {
+				for i := range 50_001 {
+					writeFile(t, dir, fmt.Sprintf("note-%05d.md", i), "")
+				}
+			}
 			if tc.file == "embed" {
 				writeFile(t, dir, "go.mod", "module fixture\n\ngo 1.26\n")
 				writeFile(t, dir, "main.go", "package fixture\nimport _ \"embed\"\n//go:embed policy.md\nvar policy string\n")
@@ -63,6 +83,9 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 			}
 			approveWorkspace(t, dir)
 			turns := []testutil.Turn{call("notes", "write_file", `{"path":"notes.md","content":"A neutral note.\n"}`)}
+			if tc.prose != "" {
+				turns = []testutil.Turn{call("notes", "write_file", fmt.Sprintf(`{"path":%q,"content":"A neutral note.\n"}`, tc.prose))}
+			}
 			if tc.file == "embed" {
 				turns = []testutil.Turn{call("notes", "write_file", `{"path":"policy.md","content":"An updated neutral policy.\n"}`)}
 			}
@@ -83,13 +106,13 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 				preset = AgentPresetDelivery
 			}
 			sink := &bundleAuditSink{}
-			ctrl, err := Build(context.Background(), Options{WorkspaceRoot: dir, AgentPreset: preset, Sink: sink, HeadlessApprovalMode: control.ToolApprovalAuto})
+			ctrl, err := Build(context.Background(), Options{Home: home, WorkspaceRoot: dir, AgentPreset: preset, Sink: sink, HeadlessApprovalMode: control.ToolApprovalAuto})
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer ctrl.Close()
 			err = ctrl.Run(context.Background(), "write the requested files")
-			wantDebt := tc.code || tc.check || tc.file != "" || tc.symlink || tc.delivery
+			wantDebt := tc.code || tc.check || tc.file != "" || tc.symlink || tc.delivery || tc.incomplete
 			var unready *agent.FinalReadinessError
 			if wantDebt {
 				if !errors.As(err, &unready) {
@@ -111,6 +134,9 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 				t.Errorf("stale_verification = %v, want %v; result: %s", debt, wantDebt, result)
 			}
 			target := "notes.md"
+			if tc.prose != "" {
+				target = tc.prose
+			}
 			if tc.file == "embed" {
 				target = "policy.md"
 			}

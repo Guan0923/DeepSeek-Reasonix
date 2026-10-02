@@ -28,6 +28,9 @@ func TestBalancedSupportingVerificationFloor(t *testing.T) {
 		wantVerification int
 	}{
 		{name: "supporting only"},
+		{name: "reStructuredText prose", file: "notes.rst"},
+		{name: "text input keeps debt", file: "notes.txt", wantVerification: 1},
+		{name: "MDX component keeps debt", file: "notes.mdx", wantVerification: 1},
 		{name: "baseline check", baseline: true, wantVerification: 1},
 		{name: "declared check", declared: true, wantVerification: 1},
 		{name: "captured criterion", captured: true, wantVerification: 1},
