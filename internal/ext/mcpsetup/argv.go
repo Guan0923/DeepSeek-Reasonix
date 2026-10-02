@@ -177,6 +177,9 @@ func NameFromArgv(command string, args []string) string {
 		}
 	}
 	base := filepath.Base(candidate)
+	if runner == "uvx" {
+		base, _, _ = strings.Cut(base, "==")
+	}
 	if at := strings.Index(base, "@"); at > 0 {
 		base = base[:at]
 	}
