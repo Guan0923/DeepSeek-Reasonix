@@ -671,7 +671,6 @@ export class MockPort extends MockFeedback implements AgentPort {
   async retryQueued(itemId: string) {
     void itemId;
   }
-
   async refreshQueued(itemId: string) {
     void itemId;
   }
@@ -692,6 +691,7 @@ export class MockPort extends MockFeedback implements AgentPort {
     if (at === undefined) throw new HttpError(409, "already applied", { code: "steer.already_applied" });
     window.clearTimeout(at);
     this.queued.delete(itemId);
+    this.dropQueued(itemId);
   }
 
   async submit(text: string) {

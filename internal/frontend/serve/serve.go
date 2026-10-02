@@ -160,7 +160,7 @@ func (s *Server) initTitleProvider() {
 	if err != nil {
 		return
 	}
-	ref, _, ok := cfg.ResolveNewSessionChatModel()
+	ref, _, ok := cfg.ResolveStartupChatModel()
 	if !ok {
 		return
 	}
@@ -548,30 +548,8 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	if refuseNetworkShell(w, r, trimmed) {
 		return
 	}
-	// Intercept /model <ref> for runtime model switching (the controller's
-	// Submit path only lists models — switching is frontend-specific).
-	if strings.HasPrefix(trimmed, "/model ") {
-		ref := strings.TrimSpace(strings.TrimPrefix(trimmed, "/model"))
-		if ref != "" {
-			if err := s.switchModel(r.Context(), ref); err != nil {
-				writeErr(w, http.StatusInternalServerError, err)
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-	}
-	// Intercept /effort <level> for reasoning effort switching.
-	if strings.HasPrefix(trimmed, "/effort ") {
-		level := strings.TrimSpace(strings.TrimPrefix(trimmed, "/effort"))
-		if level != "" {
-			if err := s.switchEffort(r.Context(), level); err != nil {
-				writeErr(w, http.StatusInternalServerError, err)
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	if s.interceptSlash(w, r, trimmed) {
+		return
 	}
 	// Serialize turn admission with controller-generation rebuilds. Admission
 	// marks an ordinary turn running synchronously, so a reload that follows
