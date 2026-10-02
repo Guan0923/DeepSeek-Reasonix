@@ -38,7 +38,7 @@ import { KIND_LABEL } from "./vendors";
 import { planProtocolSwitch } from "./protocolswitch";
 import { Boundary } from "./Boundary";
 import { Path } from "./Path";
-import { Versions } from "./Versions";
+import { About } from "./About";
 import { Memory } from "./Memory";
 import { DEFAULT_DAYS, Usage } from "./Usage";
 import { Storage } from "./Storage";
@@ -745,14 +745,7 @@ export function Settings({ hub, onError, port, networkPort, networkHost, status,
             </Group>
           )}
 
-          {at === "versions" && (
-            <Group id="versions"
-              title={t("版本")}
-              hint={t("当前安装的版本、可用更新，以及出现问题时如何回退。更新下载好后由你决定何时重启；回退后会固定在所选版本，不再提示新版本。")}
-            >
-              <Versions port={port} />
-            </Group>
-          )}
+          {at === "versions" && <About port={port} />}
 
           {at === "memory" && (
             <Group id="memory"

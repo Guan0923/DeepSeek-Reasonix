@@ -803,6 +803,14 @@ what exists.
 - Remove is the one irreversible action in a row, so it does not look like the
   other buttons and appears only on hover.
 
+## Community
+
+- The QR code sits on a white plate in both themes: a scanner needs dark modules
+  on a light field with a quiet zone, and an inverted code in the dark theme
+  does not scan. The plate is the image's own quiet zone, not a card behind it.
+- The image is drawn at 5 CSS pixels per module (185px for 37 modules) so the
+  squares land on whole pixels; `image-rendering: pixelated` keeps them hard.
+
 ## Version list
 
 - The list is one grid and each row a subgrid of it, so version, description,
