@@ -192,8 +192,8 @@ func verifyShell(prefer, path string, exists, probe, launches func(string) bool)
 	if kind == ShellBash && !probe(path) {
 		return fmt.Errorf("%s: did not run a command", path)
 	}
-	// Bash has always been proven here; PowerShell was not, so a Store alias that
-	// stats fine but will not start was accepted and then failed every command.
+	// A pinned PowerShell is launch-probed too: an existing executable that
+	// cannot start is not a usable shell.
 	if kind == ShellPowerShell && !launches(path) {
 		return fmt.Errorf("%s: did not start", path)
 	}
@@ -253,10 +253,9 @@ func warnMissingShell(warn io.Writer, prefer string) {
 	}
 }
 
-// warnUnusablePath reports a pinned interpreter that detection is about to
-// ignore, whichever way it failed. Detection then answers in its place, so the
-// session still gets a shell — but the user learns the pin was dropped instead
-// of finding out when a command fails under a shell they did not choose.
+// warnUnusablePath reports a pinned interpreter that detection will ignore.
+// Detection answers in its place so the session still has a shell, while the
+// warning tells the user their pin was dropped.
 func warnUnusablePath(warn io.Writer, path, what string) {
 	if warn != nil {
 		fmt.Fprintf(warn, "warning: [tools.shell] path %q is not a usable %s; using auto-detection instead\n", path, what)
