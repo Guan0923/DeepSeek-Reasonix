@@ -752,7 +752,7 @@ func publishSurface(ctx context.Context, sessionID string, generation uint64, su
 		return err
 	}
 	var result UIPublishResult
-	if err := strictDecode(resultRaw, &result); err != nil {
+	if err := strictDecode(resultRaw, &result); err != nil || !uiResultBoolPresent(resultRaw, "accepted") {
 		return &ProtocolError{Reason: ErrProtocolError, Message: "invalid host/ui/publish result"}
 	}
 	if !result.Accepted {
@@ -902,7 +902,7 @@ func (h HostUI) requestPrompt(ctx context.Context, sessionID string, generation 
 		return nil, err
 	}
 	var result UIRequestResult
-	if err := strictDecode(resultRaw, &result); err != nil {
+	if err := strictDecode(resultRaw, &result); err != nil || !uiResultBoolPresent(resultRaw, "cancelled") {
 		return nil, &ProtocolError{Reason: ErrProtocolError, Message: "invalid host/ui/request result"}
 	}
 	if result.Cancelled {
