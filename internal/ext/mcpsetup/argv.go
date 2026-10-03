@@ -149,7 +149,7 @@ func NameFromArgv(command string, args []string) string {
 	runner := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(strings.ToLower(filepath.Base(command)), ".exe"), ".cmd"), ".bat")
 	candidate := command
 	switch runner {
-	case "npx", "bunx", "uvx":
+	case "npx", "bunx":
 		if operand := firstCommandOperand(args); operand != "" {
 			candidate = operand
 		}
@@ -161,11 +161,9 @@ func NameFromArgv(command string, args []string) string {
 		if operand := nodeCommandOperand(args); operand != "" {
 			candidate = operand
 		}
-	case "uv":
-		if len(args) > 0 && args[0] == "run" {
-			if operand := firstCommandOperand(args[1:]); operand != "" {
-				candidate = operand
-			}
+	case "uv", "uvx":
+		if operand := uvCommandOperand(args, runner == "uv"); operand != "" {
+			candidate = operand
 		}
 	}
 	base := filepath.Base(candidate)
