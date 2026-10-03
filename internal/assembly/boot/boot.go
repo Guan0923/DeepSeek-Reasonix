@@ -391,27 +391,11 @@ func subagentEffectiveIdentity(cfg *config.Config, resolver provider.Resolver, b
 	} else {
 		ref = strings.TrimSpace(baseModelRef)
 	}
-	if explicit && cfg != nil && ref != "" {
-		if resolved, ok := cfg.ResolveModel(ref); ok {
-			entry = *resolved
-		} else if resolved := syntheticEntryFromResolver(resolver, ref); strings.TrimSpace(resolved.Name) != "" {
-			entry = *resolved
+	if explicit || base == nil {
+		if resolved, _, err := subagentModelEntry(cfg, resolver, base, ref); err == nil {
+			entry = resolved
 		} else {
 			entry.Model = ref
-		}
-	} else if explicit {
-		if resolved := syntheticEntryFromResolver(resolver, ref); strings.TrimSpace(resolved.Name) != "" {
-			entry = *resolved
-		} else {
-			entry.Model = ref
-		}
-	} else if base == nil && ref != "" {
-		if resolved := syntheticEntryFromResolver(resolver, ref); strings.TrimSpace(resolved.Name) != "" {
-			entry = *resolved
-		} else if cfg != nil {
-			if resolved, ok := cfg.ResolveModel(ref); ok {
-				entry = *resolved
-			}
 		}
 	}
 	if rawEffort := strings.TrimSpace(effort); rawEffort != "" {
