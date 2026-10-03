@@ -146,27 +146,19 @@ func NameFromURL(raw string) string {
 // NameFromArgv derives a server name from the command that starts it, looking
 // through the runner (npx/uvx/python -m/…) to the package it actually launches.
 func NameFromArgv(command string, args []string) string {
-	runner := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(strings.ToLower(filepath.Base(command)), ".exe"), ".cmd"), ".bat")
+	runner := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(strings.ToLower(filepath.Base(strings.ReplaceAll(command, "\\", "/"))), ".exe"), ".cmd"), ".bat")
 	candidate := command
-	switch runner {
-	case "npx", "bunx":
-		if operand := firstCommandOperand(args); operand != "" {
-			candidate = operand
-		}
-	case "python", "python3", "py":
-		if operand := pythonCommandOperand(args); operand != "" {
-			candidate = operand
-		}
-	case "node":
-		if operand := nodeCommandOperand(args); operand != "" {
-			candidate = operand
-		}
-	case "uv", "uvx":
-		if operand := uvCommandOperand(args, runner == "uv"); operand != "" {
-			candidate = operand
+	launcher, known := commandLaunchers[runner]
+	if known {
+		candidate = launcherCommandOperand(args, launcher)
+		if candidate == "" {
+			return "mcp-server"
 		}
 	}
-	base := filepath.Base(candidate)
+	base := filepath.Base(strings.ReplaceAll(candidate, "\\", "/"))
+	if known && launcher.image {
+		base, _, _ = strings.Cut(base, ":")
+	}
 	if runner == "uvx" {
 		base, _, _ = strings.Cut(base, "==")
 	}
@@ -180,83 +172,7 @@ func NameFromArgv(command string, args []string) string {
 	if name == "" {
 		return "mcp-server"
 	}
-	if candidate == command {
-		switch runner {
-		case "npx", "bunx", "uvx", "uv", "node", "python", "python3", "py":
-			return "mcp-server"
-		}
-	}
 	return name
-}
-
-func pythonCommandOperand(args []string) string {
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--" || arg == "-m":
-			if i+1 < len(args) {
-				return args[i+1]
-			}
-			return ""
-		case arg == "-" || strings.HasPrefix(arg, "-c"):
-			return ""
-		case strings.HasPrefix(arg, "-m"):
-			return strings.TrimPrefix(arg, "-m")
-		case arg == "-W" || arg == "-X" || arg == "--check-hash-based-pycs":
-			i++
-		case arg != "" && !strings.HasPrefix(arg, "-"):
-			return arg
-		}
-	}
-	return ""
-}
-
-func firstCommandOperand(args []string) string {
-	valueFlags := map[string]bool{
-		"-p": true, "--package": true, "-c": true, "--call": true,
-		"--node-options": true, "--python": true, "--from": true,
-		"-w": true, "--with": true, "--with-requirements": true,
-	}
-	options := true
-	for i := 0; i < len(args); i++ {
-		arg := strings.TrimSpace(args[i])
-		if options && arg == "--" {
-			options = false
-			continue
-		}
-		if options && strings.HasPrefix(arg, "-") {
-			if valueFlags[arg] {
-				i++
-			}
-			continue
-		}
-		if arg != "" {
-			return arg
-		}
-	}
-	return ""
-}
-
-func nodeCommandOperand(args []string) string {
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--":
-			if i+1 < len(args) {
-				return args[i+1]
-			}
-			return ""
-		case arg == "-", arg == "-e", arg == "--eval", arg == "-p", arg == "--print",
-			strings.HasPrefix(arg, "--eval="), strings.HasPrefix(arg, "--print="):
-			return ""
-		case arg == "-r", arg == "--require", arg == "--import", arg == "--env-file",
-			arg == "--env-file-if-exists", arg == "--conditions", arg == "-C":
-			i++
-		case arg != "" && !strings.HasPrefix(arg, "-"):
-			return arg
-		}
-	}
-	return ""
 }
 
 // SanitizeName reduces a derived name to the lowercase-and-dashes form config
