@@ -173,7 +173,7 @@ func (p *plugin) interceptTool(_ context.Context, payload json.RawMessage) (*ext
 	case rewrittenTool:
 		args := map[string]any{}
 		if strings.TrimSpace(call.Arguments) != "" {
-			if err := json.Unmarshal([]byte(call.Arguments), &args); err != nil {
+			if err := json.Unmarshal([]byte(call.Arguments), &args); err != nil || args == nil {
 				return extension.Continue(), nil
 			}
 		}
