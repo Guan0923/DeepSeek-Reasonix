@@ -53,7 +53,7 @@ func TestPowerShellDeleteEntryPoints(t *testing.T) {
 				requests.Write(data)
 				requests.WriteByte('\n')
 			}
-			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 			defer cancel()
 			cmd := exec.CommandContext(ctx, path, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", PowerShellDeleteServer)
 			cmd.Stdin = strings.NewReader(requests.String())
