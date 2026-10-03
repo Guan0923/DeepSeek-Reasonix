@@ -2,19 +2,17 @@ package builtin
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"slices"
 
 	"reasonix/internal/base/fileutil"
 	"reasonix/internal/state/sessiontemp"
 )
 
-// ResolveWritePath preserves the writer's argument semantics, including spaces
-// and session-temp expansion. Claims and concrete writers must use this path.
-func ResolveWritePath(workDir string, temp *sessiontemp.Manager, path string) string {
-	path, _ = canonicalWriterPath(workDir, temp, path)
-	return path
-}
-
+// canonicalWriterPath is the lease and grant identity of a write target. The
+// writers themselves keep the path as the caller spelled it, so receipts, file
+// views and refusals name what the model used.
 func canonicalWriterPath(workDir string, temp *sessiontemp.Manager, path string) (string, error) {
 	path = resolveIn(workDir, resolveSessionTemp(temp, path))
 	canonical, err := fileutil.CanonicalWritePath(path)
@@ -24,7 +22,8 @@ func canonicalWriterPath(workDir string, temp *sessiontemp.Manager, path string)
 	return canonical, nil
 }
 
-// ResolveWritePaths shares argument parsing with named writer contracts.
+// ResolveWritePaths returns grant targets even when their narrow lease identity
+// is ambiguous. Lease callers must retain whole-workspace exclusion on error.
 func ResolveWritePaths(workDir string, temp *sessiontemp.Manager, args json.RawMessage, move bool) ([]string, error) {
 	var p struct {
 		Path        string `json:"path"`
@@ -38,37 +37,45 @@ func ResolveWritePaths(workDir string, temp *sessiontemp.Manager, args json.RawM
 	if move {
 		paths = []string{p.Source, p.Destination}
 	}
+	if slices.Contains(paths, "") {
+		return nil, fmt.Errorf("write path is required")
+	}
+	var identityErr error
 	for i, path := range paths {
-		if path == "" {
-			return nil, fmt.Errorf("write path is required")
-		}
 		resolved, err := canonicalWriterPath(workDir, temp, path)
 		if err != nil {
-			return nil, err
+			if !errors.Is(err, fileutil.ErrAmbiguousPath) {
+				return nil, err
+			}
+			identityErr = fileutil.ErrAmbiguousPath
+			resolved, err = realPath(resolved)
+			if err != nil {
+				return nil, err
+			}
 		}
 		paths[i] = resolved
 	}
-	return paths, nil
+	return paths, identityErr
 }
 
 func (w writeFile) WritePaths(args json.RawMessage) ([]string, error) {
 	return ResolveWritePaths(w.workDir, w.sessionTemp, args, false)
 }
-func (w editFile) WritePaths(args json.RawMessage) ([]string, error) {
-	return ResolveWritePaths(w.workDir, w.sessionTemp, args, false)
+func (e editFile) WritePaths(args json.RawMessage) ([]string, error) {
+	return ResolveWritePaths(e.workDir, e.sessionTemp, args, false)
 }
-func (w multiEdit) WritePaths(args json.RawMessage) ([]string, error) {
-	return ResolveWritePaths(w.workDir, w.sessionTemp, args, false)
+func (m multiEdit) WritePaths(args json.RawMessage) ([]string, error) {
+	return ResolveWritePaths(m.workDir, m.sessionTemp, args, false)
 }
-func (w notebookEdit) WritePaths(args json.RawMessage) ([]string, error) {
-	return ResolveWritePaths(w.workDir, w.sessionTemp, args, false)
+func (n notebookEdit) WritePaths(args json.RawMessage) ([]string, error) {
+	return ResolveWritePaths(n.workDir, n.sessionTemp, args, false)
 }
-func (w deleteRange) WritePaths(args json.RawMessage) ([]string, error) {
-	return ResolveWritePaths(w.workDir, w.sessionTemp, args, false)
+func (d deleteRange) WritePaths(args json.RawMessage) ([]string, error) {
+	return ResolveWritePaths(d.workDir, d.sessionTemp, args, false)
 }
-func (w deleteSymbol) WritePaths(args json.RawMessage) ([]string, error) {
-	return ResolveWritePaths(w.workDir, w.sessionTemp, args, false)
+func (d deleteSymbol) WritePaths(args json.RawMessage) ([]string, error) {
+	return ResolveWritePaths(d.workDir, d.sessionTemp, args, false)
 }
-func (w moveFile) WritePaths(args json.RawMessage) ([]string, error) {
-	return ResolveWritePaths(w.workDir, w.sessionTemp, args, true)
+func (m moveFile) WritePaths(args json.RawMessage) ([]string, error) {
+	return ResolveWritePaths(m.workDir, m.sessionTemp, args, true)
 }

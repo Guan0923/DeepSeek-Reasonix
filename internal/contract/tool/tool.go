@@ -62,8 +62,8 @@ type Previewer interface {
 	Preview(ctx context.Context, args json.RawMessage) (diff.Change, error)
 }
 
-// WritePathResolver owns the same path resolution used by Execute. Unknown
-// targets must return no paths so the host claims the whole workspace.
+// WritePathResolver owns writer path resolution. Any error requires a whole
+// workspace lease; ErrAmbiguousPath may also carry resolved targets for grants.
 type WritePathResolver interface {
 	WritePaths(json.RawMessage) ([]string, error)
 }

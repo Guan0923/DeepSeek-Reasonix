@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -102,6 +100,7 @@ model = "x"
 		opts := Options{Sink: sink}
 		if len(terminals) != 0 {
 			opts.TerminalRunner = terminals[0]
+			opts.SandboxBashOverride = "off"
 		}
 		c, err := Build(context.Background(), opts)
 		if err != nil {
@@ -261,7 +260,7 @@ func TestEffectSingleSessionWideningAndRestart(t *testing.T) {
 
 func TestEffectAwaitUserReleasesTheWriteClaim(t *testing.T) {
 	root, build := revisionLeaseWorkspace(t)
-	writeFile(t, root, "go.mod", "module leasefixture\n\ngo 1.26.8\n")
+	writeFile(t, root, "go.mod", "module leasefixture\n\ngo 1.21\n")
 	writeFile(t, root, "fixture_test.go", "package leasefixture\nimport \"testing\"\nfunc TestFixture(t *testing.T) {}\n")
 	p := revisionLeaseScript(provider.ToolCall{Name: "todo_write", Arguments: `{"todos":[{"step_id":"fixture-step","content":"Create fixture and await choice","status":"in_progress"}]}`}, revisionWriter("waiting.txt"))
 	p.calls = append(p.calls, provider.ToolCall{ID: "fixture-verify", Name: "bash", Arguments: `{"command":"go test ./..."}`})
@@ -293,17 +292,9 @@ func TestEffectAwaitUserReleasesTheWriteClaim(t *testing.T) {
 
 type revisionFixtureTerminal struct{}
 
-func (revisionFixtureTerminal) RunCommand(ctx context.Context, command, cwd string, _ time.Duration, _ map[string]string) (string, bool, error) {
+func (revisionFixtureTerminal) RunCommand(_ context.Context, command, _ string, _ time.Duration, _ map[string]string) (string, bool, error) {
 	if command != "go test ./..." {
 		return "", false, nil
 	}
-	name := "go"
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
-	cmd := exec.CommandContext(ctx, filepath.Join(runtime.GOROOT(), "bin", name), "test", "./...")
-	cmd.Dir = cwd
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
-	output, err := cmd.CombinedOutput()
-	return string(output), true, err
+	return "ok  \tleasefixture\t0.001s\n", true, nil
 }

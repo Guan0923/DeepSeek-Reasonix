@@ -3,7 +3,9 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"reasonix/internal/base/fileutil"
 	"reasonix/internal/runtime/writeclaim"
 	"strings"
 
@@ -89,7 +91,7 @@ func (w pathBoundWriter) PlanModeSafe() bool {
 // resolved ones, so a symlink names the file the write would really land on.
 func (w pathBoundWriter) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	paths, err := w.WritePaths(args)
-	if err != nil {
+	if err != nil && (!errors.Is(err, fileutil.ErrAmbiguousPath) || len(paths) == 0) {
 		return "", err
 	}
 	declared := w.grant.Declared()

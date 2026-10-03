@@ -7,12 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"reasonix/internal/base/fileutil"
 	"reasonix/internal/base/testenv"
 	"reasonix/internal/tools/builtin"
 )
 
 func TestWorkspaceClaimUsesTheWritersWhitespaceSemantics(t *testing.T) {
-	root := testenv.TempDir(t)
+	root := canonicalTempDir(t)
 	a := &Agent{}
 	a.writeWorkspaceRoot = root
 	for _, name := range []string{"write_file", "edit_file", "multi_edit", "notebook_edit", "delete_range", "delete_symbol", "move_file"} {
@@ -45,7 +46,7 @@ func TestWorkspaceClaimUsesTheWritersWhitespaceSemantics(t *testing.T) {
 }
 
 func TestSubagentFencePreservesWriterWhitespace(t *testing.T) {
-	root := testenv.TempDir(t)
+	root := canonicalTempDir(t)
 	got, err := extractWritePathsFromArgs("move_file", root, json.RawMessage(`{"source_path":" source.txt","destination_path":" dest.txt"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +57,7 @@ func TestSubagentFencePreservesWriterWhitespace(t *testing.T) {
 }
 
 func TestWorkspaceClaimUsesBoundSubagentWriterPaths(t *testing.T) {
-	root := testenv.TempDir(t)
+	root := canonicalTempDir(t)
 	writer := (builtin.Workspace{Dir: root}).Tools("write_file")[0]
 	bound := pathBoundWriter{inner: writer, workDir: root}
 	a := &Agent{}
@@ -65,4 +66,15 @@ func TestWorkspaceClaimUsesBoundSubagentWriterPaths(t *testing.T) {
 	if len(paths) != 1 || paths[0] != filepath.Join(root, "child.txt") {
 		t.Fatalf("bound writer lost its concrete scope: %v", paths)
 	}
+}
+
+// Claims and grants are keyed by resolved paths, so fixtures that compare them
+// against a spelled-out path start from a root with no symlinked ancestor.
+func canonicalTempDir(t *testing.T) string {
+	t.Helper()
+	root, err := fileutil.ResolveExistingPath(testenv.TempDir(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root
 }

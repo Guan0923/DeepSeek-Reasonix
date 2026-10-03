@@ -14,7 +14,7 @@ var ErrAmbiguousPath = errors.New("filesystem path identity is ambiguous")
 // semantics. Ambiguous missing Windows components cannot establish an identity.
 func CanonicalWritePath(path string) (string, error) {
 	if runtime.GOOS == "windows" {
-		for _, component := range strings.Split(filepath.ToSlash(path), "/") {
+		for component := range strings.SplitSeq(filepath.ToSlash(path), "/") {
 			if component != "." && component != ".." && strings.TrimRight(component, ". ") != component {
 				return "", ErrAmbiguousPath
 			}
