@@ -791,7 +791,7 @@ func (a *Agent) reserveParentWrite(runTool tool.Tool, args json.RawMessage, read
 	if !parentWriteGuardTarget(name) {
 		return noop, nil
 	}
-	claim, err := parentWriteReservation(a.writeWorkspaceRoot, name, args)
+	claim, err := a.parentToolWriteReservation(runTool, args)
 	if err != nil {
 		return noop, err
 	}
