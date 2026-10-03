@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import { count, money, tokens as fmtTokens } from "../i18n/format";
 import { reason } from "../i18n/kernel";
 import { DEFAULT_USAGE_DAYS, type AgentPort, type Money, type UsageDay, type UsageQuery, type UsageReport } from "../port/port";
+import { hostOf } from "./vendors";
 
 const RANGES: [number, string][] = [[7, "7 天"], [30, "30 天"], [365, "全部"]];
 
@@ -33,6 +34,10 @@ function sourceColor(source: string): string {
   let hue = 216;
   for (const ch of source) hue = (hue * 31 + (ch.codePointAt(0) ?? 0)) % 360;
   return `hsl(${hue} 62% 48%)`;
+}
+
+function providerFallback(kind?: string, host?: string): string {
+  return [kind?.trim(), host?.trim()].filter(Boolean).join(" · ");
 }
 
 /** The window this panel opens on. Exported because the settings contents list
@@ -217,15 +222,25 @@ export function Usage({ port }: { port: AgentPort }) {
 
   useEffect(() => {
     let live = true;
-    port.providers().then(
-      (list) => {
-        if (!live) return;
-        const labels: Record<string, string> = {};
-        for (const p of list) labels[p.name] = p.displayName?.trim() || p.name;
-        setProviderLabels(labels);
-      },
-      () => {},
-    );
+    Promise.all([
+      port.providers().catch(() => []),
+      port.models().catch(() => []),
+    ]).then(([providers, models]) => {
+      if (!live) return;
+      const labels: Record<string, string> = {};
+      // A source can be absent from providers() while still being reachable
+      // through the model catalog. Fill those first, then let providers()
+      // override them with the connection panel's canonical metadata.
+      for (const m of models) {
+        const label = m.displayName?.trim() || providerFallback(m.kind, m.vendor);
+        if (label) labels[m.provider] = label;
+      }
+      for (const p of providers) {
+        const label = p.displayName?.trim() || providerFallback(p.kind, hostOf(p.baseUrl));
+        if (label) labels[p.name] = label;
+      }
+      setProviderLabels(labels);
+    });
     return () => { live = false; };
   }, [port]);
 
@@ -378,7 +393,7 @@ export function Usage({ port }: { port: AgentPort }) {
         </section>
         <section className="ucard">
           <div className="ucard-h"><h3>{t("按来源")}</h3></div>
-          <Bars rows={report.providers.map((p) => [p.provider, providerLabels[p.provider] ?? p.provider, p.tokens, `${fmtTokens(p.tokens)}  ${p.percent.toFixed(1)}%`, sourceColor(p.provider)])} />
+          <Bars rows={report.providers.map((p) => [p.provider, providerLabels[p.provider] ?? t("未知来源"), p.tokens, `${fmtTokens(p.tokens)}  ${p.percent.toFixed(1)}%`, sourceColor(p.provider)])} />
         </section>
       </div>
       </>}

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import "./testkit";
 import { t } from "../i18n";
-import type { AgentPort, ProviderEntry, UsageReport } from "../port/port";
+import type { AgentPort, ModelEntry, ProviderEntry, UsageReport } from "../port/port";
 import { Usage } from "./Usage";
 
 const REPORT: UsageReport = {
@@ -40,17 +40,22 @@ const REPORT: UsageReport = {
   ],
 };
 
-function provider(name: string, displayName: string): ProviderEntry {
+function provider(name: string, displayName?: string): ProviderEntry {
   return {
     name, displayName, kind: "openai", baseUrl: "https://relay.example", models: ["model"],
     default: "model", hasKey: true, inUse: true, preset: false,
   };
 }
 
+function model(providerName: string, kind: string, vendor: string): ModelEntry {
+  return { ref: `${providerName}/model`, provider: providerName, model: "model", kind, vendor };
+}
+
 function makePort(over: Partial<AgentPort> = {}) {
   return {
     usage: vi.fn().mockResolvedValue(REPORT),
     providers: vi.fn().mockResolvedValue([]),
+    models: vi.fn().mockResolvedValue([]),
     ...over,
   } as unknown as AgentPort;
 }
@@ -88,6 +93,28 @@ describe("usage is exact on every device", () => {
     const fillB = screen.getByText("Relay Beta").closest(".urow")?.querySelector<HTMLElement>(".ufill");
     expect(fillA?.style.getPropertyValue("--row-color")).toBeTruthy();
     expect(fillA?.style.getPropertyValue("--row-color")).not.toBe(fillB?.style.getPropertyValue("--row-color"));
+  });
+
+  it("uses provider kind and host when no display name is configured", async () => {
+    const port = makePort({
+      usage: vi.fn().mockResolvedValue({ ...REPORT, providers: [REPORT.providers[0]], models: [REPORT.models[0]] }),
+      providers: vi.fn().mockResolvedValue([provider("relay-a")]),
+    });
+    render(<Usage port={port} />);
+
+    expect(await screen.findByText("openai · relay.example")).toBeTruthy();
+    expect(screen.queryByText("relay-a")).toBeNull();
+  });
+
+  it("uses model kind and host when the provider is missing from providers()", async () => {
+    const port = makePort({
+      usage: vi.fn().mockResolvedValue({ ...REPORT, providers: [REPORT.providers[0]], models: [REPORT.models[0]] }),
+      models: vi.fn().mockResolvedValue([model("relay-a", "anthropic", "gateway.example")]),
+    });
+    render(<Usage port={port} />);
+
+    expect(await screen.findByText("anthropic · gateway.example")).toBeTruthy();
+    expect(screen.queryByText("relay-a")).toBeNull();
   });
 });
 

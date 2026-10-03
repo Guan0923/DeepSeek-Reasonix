@@ -64,6 +64,7 @@ export const EN_USAGE: Record<string, string> = {
   "另有 {n} 天有用量但没有成本记录 —— 不是那几天没花费，是成本字段后来才开始持久化。": "{n} more days have usage but no cost recorded — not free days; the cost field started being persisted later.",
   "按模型": "By model",
   "按来源": "By source",
+  "未知来源": "Unknown source",
   "尚无 key？前往获取": "No key yet? Get one",
   "打开 {name} 控制台": "Open the {name} console",
   "无法打开浏览器，请手动访问 {at}": "Could not open a browser — visit {at} yourself",
