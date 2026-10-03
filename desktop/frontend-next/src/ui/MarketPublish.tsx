@@ -283,7 +283,7 @@ function PackageList({ port, onInstalled, onViewInstalled, onApplying, onPublish
                 {onPublish && <button className="act" data-action="market.prepare-version" data-value={p.slug} disabled={sending === p.slug} onClick={() => onPublish(p)}>{t("发布新版本")}</button>}
                 {stuck && <span className="note">{t("技能不会被原地覆盖：先在「已安装」里移除旧版本，再回来安装")}</span>}
                 {p.status === "private" && (
-                  <button className="act" data-action="market.submit" data-value={p.slug} disabled={sending === p.slug} onClick={() => void submit(p.slug)}>
+                  <button className="act" data-action="market.submit" data-value={p.slug} disabled={!!sending} onClick={() => void submit(p.slug)}>
                     {t(sending === p.slug ? "提交中…" : "提交审核")}
                   </button>
                 )}
