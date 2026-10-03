@@ -150,7 +150,8 @@ describe("a package's inline update", () => {
         ? { ok: true, applied: true, status: "done", actions: [{ kind: "plugin", action: "install_plugin_package", status: "done", name: "review-kit", riskLevel: "low" }] }
         : { ok: false, applied: false, status: "failed", error: "update refused", actions: [] }));
       const done = await screen.findByRole("button", { name: "完成" });
-      await waitFor(() => expect(document.activeElement).toBe(done));
+      const next = outcome === "success" ? done : screen.getByRole("button", { name: "重试" });
+      await waitFor(() => expect(document.activeElement).toBe(next));
       await userEvent.click(done);
     } else {
       await act(async () => fail(new Error("update unavailable")));
