@@ -17,7 +17,10 @@ func TestAmbiguousWriterPathsRetainGrantTargets(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("Windows aliases")
 	}
-	root := testenv.TempDir(t)
+	root, err := fileutil.ResolveExistingPath(testenv.TempDir(t))
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, writer := range ConfineWriters([]string{root}, SessionDataGuard{}, ManagedConfigPaths{}) {
 		t.Run(writer.Name(), func(t *testing.T) {
 			want := []string{filepath.Join(root, "fixture")}
