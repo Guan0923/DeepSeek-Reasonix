@@ -751,7 +751,7 @@ function Swatch({
   on: boolean;
   onPick: () => void;
 }) {
-  const [shot, setShot] = useState(true);
+  const [failedPreview, setFailedPreview] = useState<ThemePack>();
   const tokens = pack && (pack.tokens[activeScheme(theme)] ?? pack.tokens.light ?? pack.tokens.dark);
   const style = tokens
     ? ({
@@ -774,13 +774,13 @@ function Swatch({
           <span className="pal-line" data-short />
           <span className="pal-mark" />
         </span>
-        {pack?.hasPreview && shot && (
+        {pack?.hasPreview && failedPreview !== pack && (
           <img
             className="pal-shot"
             src={`/themes/${encodeURIComponent(pack.id)}/preview`}
             alt=""
             loading="lazy"
-            onError={() => setShot(false)}
+            onError={() => setFailedPreview(pack)}
           />
         )}
       </span>
