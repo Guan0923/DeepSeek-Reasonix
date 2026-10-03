@@ -449,6 +449,7 @@ type Compaction struct {
 	CoverageBackstopped bool   // the host wrote the dropped facts in itself
 	Boundary            string // "capacity" | "economic": which threshold sent this fold
 	TriggerTokens       int    // ...and its size, so a card need not say only "a threshold"
+	Code                string // Done with nothing folded: the class of refusal or failure, empty when none applies
 }
 
 // ContextMaintenance is the typed wire-safe receipt for snip/prune/noop/

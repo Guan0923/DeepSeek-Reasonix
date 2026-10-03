@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,10 +35,9 @@ func TestEffectWideWorkspaceSnapshotResourceBound(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ctrl.Close()
-	baseline := runtime.NumGoroutine()
 	done := make(chan error, 1)
 	go func() { done <- ctrl.Run(context.Background(), "reply") }()
-	peak := baseline
+	peak := 0
 	tick := time.NewTicker(time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -50,12 +50,55 @@ func TestEffectWideWorkspaceSnapshotResourceBound(t *testing.T) {
 			if len(audits) != 1 || !audits[0].Sealed || !audits[0].SnapshotComplete {
 				t.Fatalf("audits = %+v", audits)
 			}
-			if peak-baseline > 64 {
-				t.Fatalf("turn goroutine growth = %d, want <= 64 including host background work", peak-baseline)
+			if peak > walkPoolSize*concurrentWalkKinds {
+				t.Fatalf("walk goroutines peaked at %d over %d directories, want <= %d (%d pool x %d walk kinds)",
+					peak, 1024, walkPoolSize*concurrentWalkKinds, walkPoolSize, concurrentWalkKinds)
 			}
+			waitNoWalkGoroutines(t)
 			return
 		case <-tick.C:
-			peak = max(peak, runtime.NumGoroutine())
+			peak = max(peak, walkGoroutines())
 		}
+	}
+}
+
+// walkPoolSize is the per-walk worker bound in observation and agent; the
+// walk's calling goroutine is one of the pool.
+const walkPoolSize = 16
+
+// concurrentWalkKinds counts the walkers a turn may run at once: the
+// observation snapshot and the agent's mutation scan.
+const concurrentWalkKinds = 2
+
+// walkGoroutines counts live goroutines running a workspace walk, so host
+// background work (history catalog, database watchers) never counts against
+// the bound.
+func walkGoroutines() int {
+	buf := make([]byte, 1<<20)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			buf = buf[:n]
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+	count := 0
+	for g := range strings.SplitSeq(string(buf), "\n\n") {
+		if strings.Contains(g, "reasonix/internal/state/observation.") || strings.Contains(g, "reasonix/internal/runtime/agent.scanWorkspaceTo") {
+			count++
+		}
+	}
+	return count
+}
+
+func waitNoWalkGoroutines(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for walkGoroutines() > 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("%d walk goroutines still alive after the turn settled", walkGoroutines())
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }

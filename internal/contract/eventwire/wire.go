@@ -360,6 +360,7 @@ type Compaction struct {
 	// declared window reads as when nothing names the boundary that fired.
 	Boundary      string `json:"boundary,omitempty"`
 	TriggerTokens int    `json:"triggerTokens,omitempty"`
+	Code          string `json:"code,omitempty"` // why a fold installed nothing
 }
 
 func toWireCompaction(c event.Compaction) *Compaction {
@@ -369,7 +370,7 @@ func toWireCompaction(c event.Compaction) *Compaction {
 		SourceTokens: c.SourceTokens, ProjectionTokens: c.ProjectionTokens,
 		CoverageRequired: c.CoverageRequired, CoverageMissing: c.CoverageMissing,
 		CoverageBackstopped: c.CoverageBackstopped,
-		Boundary:            c.Boundary, TriggerTokens: c.TriggerTokens,
+		Boundary:            c.Boundary, TriggerTokens: c.TriggerTokens, Code: c.Code,
 	}
 }
 

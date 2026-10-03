@@ -486,6 +486,8 @@ export interface Compaction {
   // window is exactly the one that needs saying.
   boundary?: string;
   triggerTokens?: number;
+  // Why a fold that installed nothing did not; the host's class, not a sentence.
+  code?: string;
 }
 
 export interface StreamAttempt {
