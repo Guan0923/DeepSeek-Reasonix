@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useEscape } from "./dismiss";
 import { current as language, plural, t } from "../i18n";
 import { useFileDrop } from "./filedrop";
@@ -33,6 +33,7 @@ interface Props {
 }
 
 export function AddPlugin({ port, onClose, onInstalled, updating, source, onApplying }: Props) {
+  const sourceLabel = useId();
   const [text, setText] = useState(updating?.source ?? source ?? "");
   const [plan, setPlan] = useState<PluginPlan | null>(null);
   const [done, setDone] = useState<PluginPlan | null>(null);
@@ -213,6 +214,7 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
     <div className="addpkg" data-stage="paste" ref={drop} data-over={over ? "" : undefined} aria-busy={busy}>
       <textarea
         className="paste"
+        aria-labelledby={sourceLabel}
         data-action-keydown="extensions.inspect"
         rows={3}
         autoFocus
@@ -228,7 +230,7 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
         }}
       />
       <div className="acts">
-        <span className="note">{t("仓库地址，或将文件夹拖入此处")}</span>
+        <span className="note" id={sourceLabel}>{t("仓库地址，或将文件夹拖入此处")}</span>
         <button className="act" data-action="extensions.pick-folder" disabled={busy} onClick={() => void pick()}>
           {t("选文件夹")}
         </button>
