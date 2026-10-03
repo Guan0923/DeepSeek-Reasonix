@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"sync"
 	"time"
@@ -199,56 +200,91 @@ type ExecResult struct {
 	ExitCode int
 }
 
-type sshSessionClient interface {
-	NewSession() (*ssh.Session, error)
-	Close() error
-}
+type execSessionOpener func() (execSession, error)
 
-// openExecSession installs cancellation before NewSession can block. If the
-// session channel is not open yet, only closing the SSH client can unblock
-// NewSession; once the session exists, cancellation closes that session alone.
-func openExecSession(ctx context.Context, cl sshSessionClient) (*ssh.Session, func() bool, error) {
-	sessionReady := make(chan *ssh.Session, 1)
+type sessionOpenState uint8
+
+const (
+	sessionOpening sessionOpenState = iota
+	sessionReady
+	sessionDone
+)
+
+// openExecSession installs cancellation before the channel open can block.
+// Closing the shared SSH client is reserved for an open that is actually in
+// flight; if the context was already done the opener is not called, and once
+// the session is ready cancellation closes only that session.
+func openExecSession(ctx context.Context, cl io.Closer, open execSessionOpener) (execSession, func() bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, func() bool { return true }, err
+	}
+
+	var (
+		mu    sync.Mutex
+		state = sessionOpening
+		sess  execSession
+	)
 	stopClose := context.AfterFunc(ctx, func() {
-		select {
-		case sess := <-sessionReady:
+		mu.Lock()
+		defer mu.Unlock()
+		switch state {
+		case sessionOpening:
+			_ = cl.Close()
+		case sessionReady:
 			if sess != nil {
 				_ = sess.Close()
 			}
-		default:
-			_ = cl.Close()
 		}
 	})
 
-	sess, err := cl.NewSession()
+	opened, err := open()
+	mu.Lock()
+	if err == nil && opened != nil {
+		sess = opened
+		state = sessionReady
+	} else {
+		state = sessionDone
+	}
+	mu.Unlock()
+
 	if err != nil {
-		sessionReady <- nil
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			err = ctxErr
 		}
 		return nil, stopClose, err
 	}
-	sessionReady <- sess
-	return sess, stopClose, nil
+	if opened == nil {
+		return nil, stopClose, errors.New("remote: SSH session opener returned nil")
+	}
+	return opened, stopClose, nil
 }
 
 // Exec runs cmd via `sh -c` on a fresh session and collects its output. When
 // ctx ends first the session is closed, so the channel is not held open by a
-// command that never returns.
+// command that never returns. If cancellation wins while the session channel is
+// opening, the shared client is closed to unblock NewSession; the supervisor
+// reconnects it.
 func (c *Client) Exec(ctx context.Context, cmd string) (ExecResult, error) {
 	cl, err := c.SSH()
 	if err != nil {
 		return ExecResult{}, err
 	}
-	sess, stopClose, err := openExecSession(ctx, cl)
+	sess, stopClose, err := openExecSession(ctx, cl, func() (execSession, error) {
+		sess, err := cl.NewSession()
+		if err != nil {
+			return nil, err
+		}
+		return &sshExecSession{Session: sess}, nil
+	})
 	defer stopClose()
 	if err != nil {
 		return ExecResult{}, err
 	}
-	if ctx.Err() != nil {
-		return ExecResult{}, ctx.Err()
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		_ = sess.Close()
+		return ExecResult{}, ctxErr
 	}
-	return runExec(ctx, &sshExecSession{Session: sess}, cmd)
+	return runExec(ctx, sess, cmd)
 }
 
 // execSession is the part of *ssh.Session runExec drives.
