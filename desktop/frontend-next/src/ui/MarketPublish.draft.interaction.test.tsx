@@ -66,7 +66,8 @@ it.each(["zh", "en"].flatMap((lang) => ["public", "private"].flatMap((visibility
   expect(busy).toBe("true");
   expect(publish).toHaveBeenCalledExactlyOnceWith(sent);
   if (outcome === "failure") {
-    expect(screen.getByText("registry temporarily unavailable")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("registry temporarily unavailable");
+    expect(screen.queryByRole("status")).toBeNull();
     expect(document.querySelector(".mkt-pub")!.getAttribute("aria-busy")).toBe("false");
     await userEvent.clear(field("来源地址"));
     await userEvent.type(field("来源地址"), "https://github.com/demo/fixed-kit");
@@ -77,13 +78,18 @@ it.each(["zh", "en"].flatMap((lang) => ["public", "private"].flatMap((visibility
     expect(publish).toHaveBeenLastCalledWith({
       ...sent, kind: "theme", source: "https://github.com/demo/fixed-kit", visibility: visibility === "private" ? "public" : "private",
     });
+    expect((await screen.findByRole("status")).textContent).toContain(receipt.package.slug);
+    expect(screen.queryByRole("alert")).toBeNull();
   } else {
-    expect(screen.getByText(t(visibility === "private" ? "已保存 {slug} {version}，仅自己可见" : "已提交 {slug} {version}", {
+    expect(screen.getByRole("status").textContent).toContain(t(visibility === "private" ? "已保存 {slug} {version}，仅自己可见" : "已提交 {slug} {version}", {
       slug: receipt.package.slug, version: receipt.version,
-    }))).toBeTruthy();
+    }));
+    expect(screen.queryByRole("alert")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: t("再发布一个") }));
     for (const name of Object.keys(values)) expect(field(name).value).toBe("");
     expect(screen.getByRole<HTMLInputElement>("checkbox").checked).toBe(false);
     expect(screen.getByRole("radio", { name: t("技能") }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   }
 });

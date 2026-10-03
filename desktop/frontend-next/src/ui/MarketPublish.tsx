@@ -84,7 +84,7 @@ function PublishDraft({ port, handle, onMine, initial }: PublishProps) {
   if (done) {
     return (
       <div className="mkt mkt-pub" data-stage="done">
-        <div className="find" data-lvl="ok">
+        <div className="find" data-lvl="ok" role="status">
           {done.package.status === "private" ? (
             <>
               <span className="t">{t("已保存 {slug} {version}，仅自己可见", { slug: done.package.slug, version: done.version })}</span>
@@ -165,7 +165,7 @@ function PublishDraft({ port, handle, onMine, initial }: PublishProps) {
         {t("仅自己可见：不提交审核，社区市场里只有你的账号能看到并安装")}
       </label>
       {error && (
-        <div className="find" data-lvl="err">
+        <div className="find" data-lvl="err" role="alert">
           <span className="t">{t("没有提交成功")}</span>
           <span className="why">{error}</span>
         </div>
@@ -293,7 +293,7 @@ function PackageList({ port, onInstalled, onViewInstalled, onApplying, onPublish
                   </button>
                 )}
               </span>
-              {sendError?.[0] === p.slug && <span className="why">{sendError[1]}</span>}
+              {sendError?.[0] === p.slug && <span className="why" role="alert">{sendError[1]}</span>}
             </li>
           );
         })}
