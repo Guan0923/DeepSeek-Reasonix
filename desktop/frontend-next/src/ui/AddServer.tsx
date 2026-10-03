@@ -99,6 +99,7 @@ function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
             rows={4}
             autoFocus
             value={text}
+            disabled={busy}
             placeholder={PLACEHOLDER}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
