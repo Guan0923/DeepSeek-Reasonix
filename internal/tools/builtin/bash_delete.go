@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -172,7 +173,30 @@ func inferDeleteDirectories(directories []string, call shellparse.DeleteCall) ([
 }
 
 func literalDeletePath(target string) bool {
-	return target != "" && !strings.ContainsAny(target, "$%~*?[]`\x00")
+	return target != "" && !strings.ContainsAny(target, "$%*?[]{}`\x00") && tildeIsLiteral(target)
+}
+
+var shortNameSegment = regexp.MustCompile(`^[^\\/~]+~[0-9]+$`)
+
+// tildeIsLiteral accepts a tilde only inside a Windows 8.3 short-name segment
+// of a drive-letter path; every other tilde can expand to a home directory.
+func tildeIsLiteral(target string) bool {
+	if !strings.Contains(target, "~") {
+		return true
+	}
+	if len(target) < 3 || !isDriveLetter(target[0]) || target[1] != ':' || target[2] != '\\' && target[2] != '/' {
+		return false
+	}
+	for _, segment := range strings.FieldsFunc(target[3:], func(r rune) bool { return r == '/' || r == '\\' }) {
+		if strings.Contains(segment, "~") && !shortNameSegment.MatchString(segment) {
+			return false
+		}
+	}
+	return true
+}
+
+func isDriveLetter(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
 }
 
 func (b bash) deleteCwd() string {
@@ -184,7 +208,7 @@ func (b bash) deleteCwd() string {
 }
 
 func (b bash) boundedDeleteTarget(target string) bool {
-	if target == "" || strings.ContainsAny(target, "$%~*?[]`\x00") {
+	if !literalDeletePath(target) {
 		return false
 	}
 	if runtime.GOOS == "windows" && strings.HasPrefix(target, "/") || runtime.GOOS == "windows" && strings.HasPrefix(target, "\\") && !filepath.IsAbs(target) {

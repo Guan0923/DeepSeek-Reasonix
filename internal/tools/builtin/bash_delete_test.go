@@ -130,3 +130,37 @@ func TestBashDeleteGateRejectsNestedDirectoryChange(t *testing.T) {
 		t.Fatalf("nested delete reached execution: err=%v calls=%d", err, terminal.calls)
 	}
 }
+
+func TestBashDeleteGateExpansionShapes(t *testing.T) {
+	root := t.TempDir()
+	cases := map[string]string{
+		`rm -rf {~,x}`: CodeDeleteNonliteral, `rm -rf "{~,x}"`: CodeDeleteNonliteral, `rm -rf {x,..}`: CodeDeleteNonliteral,
+		`rm -rf a=~`: CodeDeleteNonliteral, `rm -rf a=x:~`: CodeDeleteNonliteral, `rm -rf x/~`: CodeDeleteNonliteral,
+		`rm -rf a~b`: CodeDeleteNonliteral, `rm -rf "a~b"`: CodeDeleteNonliteral, `rm -rf '~'`: CodeDeleteNonliteral,
+		`rm -rf 'C:/Users/RUNNER~1/AppData/Local/Temp/x'`: CodeDestructiveTarget,
+		`rm -rf 'C:/Users/RUNNER~1/~x'`:                   CodeDeleteNonliteral,
+	}
+	for command, code := range cases {
+		t.Run(command, func(t *testing.T) {
+			terminal := &deleteGateTerminal{}
+			b := bash{shell: sandbox.Shell{Kind: sandbox.ShellBash, Path: "bash"}, workDir: root, sb: sandbox.Spec{WriteRoots: []string{root}}, terminal: terminal}
+			args, _ := json.Marshal(map[string]string{"command": command})
+			_, err := b.ExecuteDetailed(t.Context(), args)
+			var refusal tool.Refusal
+			if !errors.As(err, &refusal) || refusal.Code != code || terminal.calls != 0 {
+				t.Fatalf("want %s refusal, got %v (calls=%d)", code, err, terminal.calls)
+			}
+		})
+	}
+}
+
+func TestLiteralDeletePathTilde(t *testing.T) {
+	for target, want := range map[string]bool{
+		"~": false, "~/x": false, "~user/x": false, "a~b": false, "x/~": false, "a=~": false, "{a,b}": false,
+		`C:\Users\RUNNER~1\Temp\x`: true, "C:/Users/RUNNER~1/x": true, "build~1/out": false, `C:\a\~b`: false,
+	} {
+		if got := literalDeletePath(target); got != want {
+			t.Errorf("literalDeletePath(%q) = %v, want %v", target, got, want)
+		}
+	}
+}
