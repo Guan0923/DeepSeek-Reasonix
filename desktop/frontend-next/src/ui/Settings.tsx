@@ -660,7 +660,7 @@ export function Settings({ hub, onError, port, networkPort, networkHost, status,
                   <Packages
                     port={port}
                     packages={packages}
-                    onChanged={afterExtChange} onReloadError={reload.report}
+                    onChanged={afterExtChange} onReloadError={reload.report} onReloaded={reload.applied}
                     updating={updatingPkg.name}
                     onUpdate={(name) => setUpdatingPkg({ name, applying: false })}
                   />
