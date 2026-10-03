@@ -81,7 +81,7 @@ func TestContinuationRecovery(t *testing.T) {
 				collect(t, p, req)
 				var next map[string]any
 				_ = json.Unmarshal(bodies[len(bodies)-1], &next)
-				if (next["previous_response_id"] != nil) != tc.accepts {
+				if (next["previous_response_id"] != nil) != (tc.accepts || tc.stale) {
 					t.Fatalf("next turn continuation = %v", next["previous_response_id"])
 				}
 				p.(*client).ResetContext()
@@ -91,7 +91,7 @@ func TestContinuationRecovery(t *testing.T) {
 			}
 			var last map[string]any
 			_ = json.Unmarshal(bodies[len(bodies)-1], &last)
-			wantContinuation := tc.accepts || tc.failRetry
+			wantContinuation := tc.accepts || tc.failRetry || tc.stale
 			if (last["previous_response_id"] != nil) != wantContinuation {
 				t.Fatalf("last continuation = %v, want %v", last["previous_response_id"], wantContinuation)
 			}

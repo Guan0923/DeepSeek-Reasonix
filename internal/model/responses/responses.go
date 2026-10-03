@@ -268,7 +268,7 @@ func (c *client) Stream(ctx context.Context, req provider.Request) (<-chan provi
 	downgrade := false
 	var apiErr *provider.APIError
 	if usedPrevious && errors.As(err, &apiErr) && apiErr.Status == http.StatusBadRequest {
-		downgrade = true
+		downgrade = !isStalePreviousResponseError(err)
 		c.ResetContext()
 		body, _, wireMessages = c.buildRequestBodyWithContinuation(req, false)
 		resp, err = c.send(requestCtx, body)
@@ -305,6 +305,26 @@ func (c *client) send(ctx context.Context, body map[string]any) (*http.Response,
 		return req, nil
 	}
 	return provider.SendWithRetry(ctx, c.http, c.sendOpts(), newRequest)
+}
+
+// isStalePreviousResponseError reads the error object, not its prose: the
+// protocol names the field it rejected in `param`. An id that merely expired
+// leaves continuation usable for the next turn; any other 400 does not.
+func isStalePreviousResponseError(err error) bool {
+	var apiErr *provider.APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusBadRequest {
+		return false
+	}
+	var body struct {
+		Error struct {
+			Param string `json:"param"`
+			Code  string `json:"code"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(apiErr.Body), &body) != nil {
+		return false
+	}
+	return body.Error.Param == "previous_response_id" || body.Error.Code == "previous_response_not_found"
 }
 
 func (c *client) buildRequestBody(req provider.Request) (map[string]any, bool, []provider.Message) {
