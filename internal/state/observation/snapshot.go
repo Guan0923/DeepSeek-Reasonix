@@ -66,9 +66,8 @@ type Observer struct {
 	policy Policy
 	digest string
 
-	mu     sync.Mutex
-	known  map[trustedstate.Digest]bool
-	writes [readers]sync.Mutex
+	mu    sync.Mutex
+	known map[trustedstate.Digest]bool
 }
 
 // NewObserver returns an observer storing nodes in store under policy.
@@ -235,13 +234,6 @@ func (o *Observer) put(w *walk, nodes []node) string {
 		return ""
 	}
 	d := trustedstate.DigestOf(b)
-	// Equal digests share a lock so a cache miss cannot race an atomic rename.
-	lock := &o.writes[(int(d[len(d)-1])+7*int(d[len(d)-2]))%readers]
-	lock.Lock()
-	defer lock.Unlock()
-	if w.failed() || w.ctx.Err() != nil {
-		return ""
-	}
 	o.mu.Lock()
 	seen := o.known[d]
 	o.mu.Unlock()

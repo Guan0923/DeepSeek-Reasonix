@@ -501,7 +501,11 @@ func firstTokenProfileRequest(t *testing.T, tokenMode string) provider.Request {
 	prov := testutil.NewMock("token-profile", testutil.Turn{Text: "[]"}, testutil.Turn{Text: "done"})
 	setBootTokenProfileTestProvider(t, prov)
 
-	opts := Options{Sink: event.Discard}
+	root, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{Sink: event.Discard, WorkspaceRoot: root}
 	if tokenMode != "" {
 		opts.TokenMode = tokenMode
 	}
@@ -2125,6 +2129,9 @@ model = "x"
 
 func TestBuildTokenBalancedAliasMatchesDefaultRequestPrefix(t *testing.T) {
 	isolateConfigHome(t)
+	if runtime.GOOS == "windows" {
+		writeUserConfig(t, "[tools.shell]\nprefer = \"powershell\"\n")
+	}
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 

@@ -184,7 +184,7 @@ func TestDependencyTreeLimitEstablishesNothing(t *testing.T) {
 	}
 }
 
-func TestConcurrentIdenticalNodesShareStoreWrite(t *testing.T) {
+func TestConcurrentIdenticalNodesPublishCompleteSnapshot(t *testing.T) {
 	root := t.TempDir()
 	for i := range 128 {
 		if err := os.Mkdir(filepath.Join(root, fmt.Sprintf("d%04d", i)), 0o755); err != nil {
@@ -193,7 +193,7 @@ func TestConcurrentIdenticalNodesShareStoreWrite(t *testing.T) {
 	}
 	s := &delayedStore{Store: trustedstate.Open(t.TempDir(), nil)}
 	snap := NewObserver(s, DefaultPolicy()).Take(t.Context(), root)
-	if !snap.Complete || s.peak.Load() != 1 {
+	if !snap.Complete || s.peak.Load() > readers {
 		t.Fatalf("snapshot = %+v, concurrent identical puts = %d", snap, s.peak.Load())
 	}
 }
