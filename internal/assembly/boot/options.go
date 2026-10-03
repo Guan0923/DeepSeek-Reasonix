@@ -40,6 +40,9 @@ type Options struct {
 	// configured serves. Only a window sets it: it must open to be fixed, while a
 	// headless run must not move to another provider and its billing unasked.
 	OpenOnFallbackModel bool
+	// WorkspaceScanLimit is a test seam: it can only lower the walk bound.
+	// Zero is the production limit.
+	WorkspaceScanLimit int
 	// EffortOverride is a session-local reasoning effort override. Nil means use
 	// the resolved provider config; a non-nil empty string means provider default.
 	EffortOverride *string
