@@ -116,7 +116,9 @@ function PublishDraft({ port, handle, onMine, initial }: PublishProps) {
         if (event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && event.target.dataset.value !== "name" && event.target.dataset.value !== "source") event.preventDefault();
       }} onSubmit={(event) => { event.preventDefault(); if (ready) void submit(); }}>
       {d.origin && <p className="mkt-sum">{t("从 {slug} 复用发布资料；请填写本次发布的来源地址。", { slug: d.origin })}</p>}
-      <p className="mkt-sum">{t("以 @{handle} 的名义提交，审核通过后公开。只收来源地址，不上传文件。", { handle })}</p>
+      <p className="mkt-sum">{t(d.private
+        ? "以 @{handle} 的名义保存，仅自己可见，不提交审核。只收来源地址，不上传文件。"
+        : "以 @{handle} 的名义提交，审核通过后公开。只收来源地址，不上传文件。", { handle })}</p>
       <div className="seg" data-text role="radiogroup" aria-label={t("类型")}>
         {KINDS.map(([id, name]) => (
           <button key={id} type="button" role="radio" aria-checked={d.kind === id} disabled={busy} data-action="market.draft" data-value="kind" onClick={() => setD({ ...d, kind: id })}>
