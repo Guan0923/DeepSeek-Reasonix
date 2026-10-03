@@ -575,6 +575,9 @@ func (c *conn) notify(method string, params any) error {
 
 // call sends a request and waits for its response, cancellation, or closure.
 func (c *conn) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	raw, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
