@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -87,6 +88,9 @@ func TestBashDeleteGateAllowsBoundedCleanup(t *testing.T) {
 func TestBashDeleteGateRejectsAlternateScopes(t *testing.T) {
 	root := t.TempDir()
 	for _, command := range []string{`command rm -rf "$target"`, `env rm -rf "$target"`, `Remove-Item -Recurse /outside`, `Remove-Item -Recurse \outside`} {
+		if command == `Remove-Item -Recurse \outside` && runtime.GOOS != "windows" {
+			continue
+		}
 		sh := sandbox.Shell{Kind: sandbox.ShellBash, Path: "bash"}
 		if strings.HasPrefix(command, "Remove-Item") {
 			sh = sandbox.Shell{Kind: sandbox.ShellPowerShell, Path: powershellPath(t)}

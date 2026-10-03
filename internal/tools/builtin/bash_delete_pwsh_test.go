@@ -24,7 +24,7 @@ func TestDeletePowerShellGoldenCauses(t *testing.T) {
 		{`Remove-Item -Recurse '`, CodeShellSyntax},
 		{`Remove-Item -Recurse child`, ""},
 		{`Remove-Item -Recurse .`, CodeDestructiveTarget},
-		{`Remove-Item -Recurse *`, CodeDestructiveTarget},
+		{`Remove-Item -Recurse *`, CodeDeleteNonliteral},
 		{`Remove-Item -Recurse $target`, CodeDeleteNonliteral},
 		{`$x=1; Remove-Item -Recurse child`, CodeDeleteSequence},
 		{`while ($false) { Remove-Item -Recurse child }`, CodeDeleteSequence},
