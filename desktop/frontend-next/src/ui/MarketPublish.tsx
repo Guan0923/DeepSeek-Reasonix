@@ -111,12 +111,15 @@ function PublishDraft({ port, handle, onMine, initial }: PublishProps) {
 
   const ready = d.name.trim() !== "" && d.source.trim() !== "" && !busy;
   return (
-    <div className="mkt mkt-pub" aria-busy={busy}>
+    <form className="mkt mkt-pub" aria-busy={busy} data-action-submit="market.publish" data-action-keydown="market.publish"
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && event.target.dataset.value !== "name" && event.target.dataset.value !== "source") event.preventDefault();
+      }} onSubmit={(event) => { event.preventDefault(); if (ready) void submit(); }}>
       {d.origin && <p className="mkt-sum">{t("从 {slug} 复用发布资料；请填写本次发布的来源地址。", { slug: d.origin })}</p>}
       <p className="mkt-sum">{t("以 @{handle} 的名义提交，审核通过后公开。只收来源地址，不上传文件。", { handle })}</p>
       <div className="seg" data-text role="radiogroup" aria-label={t("类型")}>
         {KINDS.map(([id, name]) => (
-          <button key={id} role="radio" aria-checked={d.kind === id} disabled={busy} data-action="market.draft" data-value="kind" onClick={() => setD({ ...d, kind: id })}>
+          <button key={id} type="button" role="radio" aria-checked={d.kind === id} disabled={busy} data-action="market.draft" data-value="kind" onClick={() => setD({ ...d, kind: id })}>
             {t(name)}
           </button>
         ))}
@@ -176,11 +179,11 @@ function PublishDraft({ port, handle, onMine, initial }: PublishProps) {
             ? t("保存后只有你能看到；要公开时在「我的发布」里提交审核。")
             : t("提交后进入审核队列；审核员会固定审核时的内容，之后只安装那一份。")}
         </span>
-        <button className="act" data-action="market.publish" data-primary disabled={!ready} onClick={() => void submit()}>
+        <button type="submit" className="act" data-action="market.publish" data-primary disabled={!ready}>
           {t(busy ? "提交中…" : d.private ? "保存为私有" : "提交审核")}
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 
