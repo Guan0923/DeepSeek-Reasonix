@@ -834,6 +834,7 @@ export const EN_SETTINGS: Record<string, string> = {
   "再发布一个": "Publish another",
   "查看我的发布": "See my packages",
   "以 @{handle} 的名义提交，审核通过后公开。只收来源地址，不上传文件。": "Submitted as @{handle} and made public once approved. Only the source address is sent; no files are uploaded.",
+  "以 @{handle} 的名义保存，仅自己可见，不提交审核。只收来源地址，不上传文件。": "Saved as @{handle}, visible only to you and not submitted for review. Only the source address is sent; no files are uploaded.",
   "主题以插件包发布，包里只能有主题；带技能、钩子或 MCP 服务的包请按插件发布。": "A theme is published as a plugin package that holds only themes; a package with skills, hooks or MCP servers is published as a plugin.",
   "小写字母、数字、点、下划线、连字符，最多 64 个字符。": "Lowercase letters, digits, dots, underscores and hyphens, up to 64 characters.",
   "要发布这个包的新版本，请保持名称不变；改名会发布为另一个包。": "Keep this name to publish a new version of this package. Changing it publishes a different package.",
