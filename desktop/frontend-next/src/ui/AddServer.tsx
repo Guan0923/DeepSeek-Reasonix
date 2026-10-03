@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useEscape } from "./dismiss";
 import { t } from "../i18n";
 import type { AgentPort, McpDraftServer, McpInstallResult, McpInstallScope, McpRisk } from "../port/port";
@@ -33,6 +33,7 @@ export function AddServer(props: Props) {
 }
 
 function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
+  const sourceLabel = useId();
   // Mounted only while open, so this component is the layer Escape closes.
   useEscape(true, onClose);
   const [text, setText] = useState("");
@@ -95,6 +96,7 @@ function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
         <>
           <textarea
             className="paste"
+            aria-labelledby={sourceLabel}
             data-action-keydown="mcp.inspect"
             rows={4}
             autoFocus
@@ -109,7 +111,7 @@ function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
             }}
           />
           <div className="acts">
-            <span className="note">{t("一段 JSON、一行命令，或一个 https 地址")}</span>
+            <span className="note" id={sourceLabel}>{t("一段 JSON、一行命令，或一个 https 地址")}</span>
             <button className="act" onClick={onClose}>
               {t("取消")}
             </button>
