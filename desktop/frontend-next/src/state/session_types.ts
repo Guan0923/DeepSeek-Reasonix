@@ -243,4 +243,7 @@ export interface SessionState {
   // are kept apart from `views` because they have no place of their own: they
   // appear only where the thing they stand in for appears.
   takeovers: Record<string, ExtensionSurface>;
+  // The last phase each sub-agent reported, by call id. Kept beside the cards
+  // because a background child outlives the call that started it.
+  subagentPhase: Record<string, string>;
 }

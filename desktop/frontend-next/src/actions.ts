@@ -155,6 +155,14 @@ export const ACTIONS: UIAction[] = [
   { id: "account.reload", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "account.sign-in", kind: "kernel-mutation", target: "none", proof: "interaction" },
   { id: "account.sign-out", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "community.join", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.discord", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.issues", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.contributors", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.profile", kind: "shell-native", target: "entity", proof: "interaction" },
+  { id: "community.douyin-qr", kind: "view", target: "none", proof: "interaction" },
+  { id: "community.author", kind: "shell-native", target: "none", proof: "interaction" },
+  { id: "community.more", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.open", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.tab", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.category", kind: "view", target: "none", proof: "interaction" },
@@ -240,6 +248,7 @@ export const ACTIONS: UIAction[] = [
   { id: "market.signin", kind: "navigation", target: "none", proof: "interaction" },
   { id: "market.draft", kind: "view", target: "none", proof: "interaction" },
   { id: "market.publish", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "market.prepare-version", kind: "view", target: "none", proof: "interaction" },
   { id: "market.publish-again", kind: "view", target: "none", proof: "interaction" },
   // The account's own packages: a preview, an install pinned to that preview's
   // digest, and sending a private one to review.
@@ -248,6 +257,7 @@ export const ACTIONS: UIAction[] = [
   { id: "market.mine-retry", kind: "view", target: "none", proof: "interaction" },
   { id: "market.submit", kind: "kernel-mutation", target: "none", proof: "interaction" },
   { id: "market.vote", kind: "kernel-mutation", target: "none", proof: "interaction" },
+  { id: "market.vote-retry", kind: "view", target: "none", proof: "interaction" },
   // Taking back the innermost open thing: a popover, an inline form. One
   // intent, reached by pressing away and by Escape.
   { id: "layer.dismiss", kind: "navigation", target: "none", proof: "interaction" },
@@ -285,6 +295,7 @@ export const ACTIONS: UIAction[] = [
   // state — which is why it is one id and why it is not a mutation.
   { id: "external.open", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "remote-host.remove", kind: "destructive", target: "none", proof: "authority-effect" },
+  { id: "workspace.reveal", kind: "shell-native", target: "entity", proof: "interaction" },
   { id: "workspace.remove", kind: "destructive", target: "none", proof: "authority-effect" },
   { id: "extensions.invoke", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
 
@@ -299,6 +310,7 @@ export const ACTIONS: UIAction[] = [
   { id: "remote.probe", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "remote.read", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "workspace.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
+  { id: "workspace.add-cancel", kind: "view", target: "none", proof: "interaction" },
   { id: "workspace.move", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
 
   // ── Taking a change back ─────────────────────────────────────────────────

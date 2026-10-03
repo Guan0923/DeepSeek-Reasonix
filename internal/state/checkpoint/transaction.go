@@ -617,14 +617,6 @@ func (s *Store) writePublishTemp(path string, data []byte, mode os.FileMode) err
 	return nil
 }
 
-func (s *Store) cleanupPublishTemps(targets []TransactionTarget) {
-	for _, target := range targets {
-		if target.PublishTmp != "" {
-			_ = secureRemove(s.root, target.PublishTmp)
-		}
-	}
-}
-
 func (s *Store) commitTransaction(tx *TransactionManifest, applier ConversationApplier, inject *InjectFail) (RewindResult, error) {
 	tx.State = TxCommitting
 	tx.UpdatedAt = time.Now()
@@ -710,7 +702,6 @@ func (s *Store) commitTransaction(tx *TransactionManifest, applier ConversationA
 		return result, err
 	}
 
-	// Conversation after files.
 	if tx.Scope == RewindConversation || tx.Scope == RewindBoth {
 		if inject != nil && inject.Phase == "conversation" {
 			err := fmt.Errorf("injected failure at conversation")

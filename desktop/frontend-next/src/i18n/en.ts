@@ -17,11 +17,13 @@ import { EN_USAGE } from "./en_usage";
 import { EN_COMPOSER } from "./en_composer";
 import { EN_BACKUP } from "./en_backup";
 import { EN_FEEDBACK } from "./en_feedback";
+import { EN_COMMUNITY } from "./en_community";
 
 export const EN: Record<string, string> = {
   "工作台": "Workbench",
   "从右侧选择文件，或打开浏览器": "Choose a file on the right, or open a browser",
   ...EN_SETTINGS,
+  ...EN_COMMUNITY,
   ...EN_METRICS,
   ...EN_STORAGE,
   ...EN_USAGE,
@@ -279,6 +281,10 @@ export const EN: Record<string, string> = {
   "尚无文件夹": "No folders yet",
   "正在读取文件夹…": "Reading folders…",
   "打开项目…": "Open a project…",
+  "添加工作区": "Add a workspace",
+  "无法打开文件夹选择器。请输入内核所在机器上的路径。": "The folder picker cannot open. Enter a path on the machine running the kernel.",
+  "工作区路径": "Workspace path",
+  "此内核不支持添加工作区。": "This kernel does not support adding workspaces.",
   "先打开一个项目": "Open a project first",
   "读取代码、运行测试与修改文件均只在你选定的文件夹内进行。": "Reading code, running tests and editing files all happen inside the folder you choose.",
   "使用当前位置": "Stay where I am",
@@ -1098,6 +1104,8 @@ export const EN: Record<string, string> = {
   "项目操作：{name}": "Project actions: {name}",
   "项目操作": "Project actions",
   "不删除文件": "Keeps files",
+  "在文件管理器中显示": "Show in file manager",
+  "文件夹已不在磁盘上": "Folder is gone",
   "删除会话：{title}": "Delete session: {title}",
   "会话在文件夹里打开，先添加一个": "A session opens in a folder; add one first",
   "添加文件夹": "Add folder",

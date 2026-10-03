@@ -63,6 +63,75 @@ func TestAgentKeepPolicyFromConfig(t *testing.T) {
 	}
 }
 
+func TestBuildRecordsRuntimeSelectionEffort(t *testing.T) {
+	home := isolateConfigHome(t)
+	reasonixHome := filepath.Join(home, ".reasonix")
+	t.Setenv("REASONIX_HOME", reasonixHome)
+	dir := robustTempDir(t)
+	writeFile(t, dir, "reasonix.toml", `
+default_model = "test-model/test-model"
+
+[[providers]]
+name = "test-model"
+kind = "openai"
+base_url = "https://example.invalid/v1"
+model = "test-model"
+supported_efforts = ["low", "high"]
+effort = "high"
+`)
+	approveWorkspace(t, dir)
+
+	ctrl, err := Build(context.Background(), Options{Model: "test-model/test-model", Home: reasonixHome, WorkspaceRoot: dir})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	defer ctrl.Close()
+
+	if got := ctrl.RuntimeSelection(); got.ModelRef != "test-model/test-model" || got.Effort != "high" {
+		t.Fatalf("runtime selection = %+v, want model test-model/test-model effort high", got)
+	} else if got.ProviderFingerprint == "" {
+		t.Fatal("runtime selection has no provider build fingerprint")
+	}
+}
+
+func TestProviderBuildIdentityTracksBuildInputsButNotStoredEffort(t *testing.T) {
+	entry := &config.ProviderEntry{
+		Name:             "relay",
+		Kind:             "openai",
+		BaseURL:          "https://one.example/v1",
+		Model:            "model-x",
+		SupportedEfforts: []string{"low", "high"},
+		Effort:           "low",
+		Vision:           false,
+	}
+	proxy := netclient.ProxySpec{}
+	first := ResolveProviderBuildIdentity(entry, proxy, nil)
+	if first.Fingerprint == "" {
+		t.Fatal("provider fingerprint is empty")
+	}
+
+	entry.Effort = "high"
+	effortChanged := ResolveProviderBuildIdentity(entry, proxy, nil)
+	if effortChanged.Fingerprint != first.Fingerprint {
+		t.Fatal("stored effort changed the provider build fingerprint")
+	}
+	if effortChanged.Effort != "high" {
+		t.Fatalf("resolved effort = %q, want high", effortChanged.Effort)
+	}
+
+	entry.Vision = true
+	visionChanged := ResolveProviderBuildIdentity(entry, proxy, nil)
+	if visionChanged.Fingerprint == first.Fingerprint {
+		t.Fatal("vision flag did not change the provider build fingerprint")
+	}
+
+	entry.BaseURL = "https://two.example/v1"
+	urlChanged := ResolveProviderBuildIdentity(entry, proxy, nil)
+	if urlChanged.Fingerprint == visionChanged.Fingerprint {
+		t.Fatal("base_url did not change the provider build fingerprint")
+	}
+}
+
 // TestBuildFoldsProjectMemoryIntoSystemPrompt is the end-to-end proof of the
 // cache-first wiring: a project REASONIX.md is discovered at boot and folded
 // into the session's system message (the cached prefix), and the `remember`

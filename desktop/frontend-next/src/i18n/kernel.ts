@@ -42,7 +42,7 @@ const SAID: Record<string, string> = {
 
   // ── 来源：填错了什么 ─────────────────────────────────────────────
   "provider.name_required": "请为该来源填写名称",
-  "provider.name_invalid": "名称只能包含字母、数字、点、连字符和下划线",
+  "provider.name_invalid": "名称只能用字母、数字、点、连字符和下划线，以字母或数字开头，最长 64 个字符",
   "provider.name_taken": "已经有名为「{name}」的连接了，换一个名称",
   "provider.config_unreadable": "读不到配置文件，没法安全地选择密钥存放位置，请检查配置后重试",
   "provider.endpoint_required": "请填写接口地址",
@@ -137,6 +137,8 @@ const SAID: Record<string, string> = {
   "editor.not_installed": "这台机器上没找到 VS Code、Cursor 这类编辑器。装一个，或在配置里用 [desktop] editor 指定路径。",
   "editor.launch_failed": "编辑器没能启动：{error}",
   "editor.no_window": "这个内核没有窗口，打不开本机的编辑器。",
+  "workspace.not_listed": "这个文件夹不在当前窗口的项目列表里。",
+  "workspace.folder_missing": "项目文件夹已不在磁盘上。",
   "workspace.locate_no_window": "这个内核不在本机，没法在系统文件管理器中显示它的文件。",
   "device.host_only": "这项操作只能在电脑上的窗口里做，已配对的手机做不了。",
   "device.host_rejected": "这个地址不是本机共享的地址，请重新扫码。",
@@ -158,6 +160,16 @@ const SAID: Record<string, string> = {
   "provider.key_too_large": "该 key 长度异常，可能粘贴了错误内容",
   "provider.setup_done": "已连接，无需重复配置",
   "provider.setup_failed": "远端配置未完成，请稍后重试",
+  "provider.unknown": "没有这个模型连接",
+  "provider.no_key_slot": "该连接没有可存放密钥的变量，请先在配置中为它指定 api_key_env",
+  "provider.key_invalid": "该 key 超长或含换行，请重新复制",
+  "provider.credentials_changed": "已保存的密钥在此期间被改动，请重新打开配置再试",
+  "provider.activation_failed": "密钥已保存，但连接尚未生效，请重试",
+  "provider.test_auth": "服务商拒绝了该 key，请检查是否复制完整",
+  "provider.test_timeout": "服务商没有及时应答，请稍后重试",
+  "provider.test_unreachable": "连不上服务商，请检查网络或服务地址",
+  "provider.test_upstream": "服务商返回了错误，请稍后重试",
+  "provider.test_failed": "连接测试未通过",
 
   "memory.unavailable": "该会话未启用记忆",
 

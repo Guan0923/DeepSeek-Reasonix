@@ -92,6 +92,8 @@ func (s *Store) finishOwnedUndo(undo, original *TransactionManifest, applier Con
 		return result, err
 	}
 
+	s.cleanupCommittedBackups(undo.Targets)
+
 	// Mark original as undone; clear lastUndo.
 	original.State = TxUndone
 	original.UpdatedAt = time.Now()
@@ -147,6 +149,7 @@ func (s *Store) finishOwnedRewind(tx *TransactionManifest, applier ConversationA
 		result.Files = stages
 		return result, err
 	}
+	s.cleanupCommittedBackups(tx.Targets)
 	s.mu.Lock()
 	s.lastUndo = tx
 	s.mu.Unlock()

@@ -103,6 +103,7 @@ type toolStage struct {
 func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	b := &builder{timer: newPhaseTimer()}
 	opts = observeOverrides(opts)
+	b.timer.observe = opts.OnPhase
 	// The runtime outlives the request that built it (Studio opens a pane with
 	// one), and its MCP servers and sidecars start on that context later.
 	b.ctx, b.opts, b.owner, b.fileWriteReceipt = bindRuntimeOwner(context.WithoutCancel(ctx), opts)
@@ -211,9 +212,25 @@ func (b *builder) load() error {
 		return err
 	}
 	b.timer.mark("provider")
-	b.shell = sandbox.ResolveShell(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, b.stderr)
+	b.shell = resolveShellWithNotice(cfg.Tools.Shell.Prefer, cfg.Tools.Shell.Path, b.stderr, b.sink)
+	// Record the resolved interpreter for diagnostics, staying at Debug because
+	// headless `run` must leave stderr empty unless --debug is passed. A launch
+	// failure emits an always-on Warn with the same kind/path/source fields.
+	slog.Debug("boot: shell tool interpreter resolved", "kind", b.shell.Kind.String(), "path", b.shell.Path, "prefer", cfg.Tools.Shell.Prefer)
 	b.prompt, err = buildPromptAssembly(b.ctx, opts, cfg, b.root, b.shell, b.sink, b.timer)
 	return err
+}
+
+// resolveShellWithNotice keeps shell-discovery warnings on stderr for CLI
+// diagnostics and also reports them through the boot sink, where the settings
+// surface can show which interpreter actually runs.
+func resolveShellWithNotice(prefer, path string, stderr io.Writer, sink event.Sink) sandbox.Shell {
+	var warnings strings.Builder
+	shell := sandbox.ResolveShell(prefer, path, io.MultiWriter(stderr, &warnings))
+	if detail := strings.TrimSpace(warnings.String()); detail != "" {
+		report(sink, event.Event{Level: event.LevelWarn, Text: "Shell tool interpreter fallback.", Detail: detail})
+	}
+	return shell
 }
 
 // loadConfig reads the configuration this build runs under. The read-only
@@ -236,6 +253,11 @@ func (b *builder) reportModelNotices() {
 	cfg, entry := b.cfg, b.model.entry
 	if ignored := cfg.IgnoredProjectDefaultModel(); ignored != "" {
 		report(b.sink, event.Event{Level: event.LevelWarn, Text: "Ignored the project config's default_model.", Detail: fmt.Sprintf("./reasonix.toml sets default_model = %q but no configured provider serves it; using %q from your user config instead. Edit or remove that default_model line to silence this notice.", ignored, cfg.DefaultModel)})
+	}
+	if b.model.skipped != "" {
+		report(b.sink, event.Event{Level: event.LevelWarn, Code: event.NoticeCodeDefaultModelUnavailable,
+			Text:   "The saved default model is not configured, so another configured model is in use.",
+			Detail: fmt.Sprintf("default_model = %q names no configured provider or model; using %q. Choosing a default model replaces it; until then the file keeps it as written.", b.model.skipped, b.model.ref)})
 	}
 	// Without RequireKey the UI stays reachable, so a missing key would
 	// otherwise surface only as a silently failing first request.
@@ -438,6 +460,7 @@ func perseverationRetries(cfg *config.Config, entry *config.ProviderEntry) *int 
 func (b *builder) controllerOptions(runner agent.Runner, executor *agent.Agent, label string) control.Options {
 	opts, cfg, root, entry, t := b.opts, b.cfg, b.root, b.model.entry, &b.tools
 	specOptions := t.specOptions
+	providerIdentity := ResolveProviderBuildIdentity(entry, b.proxy, nil)
 	return control.Options{
 		Observe:                        b.observeRun(),
 		TaskBudget:                     taskBudgetFromConfig(cfg),
@@ -449,6 +472,8 @@ func (b *builder) controllerOptions(runner agent.Runner, executor *agent.Agent, 
 		SubagentGate:                   t.gate,
 		Label:                          label,
 		ModelRef:                       b.model.ref,
+		Effort:                         providerIdentity.Effort,
+		ProviderFingerprint:            providerIdentity.Fingerprint,
 		ModelModes:                     config.RequestModes(entry),
 		SystemPrompt:                   b.prompt.prompt,
 		SessionDir:                     b.session.dir,

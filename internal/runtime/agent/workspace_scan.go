@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -24,6 +25,10 @@ func scanWorkspaceTo(ctx context.Context, root string, limit int) workspaceScan 
 	if root == "" {
 		return workspaceScan{}
 	}
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return workspaceScan{}
+	}
 	info, err := os.Lstat(root)
 	if err != nil {
 		return workspaceScan{state: map[string]pathState{}}
@@ -31,7 +36,7 @@ func scanWorkspaceTo(ctx context.Context, root string, limit int) workspaceScan 
 	if !info.IsDir() {
 		state := map[string]pathState{}
 		if limit > 0 {
-			state[root] = pathState{exists: true, size: info.Size(), modTime: info.ModTime().UnixNano()}
+			state[root] = pathState{exists: true, size: info.Size(), modTime: info.ModTime().UnixNano(), mode: info.Mode()}
 		}
 		return workspaceScan{state: state, complete: limit > 0, overLimit: limit <= 0}
 	}
@@ -99,9 +104,55 @@ func (w *scanWalk) dir(path string) {
 			w.short.Store(true)
 			continue
 		}
-		local[full] = pathState{exists: true, size: info.Size(), modTime: info.ModTime().UnixNano()}
+		local[full] = pathState{exists: true, size: info.Size(), modTime: info.ModTime().UnixNano(), mode: info.Mode()}
 	}
 	w.mu.Lock()
 	maps.Copy(w.state, local)
 	w.mu.Unlock()
+}
+
+func (before workspaceScan) proseOnly() bool {
+	if !before.complete || len(before.state) >= workspaceScanLimit {
+		return false
+	}
+	for path, state := range before.state {
+		if !state.mode.IsRegular() || (runtime.GOOS != "windows" && state.mode.Perm()&0o111 != 0) {
+			return false
+		}
+		switch filepath.Ext(path) {
+		case ".md", ".rst":
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+type workspaceProseCache struct {
+	mu    sync.Mutex
+	state workspaceProseState
+}
+
+type workspaceProseState struct {
+	epoch     uint64
+	root      string
+	proseOnly bool
+}
+
+func (a *Agent) workspaceIsProseOnly() bool {
+	if a.deliveryProfile || a.observeRoot == "" || a.mutationEpoch() == 0 || a.task.workspaceOverScanLimit() {
+		return false
+	}
+	read := func() bool { return scanWorkspace(context.Background(), a.observeRoot).proseOnly() }
+	cache := a.task.workspaceProse
+	if cache == nil {
+		return read()
+	}
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	epoch := a.mutationEpoch()
+	if cache.state.epoch != epoch || cache.state.root != a.observeRoot {
+		cache.state = workspaceProseState{epoch: epoch, root: a.observeRoot, proseOnly: read()}
+	}
+	return cache.state.proseOnly
 }
