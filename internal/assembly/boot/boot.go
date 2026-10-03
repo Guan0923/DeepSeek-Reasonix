@@ -178,6 +178,13 @@ func subagentModelRef(cfg *config.Config, sk skill.Skill) string {
 }
 
 func subagentEffortRef(cfg *config.Config, sk skill.Skill) string {
+	if cfg == nil {
+		return strings.TrimSpace(sk.Effort)
+	}
+	return subagentEffortRefWithInheritedDefault(cfg, sk, cfg.Agent.SubagentEffort)
+}
+
+func subagentEffortRefWithInheritedDefault(cfg *config.Config, sk skill.Skill, inherited string) string {
 	if cfg != nil {
 		for _, key := range SubagentModelKeys(sk.Name) {
 			if e := strings.TrimSpace(cfg.Agent.SubagentEfforts[key]); e != "" {
@@ -188,10 +195,7 @@ func subagentEffortRef(cfg *config.Config, sk skill.Skill) string {
 	if e := strings.TrimSpace(sk.Effort); e != "" {
 		return e
 	}
-	if cfg == nil {
-		return ""
-	}
-	return strings.TrimSpace(cfg.Agent.SubagentEffort)
+	return strings.TrimSpace(inherited)
 }
 
 // SubagentModelKeys returns the cfg.Agent.SubagentModels/SubagentEfforts map
