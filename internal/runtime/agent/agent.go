@@ -680,10 +680,7 @@ func New(prov provider.Provider, tools *tool.Registry, session *sessionstore.Ses
 			path:         strings.TrimSpace(opts.SessionPath),
 			win:          windowState{cacheState: CacheStateUnknown},
 		},
-		task: taskRuntime{
-			ledger: evidence.NewLedger(),
-			budget: runBudget{limit: normalizeTaskBudget(opts.TaskBudget)},
-		},
+		task: newTaskRuntime(opts.TaskBudget),
 		role: agentRole{
 			requireVisibleFinal: opts.RequireVisibleFinal,
 			readOnlyExecution:   opts.ReadOnlyExecution,
