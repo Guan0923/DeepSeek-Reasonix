@@ -199,6 +199,39 @@ type ExecResult struct {
 	ExitCode int
 }
 
+type sshSessionClient interface {
+	NewSession() (*ssh.Session, error)
+	Close() error
+}
+
+// openExecSession installs cancellation before NewSession can block. If the
+// session channel is not open yet, only closing the SSH client can unblock
+// NewSession; once the session exists, cancellation closes that session alone.
+func openExecSession(ctx context.Context, cl sshSessionClient) (*ssh.Session, func() bool, error) {
+	sessionReady := make(chan *ssh.Session, 1)
+	stopClose := context.AfterFunc(ctx, func() {
+		select {
+		case sess := <-sessionReady:
+			if sess != nil {
+				_ = sess.Close()
+			}
+		default:
+			_ = cl.Close()
+		}
+	})
+
+	sess, err := cl.NewSession()
+	if err != nil {
+		sessionReady <- nil
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			err = ctxErr
+		}
+		return nil, stopClose, err
+	}
+	sessionReady <- sess
+	return sess, stopClose, nil
+}
+
 // Exec runs cmd via `sh -c` on a fresh session and collects its output. When
 // ctx ends first the session is closed, so the channel is not held open by a
 // command that never returns.
@@ -207,9 +240,13 @@ func (c *Client) Exec(ctx context.Context, cmd string) (ExecResult, error) {
 	if err != nil {
 		return ExecResult{}, err
 	}
-	sess, err := cl.NewSession()
+	sess, stopClose, err := openExecSession(ctx, cl)
+	defer stopClose()
 	if err != nil {
 		return ExecResult{}, err
+	}
+	if ctx.Err() != nil {
+		return ExecResult{}, ctx.Err()
 	}
 	return runExec(ctx, &sshExecSession{Session: sess}, cmd)
 }
