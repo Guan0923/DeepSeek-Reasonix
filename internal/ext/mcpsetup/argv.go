@@ -288,7 +288,19 @@ func Tokenize(s string) []string {
 	var cur strings.Builder
 	inWord := false
 	var quote rune
-	for _, r := range s {
+	chars := []rune(s)
+	for i := 0; i < len(chars); i++ {
+		r := chars[i]
+		if r == '\\' && quote != '\'' && i+1 < len(chars) && chars[i+1] == '\n' {
+			start := i
+			for start > 0 && chars[start-1] == '\\' {
+				start--
+			}
+			if (i-start)%2 == 0 {
+				i++
+				continue
+			}
+		}
 		switch {
 		case quote != 0:
 			if r == quote {
