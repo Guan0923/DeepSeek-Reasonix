@@ -347,6 +347,7 @@ export const ACTIONS: UIAction[] = [
   { id: "context.window-tokens", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "mcp.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "mcp.inspect", kind: "repeatable", target: "none", proof: "interaction" },
+  { id: "mcp.scope", kind: "interaction", target: "none", proof: "interaction" },
   { id: "remotes.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "remotes.save", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "remotes.remove", kind: "destructive", target: "entity", proof: "authority-effect" },
