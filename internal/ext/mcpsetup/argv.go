@@ -251,7 +251,8 @@ func nodeCommandOperand(args []string) string {
 		case arg == "-", arg == "-e", arg == "--eval", arg == "-p", arg == "--print",
 			strings.HasPrefix(arg, "--eval="), strings.HasPrefix(arg, "--print="):
 			return ""
-		case arg == "-r", arg == "--require", arg == "--import":
+		case arg == "-r", arg == "--require", arg == "--import", arg == "--env-file",
+			arg == "--env-file-if-exists", arg == "--conditions", arg == "-C":
 			i++
 		case arg != "" && !strings.HasPrefix(arg, "-"):
 			return arg
