@@ -143,13 +143,30 @@ function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
           {/* Installing is a global act; how far it reaches is a separate
               question. Only the third option edits a tracked file, so it is the
               one that has to say so out loud — and it is never the default. */}
-          <div className="scope" role="radiogroup" aria-label={t("安装位置")}>
-            <button role="radio" aria-checked={scope === "user"} disabled={busy || hasSaved} onClick={() => setScope("user")}>
+          <div className="scope" role="radiogroup" aria-label={t("安装位置")} data-action-keydown="mcp.scope"
+            onKeyDown={(e) => {
+              if (busy || hasSaved || e.altKey || e.ctrlKey || e.metaKey) return;
+              const radios = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')].filter((radio) => !radio.disabled);
+              const index = radios.indexOf(document.activeElement as HTMLButtonElement);
+              if (index < 0) return;
+              const next = e.key === "ArrowRight" || e.key === "ArrowDown" ? (index + 1) % radios.length
+                : e.key === "ArrowLeft" || e.key === "ArrowUp" ? (index + radios.length - 1) % radios.length
+                : e.key === "Home" ? 0 : e.key === "End" ? radios.length - 1 : undefined;
+              if (next === undefined) return;
+              e.preventDefault();
+              e.stopPropagation();
+              radios[next].focus();
+              radios[next].click();
+            }}>
+            <button role="radio" aria-checked={scope === "user"} tabIndex={scope === "user" ? 0 : -1}
+              data-action="mcp.scope" disabled={busy || hasSaved} onClick={() => setScope("user")}>
               {t("我的")}<i>{t("所有项目均可使用")}</i>
             </button>
             <button
               role="radio"
               aria-checked={scope === "local"}
+              tabIndex={scope === "local" ? 0 : -1}
+              data-action="mcp.scope"
               disabled={busy || hasSaved || !canProject}
               onClick={() => setScope("local")}
             >
@@ -158,6 +175,8 @@ function ServerInput({ port, canProject, onClose, onInstalled }: Props) {
             <button
               role="radio"
               aria-checked={scope === "project"}
+              tabIndex={scope === "project" ? 0 : -1}
+              data-action="mcp.scope"
               disabled={busy || hasSaved || !canProject}
               onClick={() => setScope("project")}
             >
