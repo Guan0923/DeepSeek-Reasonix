@@ -125,8 +125,8 @@ func (w *scanWalk) dir(path string) {
 	w.mu.Unlock()
 }
 
-func (before workspaceScan) proseOnly() bool {
-	if !before.complete || len(before.state) >= workspaceScanLimit {
+func (before workspaceScan) proseOnly(limit int) bool {
+	if !before.complete || len(before.state) >= limit {
 		return false
 	}
 	for path, state := range before.state {
@@ -157,7 +157,9 @@ func (a *Agent) workspaceIsProseOnly() bool {
 	if a.deliveryProfile || a.observeRoot == "" || a.mutationEpoch() == 0 || a.task.workspaceOverScanLimit() {
 		return false
 	}
-	read := func() bool { return scanWorkspace(context.Background(), a.observeRoot).proseOnly() }
+	read := func() bool {
+		return scanWorkspaceTo(context.Background(), a.observeRoot, a.scanLimit()).proseOnly(a.scanLimit())
+	}
 	cache := a.task.workspaceProse
 	if cache == nil {
 		return read()

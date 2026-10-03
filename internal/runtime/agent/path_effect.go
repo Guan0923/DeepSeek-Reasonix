@@ -318,6 +318,15 @@ func scanWorkspace(ctx context.Context, root string) workspaceScan {
 	return scanWorkspaceTo(ctx, root, workspaceScanLimit)
 }
 
+// scanLimit is the walk bound this agent runs under: its configured limit,
+// never above workspaceScanLimit, which is also the default.
+func (a *Agent) scanLimit() int {
+	if a.workspaceScanLimit > 0 {
+		return min(a.workspaceScanLimit, workspaceScanLimit)
+	}
+	return workspaceScanLimit
+}
+
 // unchanged reports whether the workspace is byte-for-byte as this scan found
 // it. Both scans must be complete; either one short of that proves nothing.
 func (before workspaceScan) unchanged(after workspaceScan) bool {
@@ -373,7 +382,7 @@ func (a *Agent) settleUnchangedWorkspace(ctx context.Context, rec *evidence.Rece
 	if !plan.scanBefore.complete || !a.mayAttributeObserved(ctx) {
 		return
 	}
-	after := scanWorkspace(ctx, a.observeRoot)
+	after := scanWorkspaceTo(ctx, a.observeRoot, a.scanLimit())
 	changed, ok := plan.scanBefore.changed(after)
 	if !ok {
 		return
@@ -432,7 +441,7 @@ func (a *Agent) scanBeforeUnprovenCall(ctx context.Context, plan *toolCallPlan) 
 	if !a.mayAttributeObserved(ctx) {
 		return workspaceScan{}
 	}
-	scan := scanWorkspace(ctx, a.observeRoot)
+	scan := scanWorkspaceTo(ctx, a.observeRoot, a.scanLimit())
 	if scan.overLimit {
 		a.task.noteWorkspaceOverScanLimit()
 	}
