@@ -121,7 +121,7 @@ function useCrop(url: string | undefined, box: HTMLElement | null) {
 }
 
 export function Appearance({ port, theme, onTheme, contrast, onContrast, weight, onWeight, reloadThemes, look, onLook }: Props) {
-  const [packs, setPacks] = useState<ThemePack[]>([]);
+  const [{ packs, unread }, setThemes] = useState<{ packs: ThemePack[]; unread: string }>({ packs: [], unread: "" });
   // null in a browser tab, where there is no window to keep running and no
   // icon to bring one back. The whole section goes with it.
   const [tray, setTray] = useState<TrayPrefs | null>(null);
@@ -151,7 +151,9 @@ export function Appearance({ port, theme, onTheme, contrast, onContrast, weight,
   );
 
   const load = useCallback(() => {
-    port.themes().then(setPacks).catch(() => setPacks([]));
+    port.themes()
+      .then((packs) => setThemes({ packs, unread: "" }))
+      .catch((e) => setThemes((prev) => ({ ...prev, unread: reason(e) })));
   }, [port]);
   useEffect(load, [load]);
 
@@ -249,12 +251,9 @@ export function Appearance({ port, theme, onTheme, contrast, onContrast, weight,
 
   return (
     <>
-      {/* Every refused write on this screen lands in one state and is said in
-          one place: a palette that would not activate is not news for the
-          wallpaper block, which is where this used to be written. */}
-      {failed && (
+      {(failed || unread) && (
         <div className="find" data-lvl="err" role="alert">
-          <span className="t">{failed}</span>
+          <span className="t">{failed || unread}</span>
         </div>
       )}
       <section className="grp" id="set-mode" data-setting="mode">
