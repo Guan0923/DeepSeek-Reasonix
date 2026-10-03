@@ -3,6 +3,7 @@ package agent
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync/atomic"
 	"testing"
 
@@ -14,6 +15,67 @@ import (
 	"reasonix/internal/state/instruction"
 	"reasonix/internal/state/trustedstate"
 )
+
+func TestProseWaiverRequiresEntireMutationDomain(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		paths   []string
+		created []string
+		writer  bool
+	}{
+		{name: "move code to prose", paths: []string{"main.go", "main.md"}, writer: true},
+		{name: "delete last code", paths: []string{"main.go"}},
+		{name: "additional directory", paths: []string{"OUTSIDE/plugin.go"}, writer: true},
+		{name: "outside instructions", paths: []string{"OUTSIDE/REASONIX.md"}, writer: true},
+		{name: "VCS hook", paths: []string{".git/hooks/run.md"}, writer: true},
+		{name: "created code", paths: []string{"notes.md"}, created: []string{"main.go"}, writer: true},
+		{name: "deleted uppercase prose", paths: []string{"gone.MD"}, writer: true},
+		{name: "blank path alongside note", paths: []string{"notes.md", ""}, writer: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, outside := t.TempDir(), t.TempDir()
+			if err := os.WriteFile(filepath.Join(root, "notes.md"), []byte("Neutral note."), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			paths := append([]string(nil), tc.paths...)
+			for i, p := range paths {
+				if len(p) > 8 && p[:8] == "OUTSIDE/" {
+					paths[i] = filepath.Join(outside, p[8:])
+				}
+			}
+			reg := tool.NewRegistry()
+			reg.Add(fakeTool{name: "bash"})
+			a := &Agent{task: taskRuntime{ledger: readinessLedger(
+				evidence.Receipt{Success: true, Mutation: true, Write: tc.writer, MutationEvidence: evidence.MutationProven, PathsComplete: true, Paths: paths, Created: tc.created},
+				evidence.Receipt{Success: true, Mutation: true, Write: true, MutationEvidence: evidence.MutationProven, Paths: []string{"notes.md"}},
+			)}, svc: agentServices{tools: reg}, turn: turnRuntime{policySet: true, policy: taskpolicy.TaskPolicy{Verification: taskpolicy.VerifyTargeted}}}
+			a.observeRoot, a.writeWorkspaceRoot = root, root
+			if a.task.ledger.ProseOnlyWithoutChecks(a.checkContract()) {
+				t.Error("mutation domain waived verification")
+			}
+			if got := a.finalReadinessCheckFor().missingVerification; got != 1 {
+				t.Errorf("missing verification = %d, want 1", got)
+			}
+		})
+	}
+}
+
+func TestProseScanRejectsExecutableFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not expose POSIX executable permission bits")
+	}
+	root := t.TempDir()
+	path := filepath.Join(root, "run.md")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if scanWorkspace(t.Context(), root).proseOnly() {
+		t.Fatal("executable prose waived verification")
+	}
+}
 
 func TestBalancedSupportingVerificationFloor(t *testing.T) {
 	for _, tc := range []struct {

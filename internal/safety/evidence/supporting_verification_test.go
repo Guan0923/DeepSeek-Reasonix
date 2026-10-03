@@ -17,6 +17,11 @@ func TestSupportingVerificationExemptionRequiresProvenScope(t *testing.T) {
 		delivery   bool
 	}{
 		{name: "supporting only"},
+		{name: "move code to prose", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"main.go", "main.md"}}}, wantDebt: true},
+		{name: "delete code", extra: []Receipt{{Success: true, Mutation: true, MutationEvidence: MutationProven, PathsComplete: true, Paths: []string{"main.go"}}}, wantDebt: true},
+		{name: "created code", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"other.md"}, Created: []string{"main.go"}}}, wantDebt: true},
+		{name: "deleted uppercase document", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"gone.MD"}}}, wantDebt: true},
+		{name: "blank path", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"other.md", ""}}}, wantDebt: true},
 		{name: "declared check", checks: []string{"go test ./..."}, wantDebt: true},
 		{name: "code before supporting", extra: []Receipt{{ToolName: "write_file", Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"main.go"}}}, mixed: true, wantDebt: true},
 		{name: "no complete observation", unobserved: true, wantDebt: true},
@@ -28,7 +33,7 @@ func TestSupportingVerificationExemptionRequiresProvenScope(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			l := ledgerOf(append(tc.extra, note)...)
-			contract := CaptureCheckContract(tc.checks, tc.checks).WithWorkspaceProseOnly(!tc.mixed && !tc.unobserved, tc.delivery)
+			contract := CaptureCheckContract(tc.checks, tc.checks).WithWorkspaceProseOnly(!tc.mixed && !tc.unobserved, tc.delivery).WithObserveRoot(t.TempDir())
 			if debt := slices.ContainsFunc(l.Obligations(contract), func(o Obligation) bool { return o.Kind == ObligationStaleVerification }); debt != tc.wantDebt {
 				t.Fatalf("stale_verification = %v, want %v", debt, tc.wantDebt)
 			}

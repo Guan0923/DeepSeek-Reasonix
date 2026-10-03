@@ -30,8 +30,12 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 		symlink    bool
 		incomplete bool
 		prose      string
+		move       bool
+		outside    bool
 	}{
 		{name: "markdown only"},
+		{name: "move last code to prose", move: true},
+		{name: "outside AdditionalDirs write", outside: true},
 		{name: "reStructuredText only", prose: "notes.rst"},
 		{name: "text input keeps debt", file: "notes.txt"},
 		{name: "MDX component keeps debt", file: "notes.mdx"},
@@ -59,6 +63,13 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 			writeUserConfig(t, userModel+"\n[codegraph]\nenabled = false\n")
 			registerBootTokenProfileTestProvider()
 			writeFile(t, dir, "todo.md", "A neutral task.\n")
+			if tc.move {
+				writeFile(t, dir, "main.go", "package fixture\n")
+			}
+			var extra string
+			if tc.outside {
+				extra = robustTempDir(t)
+			}
 			if tc.incomplete {
 				for i := range 50_001 {
 					writeFile(t, dir, fmt.Sprintf("note-%05d.md", i), "")
@@ -82,6 +93,12 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 			}
 			approveWorkspace(t, dir)
 			turns := []testutil.Turn{call("notes", "write_file", `{"path":"notes.md","content":"A neutral note.\n"}`)}
+			if tc.move {
+				turns = append([]testutil.Turn{call("move", "move_file", `{"source_path":"main.go","destination_path":"main.md"}`)}, turns...)
+			}
+			if tc.outside {
+				turns = append([]testutil.Turn{call("outside", "write_file", fmt.Sprintf(`{"path":%q,"content":"package fixture\n"}`, filepath.Join(extra, "plugin.go")))}, turns...)
+			}
 			if tc.prose != "" {
 				turns = []testutil.Turn{call("notes", "write_file", fmt.Sprintf(`{"path":%q,"content":"A neutral note.\n"}`, tc.prose))}
 			}
@@ -105,13 +122,17 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 				preset = AgentPresetDelivery
 			}
 			sink := &bundleAuditSink{}
-			ctrl, err := Build(context.Background(), Options{Home: home, WorkspaceRoot: dir, AgentPreset: preset, Sink: sink, HeadlessApprovalMode: control.ToolApprovalAuto})
+			opts := Options{Home: home, WorkspaceRoot: dir, AgentPreset: preset, Sink: sink, HeadlessApprovalMode: control.ToolApprovalAuto}
+			if tc.outside {
+				opts.AdditionalDirs = []string{extra}
+			}
+			ctrl, err := Build(context.Background(), opts)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer ctrl.Close()
 			err = ctrl.Run(context.Background(), "write the requested files")
-			wantDebt := tc.code || tc.check || tc.file != "" || tc.symlink || tc.delivery || tc.incomplete
+			wantDebt := tc.code || tc.check || tc.file != "" || tc.symlink || tc.delivery || tc.incomplete || tc.move || tc.outside
 			var unready *agent.FinalReadinessError
 			if wantDebt {
 				if !errors.As(err, &unready) {
@@ -144,6 +165,19 @@ func TestEffectSupportingWritesWithoutChecksMayFinish(t *testing.T) {
 			}
 			if _, err := os.Stat(filepath.Join(dir, target)); err != nil {
 				t.Fatal(err)
+			}
+			if tc.move {
+				if _, err := os.Stat(filepath.Join(dir, "main.go")); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("move source remains: %v", err)
+				}
+				if _, err := os.Stat(filepath.Join(dir, "main.md")); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.outside {
+				if _, err := os.Stat(filepath.Join(extra, "plugin.go")); err != nil {
+					t.Fatal(err)
+				}
 			}
 			audits := sink.audits()
 			if len(audits) == 0 || !audits[len(audits)-1].Sealed {

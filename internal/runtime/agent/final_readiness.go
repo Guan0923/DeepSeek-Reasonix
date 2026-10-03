@@ -398,7 +398,7 @@ func (a *Agent) mutationEpoch() uint64 {
 // requirement it replaced.
 func (a *Agent) checkContract() evidence.CheckContract {
 	return evidence.CaptureCheckContract(a.task.checkpoint.BaselineChecks, a.declaredChecks()).
-		WithCapturedTests(len(a.task.baselineCriteria)).WithWorkspaceProseOnly(a.workspaceIsProseOnly(), a.deliveryProfile)
+		WithCapturedTests(len(a.task.baselineCriteria)).WithWorkspaceProseOnly(a.workspaceIsProseOnly(), a.deliveryProfile).WithObserveRoot(a.observeRoot)
 }
 
 // DeclaredProjectChecks is the declaration this process loaded, for a host that

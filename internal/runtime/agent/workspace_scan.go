@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -22,6 +23,10 @@ const scanReaders = 16
 // The limit is an argument so a test reaches that answer with a small tree.
 func scanWorkspaceTo(ctx context.Context, root string, limit int) workspaceScan {
 	if root == "" {
+		return workspaceScan{}
+	}
+	root, err := filepath.Abs(root)
+	if err != nil {
 		return workspaceScan{}
 	}
 	info, err := os.Lstat(root)
@@ -111,7 +116,7 @@ func (before workspaceScan) proseOnly() bool {
 		return false
 	}
 	for path, state := range before.state {
-		if !state.mode.IsRegular() {
+		if !state.mode.IsRegular() || (runtime.GOOS != "windows" && state.mode.Perm()&0o111 != 0) {
 			return false
 		}
 		switch filepath.Ext(path) {

@@ -51,6 +51,12 @@ type CheckContract struct {
 	capturedTests      int
 	workspaceProseOnly bool
 	delivery           bool
+	observeRoot        string
+}
+
+func (c CheckContract) WithObserveRoot(root string) CheckContract {
+	c.observeRoot = root
+	return c
 }
 
 func (c CheckContract) WithWorkspaceProseOnly(proseOnly, delivery bool) CheckContract {
@@ -167,8 +173,8 @@ func (l *Ledger) ProseOnlyWithoutChecks(contract CheckContract) bool {
 		if r.MutationEvidence != MutationProven || len(r.Paths) == 0 || (!r.Write && !r.PathsComplete) {
 			return false
 		}
-		for _, path := range r.Paths {
-			if strings.TrimSpace(path) == "" {
+		for _, path := range r.MutationPaths {
+			if !proseMutationPath(contract.observeRoot, path) {
 				return false
 			}
 		}
