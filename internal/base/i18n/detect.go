@@ -56,6 +56,9 @@ func normalize(s string) string {
 	if s == "" {
 		return ""
 	}
+	if s == "c" || s == "posix" || strings.HasPrefix(s, "c.") || strings.HasPrefix(s, "posix.") {
+		return "en"
+	}
 	if strings.HasPrefix(s, "zh-tw") || strings.HasPrefix(s, "zh-hant") || strings.Contains(s, "chinese traditional") || strings.Contains(s, "繁體") {
 		return "zh-TW"
 	}
