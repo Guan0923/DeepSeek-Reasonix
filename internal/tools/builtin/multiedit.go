@@ -86,7 +86,7 @@ func (m multiEdit) Execute(ctx context.Context, args json.RawMessage) (string, e
 	if len(p.Edits) == 0 {
 		return "", fmt.Errorf("edits must not be empty")
 	}
-	p.Path = resolveIn(m.workDir, resolveSessionTemp(m.sessionTemp, p.Path))
+	p.Path = ResolveWritePath(m.workDir, m.sessionTemp, p.Path)
 	if err := confineWrite(ctx, m.roots, m.guard, m.managed, m.sessionTemp, p.Path); err != nil {
 		return "", err
 	}

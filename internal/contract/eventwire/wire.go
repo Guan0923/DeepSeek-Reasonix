@@ -137,6 +137,7 @@ func ToWire(e event.Event) Event {
 	switch e.Kind {
 	case event.Notice:
 		w.Code = e.Code
+		w.WorkspaceLease = toWireWorkspaceLease(e.WorkspaceLease)
 		if e.DecisionReceipt != nil {
 			w.DecisionReceipt = ToWireDecisionReceipt(e.DecisionReceipt)
 		}
@@ -437,8 +438,9 @@ func toWireTool(t event.Tool) *Tool {
 		ID: t.ID, Name: t.Name, Args: t.Args,
 		ResolvedName: t.ResolvedName, CapabilityID: t.CapabilityID,
 		Output: t.Output, Images: t.Images, Err: t.Err, RefusalCode: t.RefusalCode,
-		OutputDiff: t.OutputDiff,
-		ReadOnly:   t.ReadOnly, Truncated: t.Bound.Lossy(),
+		WorkspaceLease: toWireWorkspaceLease(t.WorkspaceLease),
+		OutputDiff:     t.OutputDiff,
+		ReadOnly:       t.ReadOnly, Truncated: t.Bound.Lossy(),
 		DurationMs: t.DurationMs, ContextTokens: t.ContextTokens(),
 		Partial: t.Partial, StartedAt: t.StartedAt, EndedAt: t.EndedAt,
 		ArgChars: t.ArgChars, Refreshed: t.Refreshed,
@@ -491,7 +493,8 @@ type Tool struct {
 	// RefusalCode is the host's dotted identity for a refusal. Err is only its
 	// wording, and a reader that has to tell one refusal from another cannot
 	// use a sentence.
-	RefusalCode string `json:"refusalCode,omitempty"`
+	RefusalCode    string          `json:"refusalCode,omitempty"`
+	WorkspaceLease *WorkspaceLease `json:"workspaceLease,omitempty"`
 	// OutputDiff marks a shell result whose whole output is a unified diff, so a
 	// frontend renders it as a diff. Set only when [agent].embedded_diff_detection
 	// is on.

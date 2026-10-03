@@ -17,14 +17,17 @@ import (
 )
 
 type pathLeaseState struct {
-	root   string
-	paths  []string
-	record string
+	root      string
+	paths     []string
+	record    string
+	sessionID func() string
+	identity  string
 }
 
 type pathLeaseRecord struct {
-	Holder string   `json:"holder"`
-	Paths  []string `json:"paths"`
+	Holder    string   `json:"holder"`
+	Paths     []string `json:"paths"`
+	SessionID string   `json:"sessionId,omitempty"`
 }
 
 func (o *Owner) normalizePaths(paths []string) []string {
@@ -39,27 +42,11 @@ func (o *Owner) normalizePaths(paths []string) []string {
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(o.scope.root, path)
 		}
-		path = filepath.Clean(path)
-		parent, tail := path, ""
-		for {
-			resolved, err := filepath.EvalSymlinks(parent)
-			if err == nil {
-				path = filepath.Join(resolved, tail)
-				break
-			}
-			if !os.IsNotExist(err) {
-				return nil
-			}
-			if info, err := os.Lstat(parent); err == nil && info.Mode()&os.ModeSymlink != 0 {
-				return nil
-			}
-			next := filepath.Dir(parent)
-			if next == parent {
-				return nil
-			}
-			tail = filepath.Join(filepath.Base(parent), tail)
-			parent = next
+		canonical, err := fileutil.CanonicalWritePath(path)
+		if err != nil {
+			return nil
 		}
+		path = canonical
 		if !pathWithin(o.scope.root, path) {
 			return nil
 		}
@@ -120,13 +107,13 @@ func pathsOverlap(a, b []string) bool {
 }
 
 func (o *Owner) acquirePaths(ctx context.Context, paths []string, held bool) (func(), error) {
-	w := &waitClock{owner: o}
+	w := &waitClock{owner: o, requested: o.extent(paths)}
 	for {
 		if err := ctx.Err(); err != nil {
 			w.close(WaitAbandoned)
-			return nil, err
+			return nil, w.failure(err)
 		}
-		release, holder, err := o.tryPaths(paths, held)
+		release, conflict, err := o.tryPaths(paths, held)
 		if err == nil {
 			w.close(WaitAcquired)
 			return release, nil
@@ -135,10 +122,13 @@ func (o *Owner) acquirePaths(ctx context.Context, paths []string, held bool) (fu
 			w.close(WaitAbandoned)
 			return nil, fmt.Errorf("acquire workspace write lease: %w", err)
 		}
-		w.contend()
-		if w.holder == "" {
-			w.holder = holder
+		if conflict != nil {
+			w.conflict = conflict
+			if held {
+				return nil, conflict
+			}
 		}
+		w.contend()
 		w.report()
 		delay := retryInterval
 		if !w.began {
@@ -149,17 +139,17 @@ func (o *Owner) acquirePaths(ctx context.Context, paths []string, held bool) (fu
 		case <-ctx.Done():
 			timer.Stop()
 			w.close(WaitAbandoned)
-			return nil, ctx.Err()
+			return nil, w.failure(ctx.Err())
 		case <-timer.C:
 		}
 	}
 }
 
-func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
+func (o *Owner) tryPaths(paths []string, held bool) (func(), *ConflictError, error) {
 	select {
 	case <-o.local.token:
 	default:
-		return nil, "", errHeld
+		return nil, nil, errHeld
 	}
 	defer func() { o.local.token <- struct{}{} }()
 	var shared func()
@@ -169,7 +159,7 @@ func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
 		var err error
 		shared, err = trySharedLockFile(o.lockPath)
 		if err != nil {
-			return nil, readHolder(o.holderPath()), err
+			return nil, o.conflict(readHolder(o.holderPath()), "", nil, paths), err
 		}
 		defer func() {
 			if shared != nil {
@@ -179,16 +169,16 @@ func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
 	}
 	guard, err := tryLockFile(o.lockPath + ".guard")
 	if err != nil {
-		return nil, readHolder(o.holderPath()), err
+		return nil, nil, err
 	}
 	defer guard()
 	dir := o.lockPath + ".claims"
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), ".json") {
@@ -204,20 +194,20 @@ func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
 			release()
 			_ = os.Remove(path + ".lock")
 			if removeErr != nil && !os.IsNotExist(removeErr) {
-				return nil, "", removeErr
+				return nil, nil, removeErr
 			}
 			continue
 		}
 		if !errors.Is(err, errHeld) {
-			return nil, "", err
+			return nil, nil, err
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return nil, "", err
+			return nil, nil, err
 		}
 		var record pathLeaseRecord
 		if err := json.Unmarshal(data, &record); err != nil {
-			return nil, "", errHeld
+			return nil, o.conflict("", "", nil, paths), errHeld
 		}
 		for _, extent := range record.Paths {
 			if !filepath.IsAbs(extent) || !pathWithin(o.scope.root, extent) {
@@ -226,13 +216,13 @@ func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
 			}
 		}
 		if pathsOverlap(paths, record.Paths) {
-			return nil, record.Holder, errHeld
+			return nil, o.conflict(record.Holder, record.SessionID, record.Paths, paths), errHeld
 		}
 	}
 	if !held {
 		var id [16]byte
 		if _, err := rand.Read(id[:]); err != nil {
-			return nil, "", err
+			return nil, nil, err
 		}
 		o.scope.record = filepath.Join(dir, hex.EncodeToString(id[:])+".json")
 	}
@@ -241,10 +231,10 @@ func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
 	if !held {
 		release, err = tryLockFile(path + ".lock")
 		if err != nil {
-			return nil, "", err
+			return nil, nil, err
 		}
 	}
-	data, err := json.Marshal(pathLeaseRecord{Holder: o.holderName(), Paths: paths})
+	data, err := json.Marshal(pathLeaseRecord{Holder: o.holderName(), SessionID: o.sessionID(), Paths: paths})
 	if err == nil {
 		err = fileutil.AtomicWriteFile(path, data, 0o600)
 	}
@@ -252,14 +242,14 @@ func (o *Owner) tryPaths(paths []string, held bool) (func(), string, error) {
 		if release != nil {
 			release()
 		}
-		return nil, "", err
+		return nil, nil, err
 	}
 	if held {
-		return nil, "", nil
+		return nil, nil, nil
 	}
 	sharedRelease := shared
 	shared = nil
-	return func() { o.releaseClaim(path, release); sharedRelease() }, "", nil
+	return func() { o.releaseClaim(path, release); sharedRelease() }, nil, nil
 }
 
 func (o *Owner) releaseClaim(path string, release func()) {

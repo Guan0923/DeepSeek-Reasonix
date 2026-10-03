@@ -6,12 +6,14 @@ package workspacelease
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reasonix/internal/base/fileutil"
 	"runtime"
 	"strings"
 	"sync"
@@ -48,7 +50,10 @@ type Wait struct {
 	Elapsed time.Duration
 	// Holder names the session writing when the wait began, as that session
 	// named itself; empty when it named nothing or could not be read.
-	Holder string
+	Holder          string
+	HolderSessionID string
+	Paths           []string
+	RequestedPaths  []string
 }
 
 // WaitNotice receives both ends of a reported wait. It must return quickly and
@@ -137,7 +142,7 @@ func New(workspaceRoot, lockDir string, onWait WaitNotice) (*Owner, error) {
 		lockPath: filepath.Join(lockDir, key+".lock"),
 		onWait:   onWait,
 		local:    local,
-		scope:    pathLeaseState{root: canonical},
+		scope:    pathLeaseState{root: canonical, identity: rand.Text()},
 	}, nil
 }
 
@@ -154,7 +159,7 @@ func CanonicalWorkspace(root string) (string, error) {
 		return "", fmt.Errorf("resolve workspace root: %w", err)
 	}
 	abs = filepath.Clean(abs)
-	if resolved, resolveErr := filepath.EvalSymlinks(abs); resolveErr == nil {
+	if resolved, resolveErr := fileutil.ResolveExistingPath(abs); resolveErr == nil {
 		abs = filepath.Clean(resolved)
 	} else if !os.IsNotExist(resolveErr) {
 		return "", fmt.Errorf("canonicalize workspace root: %w", resolveErr)
@@ -337,10 +342,12 @@ func (o *Owner) markWaiting() {
 // that clears inside the grace never becomes a line someone has to read, and
 // one that does not is always closed by the report that ends it.
 type waitClock struct {
-	owner   *Owner
-	started time.Time
-	began   bool
-	holder  string
+	owner     *Owner
+	started   time.Time
+	began     bool
+	holder    string
+	conflict  *ConflictError
+	requested []string
 }
 
 func (w *waitClock) contend() {
@@ -355,20 +362,38 @@ func (w *waitClock) report() {
 		return
 	}
 	w.began = true
-	w.owner.notify(Wait{Outcome: WaitBegan, Elapsed: time.Since(w.started), Holder: w.holder})
+	w.owner.notify(w.notice(WaitBegan, time.Since(w.started)))
 }
 
 func (w *waitClock) close(outcome WaitOutcome) {
 	if w.started.IsZero() {
 		return
 	}
+	w.report()
 	waited := time.Since(w.started)
 	w.owner.mu.Lock()
 	w.owner.contendedLocked(waited, w.began)
 	w.owner.mu.Unlock()
 	if w.began {
-		w.owner.notify(Wait{Outcome: outcome, Elapsed: waited})
+		w.owner.notify(w.notice(outcome, waited))
 	}
+}
+
+func (w *waitClock) notice(outcome WaitOutcome, elapsed time.Duration) Wait {
+	n := Wait{Outcome: outcome, Elapsed: elapsed, Holder: w.holder, RequestedPaths: w.requested}
+	if c := w.conflict; c != nil {
+		n.Holder, n.HolderSessionID, n.Paths = c.Holder, c.SessionID, c.Paths
+	}
+	return n
+}
+
+func (w *waitClock) failure(err error) error {
+	if w.conflict == nil {
+		return err
+	}
+	c := *w.conflict
+	c.Cause = err
+	return &c
 }
 
 func (w *waitClock) remainingGrace() time.Duration {

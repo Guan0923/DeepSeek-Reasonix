@@ -98,7 +98,7 @@ func (d deleteRange) preview(ctx context.Context, args json.RawMessage) (diff.Ch
 		inclusive = *p.Inclusive
 	}
 
-	p.Path = resolveIn(d.workDir, resolveSessionTemp(d.sessionTemp, p.Path))
+	p.Path = ResolveWritePath(d.workDir, d.sessionTemp, p.Path)
 	if err := confinePreview(d.roots, d.guard, d.managed, d.sessionTemp, p.Path); err != nil {
 		return diff.Change{}, editSource{}, err
 	}

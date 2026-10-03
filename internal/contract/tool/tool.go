@@ -62,6 +62,12 @@ type Previewer interface {
 	Preview(ctx context.Context, args json.RawMessage) (diff.Change, error)
 }
 
+// WritePathResolver owns the same path resolution used by Execute. Unknown
+// targets must return no paths so the host claims the whole workspace.
+type WritePathResolver interface {
+	WritePaths(json.RawMessage) ([]string, error)
+}
+
 // PreviewChange returns the change a writer tool would make for args, or ok=false
 // when there's nothing renderable: t is read-only, doesn't implement Previewer,
 // the preview errored (the edit will likely fail too), or the file is binary.

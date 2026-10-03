@@ -33,7 +33,7 @@ func (w writeFile) Preview(ctx context.Context, args json.RawMessage) (diff.Chan
 	if p.Path == "" {
 		return diff.Change{}, fmt.Errorf("path is required")
 	}
-	p.Path = resolveIn(w.workDir, p.Path)
+	p.Path = ResolveWritePath(w.workDir, w.sessionTemp, p.Path)
 
 	old, kind := "", diff.Create
 	if src, err := readEditSource(ctx, w.overlay, p.Path); err == nil {
@@ -62,7 +62,7 @@ func (e editFile) Preview(ctx context.Context, args json.RawMessage) (diff.Chang
 	if p.OldString == "" {
 		return diff.Change{}, fmt.Errorf("old_string is required")
 	}
-	p.Path = resolveIn(e.workDir, p.Path)
+	p.Path = ResolveWritePath(e.workDir, e.sessionTemp, p.Path)
 
 	src, err := readEditSource(ctx, e.overlay, p.Path)
 	if err != nil {
@@ -101,7 +101,7 @@ func (m multiEdit) Preview(ctx context.Context, args json.RawMessage) (diff.Chan
 	if len(p.Edits) == 0 {
 		return diff.Change{}, fmt.Errorf("edits must not be empty")
 	}
-	p.Path = resolveIn(m.workDir, p.Path)
+	p.Path = ResolveWritePath(m.workDir, m.sessionTemp, p.Path)
 
 	src, err := readEditSource(ctx, m.overlay, p.Path)
 	if err != nil {

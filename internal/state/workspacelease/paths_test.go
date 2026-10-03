@@ -67,7 +67,7 @@ func TestPathLeasesConflictByExtent(t *testing.T) {
 	}
 }
 
-func TestPathLeaseRetainsEarlierWritesAndCancelsWidening(t *testing.T) {
+func TestPathLeaseRetainsEarlierWritesAndRefusesWidening(t *testing.T) {
 	root, locks := pathLeaseRoot(t), testenv.TempDir(t)
 	a, _ := New(root, locks, nil)
 	b, _ := New(root, locks, nil)
@@ -83,10 +83,10 @@ func TestPathLeaseRetainsEarlierWritesAndCancelsWidening(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
 	defer cancel()
-	if err := a.AcquirePaths(ctx, []string{"b"}); !errors.Is(err, context.DeadlineExceeded) {
+	if err := a.AcquirePaths(ctx, []string{"b"}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("widening: %v", err)
 	}
-	if err := b.AcquirePaths(ctx, []string{"a"}); !errors.Is(err, context.DeadlineExceeded) {
+	if err := b.AcquirePaths(ctx, []string{"a"}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("earlier claim lost: %v", err)
 	}
 	if !a.State().Acquired {
@@ -166,7 +166,7 @@ func TestCrossProcessPathLeaseReclaimedAfterCrash(t *testing.T) {
 		t.Fatalf("disjoint cross-process path blocked: %v", err)
 	}
 	blocked, stop := context.WithTimeout(context.Background(), 150*time.Millisecond)
-	if err := o.AcquirePaths(blocked, []string{"a.go"}); !errors.Is(err, context.DeadlineExceeded) {
+	if err := o.AcquirePaths(blocked, []string{"a.go"}); !errors.Is(err, ErrConflict) {
 		stop()
 		t.Fatalf("live holder ignored: %v", err)
 	}

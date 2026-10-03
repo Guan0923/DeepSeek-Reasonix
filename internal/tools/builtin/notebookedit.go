@@ -87,7 +87,7 @@ func (n notebookEdit) Execute(ctx context.Context, raw json.RawMessage) (string,
 	if err != nil {
 		return "", err
 	}
-	a.Path = resolveIn(n.workDir, resolveSessionTemp(n.sessionTemp, a.Path))
+	a.Path = ResolveWritePath(n.workDir, n.sessionTemp, a.Path)
 	if err := confineWrite(ctx, n.roots, n.guard, n.managed, n.sessionTemp, a.Path); err != nil {
 		return "", err
 	}
@@ -124,7 +124,7 @@ func (n notebookEdit) Preview(ctx context.Context, raw json.RawMessage) (diff.Ch
 	if err != nil {
 		return diff.Change{}, err
 	}
-	a.Path = resolveIn(n.workDir, resolveSessionTemp(n.sessionTemp, a.Path))
+	a.Path = ResolveWritePath(n.workDir, n.sessionTemp, a.Path)
 	src, err := readEditSource(ctx, n.overlay, a.Path)
 	if err != nil {
 		return diff.Change{}, fmt.Errorf("read %s: %w", a.Path, err)

@@ -17,6 +17,27 @@ type namedLeaseWriter struct{ workspaceLeaseTestTool }
 
 func (*namedLeaseWriter) WritesNamedPaths() bool { return true }
 
+func (w *namedLeaseWriter) WritePaths(args json.RawMessage) ([]string, error) {
+	var p struct {
+		Path        string `json:"path"`
+		Source      string `json:"source_path"`
+		Destination string `json:"destination_path"`
+	}
+	if err := json.Unmarshal(args, &p); err != nil {
+		return nil, err
+	}
+	if w.Name() == "move_file" {
+		if p.Source == "" || p.Destination == "" {
+			return nil, nil
+		}
+		return []string{p.Source, p.Destination}, nil
+	}
+	if p.Path == "" {
+		return nil, nil
+	}
+	return []string{p.Path}, nil
+}
+
 func TestWorkspaceLeaseExecutionScope(t *testing.T) {
 	for _, tc := range []struct {
 		name, toolName, args string

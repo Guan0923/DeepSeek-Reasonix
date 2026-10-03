@@ -555,9 +555,11 @@ func (a *Agent) prepareToolExecution(ctx context.Context, plan *toolCallPlan) (t
 	if plan.mutates && a.svc.workspaceLease != nil {
 		if err := a.svc.workspaceLease.AcquirePaths(ctx, a.workspaceWritePaths(plan)); err != nil {
 			return toolOutcome{
-				output:  fmt.Sprintf("blocked: the workspace did not become available for writing: %v", err),
-				blocked: true,
-				errMsg:  "blocked: workspace write lease unavailable",
+				output:         fmt.Sprintf("blocked: %v", err),
+				blocked:        true,
+				errMsg:         "blocked: workspace write lease unavailable",
+				refusalCode:    workspaceLeaseRefusalCode(err),
+				workspaceLease: workspaceLeaseConflictScope(err),
 			}, true
 		}
 	}
