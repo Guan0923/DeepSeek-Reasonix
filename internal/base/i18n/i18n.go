@@ -381,10 +381,16 @@ type Messages struct {
 	ArgEffortHigh        string // /effort high
 	ArgEffortXHigh       string // /effort xhigh
 	ArgEffortMax         string // /effort max
+	ArgEffortForcedOn    string // Thinking cannot be disabled at the lowest effort.
 	ArgThemeCurrent      string // /theme <style> active tag
 	ArgLanguageAuto      string // /language auto
 	ArgLanguageEn        string // /language en
 	ArgLanguageZh        string // /language zh
+
+	EffortReadErrorFmt    string
+	EffortUnknownModelFmt string
+	EffortUnsupportedFmt  string
+	EffortStatusFmt       string
 
 	// management listing notices (the Submit path: desktop / HTTP frontends)
 	ListModelsHeaderFmt string // "models (active: %s)"

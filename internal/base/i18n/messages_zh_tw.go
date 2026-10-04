@@ -378,10 +378,16 @@ var ChineseTraditional = Messages{
 	ArgEffortHigh:        "較深推理",
 	ArgEffortXHigh:       "超高推理",
 	ArgEffortMax:         "最高推理",
+	ArgEffortForcedOn:    "思考仍開啟並計費，該模型無法關閉思考",
 	ArgThemeCurrent:      "當前",
 	ArgLanguageAuto:      "從 REASONIX_LANG / 系統 locale 自動偵測",
 	ArgLanguageEn:        "English",
 	ArgLanguageZh:        "中文",
+
+	EffortReadErrorFmt:    "推理檔位：%s",
+	EffortUnknownModelFmt: "推理檔位：未知模型 %q",
+	EffortUnsupportedFmt:  "%s 不支援設定推理檔位",
+	EffortStatusFmt:       "%s 的推理檔位：%s（預設：%s；選項：%s）",
 
 	ListModelsHeaderFmt: "模型（當前：%s）",
 	ListModelsHint:      "用底部的模型切換器，或輸入 /model <provider/model>",
