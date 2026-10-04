@@ -616,6 +616,11 @@ var English = Messages{
 	ProviderAlreadyOnFmt: "already using provider %s",
 	ProviderUnknownFmt:   "unknown provider %q",
 	ProviderPickLabel:    "Select a model from %s",
+	SkillPickTitle:       "Manage skills",
+	SkillPickSummaryFmt:  "%d available · %d enabled",
+	SkillPickSource:      "Source: ",
+	SkillPickHint:        "↑↓ navigate · Space toggle · Enter save · / search · s source · Esc cancel",
+	SkillPickSavedFmt:    "skills updated: %d enabled, %d disabled — in effect from your next message",
 	ProviderNoModelsFmt:  "provider %s has no configured models",
 
 	// self-update

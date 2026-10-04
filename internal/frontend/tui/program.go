@@ -111,6 +111,7 @@ type model struct {
 	copying       *copyPicker
 	clearing      *clearConfirm
 	setup         *connectionSetup
+	skills        *skillPicker
 	lastEsc       time.Time // an idle Esc on an empty composer, arming the second
 	// frameRows is how tall the last inline frame was: a print has only the
 	// rows above it to land in.
@@ -400,6 +401,10 @@ func (m *model) onScreenMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onConnectionTested(msg), true
 	case connectionSavedMsg:
 		return m.onConnectionSaved(msg), true
+	case skillsMsg:
+		return m.onSkills(msg), true
+	case skillsSavedMsg:
+		return m.onSkillsSaved(msg), true
 	case sessionsMsg:
 		return m.onSessions(msg), true
 	case resumedMsg:
