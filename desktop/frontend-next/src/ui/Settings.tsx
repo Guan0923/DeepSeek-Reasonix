@@ -538,7 +538,12 @@ export function Settings({ hub, onError, port, networkPort, networkHost, status,
               <Group id="model" title={t("按用途选择模型")} now={nav.model}
                 hint={t("默认模型用于当前对话和大多数任务，其他用途默认跟随它；只有要为某件事换一个模型时才改。切换会保留对话并重建运行时，任务执行期间无法修改。")}>
                 <ModelUsage models={models} roles={roles} main={status?.modelRef} busy={busy} protocol={protocol}
-                  onMain={(ref) => run(ref, () => port.setModel(ref, true))}
+                  onMain={(ref) => run(ref, async () => {
+                    await port.setModel(ref, true);
+                    // The row reads the catalogue's default, so the list has to
+                    // be re-read or the controlled select snaps back.
+                    loadModels();
+                  })}
                   onRole={(role, ref) => run(`role:${role}`, async () => {
                     await port.setRole(role, ref);
                     loadRoles();

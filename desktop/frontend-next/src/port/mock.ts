@@ -7,6 +7,7 @@ import { SCRIPT, mockMsgIndex, mockTurnStart } from "./fixture";
 import { MockExecutionHold, mockExecutionGraph } from "./mock_graph";
 import { mockStorage, mockStoragePlan } from "./mock_storage";
 import { MEMORIES } from "./mock_memory";
+import { mockModels } from "./mock_models";
 import { mockUsage } from "./mock_usage";
 
 
@@ -81,44 +82,14 @@ export class MockPort extends MockFeedback implements AgentPort {
     this.assigned = { ...this.assigned, [role]: ref };
   }
 
-  // Two protocols onto one host, plus a second vendor carrying the only model
-  // that reads images: the two shapes the picker has to render correctly.
   async models(): Promise<ModelEntry[]> {
     const efforts = ["auto", "low", "high", "max"];
-    return [
-      {
-        ref: "deepseek/deepseek-v4-pro", provider: "deepseek", model: "deepseek-v4-pro",
-        kind: "openai", vendor: "api.deepseek.com", keyEnv: "DEEPSEEK_API_KEY", active: true, efforts, effort: "high",
-        contextWindow: 131072, price: { input: 2, output: 8, currency: "CNY" },
-      },
-      {
-        ref: "deepseek-anthropic/deepseek-v4-pro", provider: "deepseek-anthropic",
-        model: "deepseek-v4-pro", kind: "anthropic", vendor: "api.deepseek.com", keyEnv: "DEEPSEEK_API_KEY",
-        efforts, effort: "high", contextWindow: 131072,
-      },
-      {
-        ref: "deepseek/deepseek-flash", provider: "deepseek", model: "deepseek-flash",
-        kind: "openai", vendor: "api.deepseek.com", keyEnv: "DEEPSEEK_API_KEY", efforts, effort: "high",
-        contextWindow: 131072, price: { input: 0.5, output: 2, currency: "CNY" },
-      },
-      {
-        ref: "kimi/kimi-k2-vision", provider: "kimi", model: "kimi-k2-vision",
-        kind: "openai", vendor: "api.moonshot.cn", keyEnv: "KIMI_API_KEY", vision: true, contextWindow: 262144,
-      },
-      {
-        ref: "myrelay/gpt-4o", provider: "myrelay", model: "gpt-4o", kind: "openai",
-        vendor: "relay.example.com", keyEnv: "MYRELAY_API_KEY", vision: true, contextWindow: 131072,
-      },
-      {
-        ref: "myrelay/claude-sonnet-4", provider: "myrelay", model: "claude-sonnet-4", kind: "openai",
-        vendor: "relay.example.com", keyEnv: "MYRELAY_API_KEY", contextWindow: 200000,
-      },
-      {
-        ref: "myrelay-work/gpt-4o", provider: "myrelay-work", model: "gpt-4o", kind: "openai",
-        vendor: "relay.example.com", keyEnv: "MYRELAY_WORK_API_KEY", contextWindow: 131072,
-      },
-    ];
+    return mockModels(efforts).map((m) => ({ ...m, default: m.ref === this.defaultRef }));
   }
+
+  // The one model the catalogue marks as default, so a pick in the settings row
+  // has something to read back after the list is reloaded.
+  private defaultRef = "";
 
   private mem: MemoryEntry[] = MEMORIES.map((m) => ({ ...m }));
 
@@ -775,9 +746,10 @@ export class MockPort extends MockFeedback implements AgentPort {
     return mockStoragePlan(root, dir);
   }
 
-  async setModel(ref: string, _asDefault?: boolean) {
+  async setModel(ref: string, asDefault = false) {
     this.state.modelRef = ref;
     this.state.label = ref.split("/").pop() ?? ref;
+    if (asDefault) this.defaultRef = ref;
   }
   async setEffort(effort: string) {
     this.state.effort = effort;
