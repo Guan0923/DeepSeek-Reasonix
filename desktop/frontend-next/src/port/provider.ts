@@ -148,6 +148,8 @@ export interface ProviderModelCheck {
   status: ProviderModelCheckStatus;
   reason?: ProviderModelCheckReason;
   httpStatus?: number;
+  // The endpoint's own error text, for display; never an input to status or reason.
+  detail?: string;
 }
 
 export interface ProviderModelCheckRequest {
