@@ -99,10 +99,10 @@ func decodeRefusal(resp *http.Response) error {
 
 // Submit starts a turn, or runs a `!` shell command where the transport allows
 // it. A running turn refuses it with CodeSessionBusy; Queue is the way in then.
-// A slash command nothing answers is refused rather than sent as prose, which
-// is what a terminal typing one means.
+// A slash command nothing answers is sent to the model as a regular message
+// with a visible notice, as in 1.x (#5756).
 func (c *Client) Submit(ctx context.Context, input string) error {
-	return c.do(ctx, http.MethodPost, "/submit", map[string]any{"input": input, "refuseUnknownSlash": true}, nil)
+	return c.do(ctx, http.MethodPost, "/submit", map[string]string{"input": input}, nil)
 }
 
 // RunShell runs a `!` command on this machine. It stays local, as in 1.x: the
