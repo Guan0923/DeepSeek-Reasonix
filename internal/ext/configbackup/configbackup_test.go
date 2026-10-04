@@ -353,3 +353,51 @@ func TestEndpointsImportsAndReplacedKeysNeedConsent(t *testing.T) {
 		t.Fatalf("the preview must show the instruction file's body: %q", row.Content)
 	}
 }
+
+const urlCredentialConfig = `
+[[plugins]]
+name = "hosted"
+type = "http"
+url = "https://mcp.example.com/sse?token=url-secret-value"
+
+[[plugins]]
+name = "local"
+command = "npx"
+args = ["-y", "local-server", "--api-key", "arg-secret-value"]
+`
+
+func TestExportAndPreviewMaskEndpointAndArgCredentials(t *testing.T) {
+	machine(t, urlCredentialConfig)
+	s := collectAll(t, CategoryExtensions)
+	raw, _ := json.Marshal(s)
+	for _, secret := range []string{"url-secret-value", "arg-secret-value"} {
+		if bytes.Contains(raw, []byte(secret)) {
+			t.Fatalf("snapshot without secrets carries %q", secret)
+		}
+	}
+	p := NewPlanner()
+	plan, err := p.Preview(s)
+	must(t, err)
+	shown, _ := json.Marshal(plan)
+	for _, secret := range []string{"url-secret-value", "arg-secret-value"} {
+		if bytes.Contains(shown, []byte(secret)) {
+			t.Fatalf("preview carries %q", secret)
+		}
+	}
+	var ids []string
+	for _, it := range plan.Items {
+		if it.Kind == KindMCP {
+			ids = append(ids, it.ID)
+		}
+	}
+	_, err = p.Apply(ApplyRequest{PlanID: plan.ID, Items: ids, Consented: ids})
+	must(t, err)
+	cfg, err := config.LoadForEditReadOnlyStrict(config.UserConfigPath())
+	must(t, err)
+	got, _ := json.Marshal(cfg.Plugins)
+	for _, secret := range []string{"url-secret-value", "arg-secret-value"} {
+		if !bytes.Contains(got, []byte(secret)) {
+			t.Fatalf("restore over the same machine dropped local %q: %s", secret, got)
+		}
+	}
+}
