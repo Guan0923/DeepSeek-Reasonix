@@ -144,6 +144,7 @@ func (s *Server) enqueueLocked(w http.ResponseWriter, req control.InboxRequest) 
 				sessionInUse(w, err)
 				return
 			}
+			keepUsedWorkspace(s.ctl().WorkspaceRoot())
 		}
 	}
 	if err := s.promoteSessionLease(); err != nil {
