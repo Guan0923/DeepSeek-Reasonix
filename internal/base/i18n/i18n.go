@@ -54,11 +54,16 @@ type Messages struct {
 	ReceiptChangedFmt       string // end-of-turn receipt, how many files the turn changed
 	// ReceiptGapKinds maps a completion gap kind to its short human phrase.
 	ReceiptGapKinds              map[string]string
-	NoSessionToResume            string // shown when --continue / --resume finds nothing
-	NoSessionToResumeStartingNew string // shown when --continue finds nothing and a fresh session starts
-	ResumeRequiresTTY            string // shown when --resume runs piped instead of on a terminal
-	PickSessionLabel             string // header on the --resume picker
-	AmbiguousResumeHint          string // under the sessions a --resume query matched
+	CompactionWhy                map[string]string // compaction decline/failure code -> reason; "" is the no-code decline
+	CompactionAbortedFmt         string            // card of a fold that installed nothing — %s the reason
+	NoticeCompacted              string            // /compact succeeded
+	NoticeCompactDeclinedFmt     string            // /compact declined — %s the reason
+	NoticeCompactFailedFmt       string            // /compact failed — %s the reason
+	NoSessionToResume            string            // shown when --continue / --resume finds nothing
+	NoSessionToResumeStartingNew string            // shown when --continue finds nothing and a fresh session starts
+	ResumeRequiresTTY            string            // shown when --resume runs piped instead of on a terminal
+	PickSessionLabel             string            // header on the --resume picker
+	AmbiguousResumeHint          string            // under the sessions a --resume query matched
 
 	// in-chat /resume command
 	ResumeBusy          string // shown when /resume is used mid-turn
