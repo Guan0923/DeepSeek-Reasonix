@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // queueKernel answers the routes the local commands read and records every
@@ -248,5 +249,25 @@ func TestUsageLevelComesFromTheCommandNotItsWording(t *testing.T) {
 	}
 	if got := steerCommand(context.Background(), nil, ""); got.level != "warn" {
 		t.Fatalf("steer usage level = %q", got.level)
+	}
+}
+
+// 1.x lists the work tree and an unset effort in /status too; the footer
+// shows both, so the report must not drop what it compresses.
+func TestStatusCarriesTheWorkTreeAndTheDefaultEffort(t *testing.T) {
+	m, _ := queueModel(t, map[string]any{
+		"GET /status": map[string]any{
+			"label": "deepseek-chat", "modelRef": "deepseek/deepseek-chat", "toolApprovalMode": "ask",
+		},
+		"GET /workspace/git": map[string]any{
+			"repo": true, "name": "proj", "branch": "main", "added": 2, "removed": 1, "untracked": 3,
+		},
+	})
+	queueSend(m, "/status")
+	got := ansi.Strip(queueLastNotice(m))
+	for _, want := range []string{"model      deepseek/deepseek-chat", "effort     effort auto", "git        proj@main  +2 -1 ?3"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("status lacks %q:\n%s", want, got)
+		}
 	}
 }
