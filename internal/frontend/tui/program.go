@@ -113,6 +113,7 @@ type model struct {
 	setup         *connectionSetup
 	skills        *skillPicker
 	quick         *quickPicker
+	mcp           *mcpPanel
 	lastEsc       time.Time // an idle Esc on an empty composer, arming the second
 	// frameRows is how tall the last inline frame was: a print has only the
 	// rows above it to land in.
@@ -410,6 +411,10 @@ func (m *model) onScreenMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onModels(msg), true
 	case modelSwitchedMsg:
 		return m.onModelSwitched(msg), true
+	case mcpMsg:
+		return m.onMCP(msg), true
+	case mcpActionErrMsg:
+		return m.onMCPActionErr(msg), true
 	case sessionsMsg:
 		return m.onSessions(msg), true
 	case resumedMsg:

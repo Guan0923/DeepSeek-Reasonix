@@ -102,7 +102,7 @@ func (m *model) insertPaste(text string) {
 		m.pasteIntoSetup(text)
 		return
 	}
-	if m.tr.OpenPrompt() != nil || m.picker != nil || m.skills != nil || m.quick != nil || m.rewind != nil || m.copying != nil || m.clearing != nil {
+	if m.tr.OpenPrompt() != nil || m.picker != nil || m.skills != nil || m.quick != nil || m.mcp != nil || m.rewind != nil || m.copying != nil || m.clearing != nil {
 		m.composer.InsertString(text)
 		return
 	}
@@ -207,6 +207,9 @@ func (m *model) screenKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, handled := m.quickKey(msg); handled {
+		return cmd, true
+	}
+	if cmd, handled := m.mcpKey(msg); handled {
 		return cmd, true
 	}
 	if cmd, handled := m.pickerKey(msg); handled {
@@ -316,6 +319,11 @@ func (m *model) send(steer bool) tea.Cmd {
 	}
 	if cmd, ok := m.modelSlash(display); ok {
 		return cmd
+	}
+	if display == "/mcp" {
+		m.composer.Reset()
+		m.tr.AddEcho(display)
+		return tea.Batch(m.commit(), m.openMCP())
 	}
 	if cmd, ok := m.miscSlash(display); ok {
 		return cmd

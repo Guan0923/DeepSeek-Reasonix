@@ -257,6 +257,8 @@ type mcpEntry struct {
 	// schema carries. They differ until the next session starts.
 	AlwaysLoad bool `json:"alwaysLoad,omitempty"`
 	InSchema   bool `json:"inSchema,omitempty"`
+	// Launch is what starting the server runs or contacts, redacted for display.
+	Launch string `json:"launch,omitempty"`
 }
 
 // mcpTool is one tool as the server describes it, plus the two hints that
@@ -275,6 +277,7 @@ type mcpTool struct {
 // cannot make the page it is listed on expensive to load.
 const (
 	mcpServerTextLimit = 400
+	mcpLaunchTextLimit = 300
 	mcpToolTextLimit   = 240
 )
 
@@ -374,6 +377,7 @@ func (s *Server) mcp(w http.ResponseWriter, r *http.Request) {
 	for i := range out {
 		if st, ok := declared[out[i].Name]; ok {
 			out[i].AlwaysLoad, out[i].InSchema = st.AlwaysLoad, st.InSchema
+			out[i].Launch = launchText(st.Entry)
 		}
 	}
 	writeJSON(w, map[string]any{"servers": out, "scope": scopeView(ctl)})
@@ -653,4 +657,18 @@ func decodeMCPName(w http.ResponseWriter, r *http.Request) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(body.Name), true
+}
+
+func launchText(e config.PluginEntry) string {
+	clean := textutil.SanitizeLaunch
+	line := mcpsetup.RedactURL(clean(e.URL))
+	if strings.TrimSpace(e.Command) != "" {
+		args := make([]string, len(e.Args))
+		for i, a := range e.Args {
+			args[i] = clean(a)
+		}
+		parts := append([]string{secrets.RedactConfigValue("", clean(e.Command))}, secrets.RedactArgs(args)...)
+		line = strings.Join(parts, " ")
+	}
+	return textutil.TruncateGraphemes(clean(line), mcpLaunchTextLimit, "…")
 }

@@ -25,6 +25,7 @@ export interface McpEntry {
   // differ until the next one.
   alwaysLoad?: boolean;
   inSchema?: boolean;
+  launch?: string;
 }
 
 // always puts a server's tools in every request; deferred reaches them through
