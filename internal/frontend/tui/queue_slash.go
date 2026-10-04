@@ -16,6 +16,7 @@ type slashDoneMsg struct{ level, text string }
 // statusReportMsg carries the fresh status a /status report is drawn from.
 type statusReportMsg struct {
 	s   Status
+	git *GitInfo
 	err error
 }
 
@@ -43,7 +44,11 @@ func (m *model) queueSlash(display string) (tea.Cmd, bool) {
 	case "/status":
 		run = func() tea.Msg {
 			s, err := m.client.Status(m.ctx)
-			return statusReportMsg{s: s, err: err}
+			msg := statusReportMsg{s: s, err: err}
+			if g, gerr := m.client.WorkspaceGit(m.ctx); gerr == nil {
+				msg.git = &g
+			}
+			return msg
 		}
 	case "/export":
 		run = m.exportSession()
@@ -104,6 +109,9 @@ func (m *model) onTakeover(msg takeoverMsg) tea.Cmd {
 func (m *model) onStatusReport(msg statusReportMsg) tea.Cmd {
 	if msg.err == nil {
 		m.status = msg.s
+	}
+	if msg.git != nil {
+		m.git = *msg.git
 	}
 	return m.onSlashDone(slashDoneMsg{level: "info", text: m.statusDetails()})
 }
