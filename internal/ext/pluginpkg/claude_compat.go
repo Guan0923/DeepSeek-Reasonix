@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	fileencoding "reasonix/internal/base/fileutil/encoding"
@@ -479,10 +478,10 @@ func compatibilityFor(pkg Package, issues []CompatibilityIssue) Compatibility {
 	return Compatibility{Status: status, Mapped: mapped, Skipped: issues}
 }
 
-func (p Package) agentRefs() []AgentRef {
+func (p Package) agentRefsWithWarnings() ([]AgentRef, []string) {
 	root, err := os.OpenRoot(p.Root)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	defer root.Close()
 	var dirs []string
@@ -498,55 +497,42 @@ func (p Package) agentRefs() []AgentRef {
 	for _, dir := range dirs {
 		out = append(out, loadAgentRefs(root, dir)...)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out
+	return p.selectAgentRefs(out)
 }
 
 func loadAgentRefs(root *os.Root, dir string) []AgentRef {
 	if !filepath.IsLocal(dir) {
 		return nil
 	}
-	info, source := agentPathInfo(root, dir)
-	if source == nil {
-		return nil
-	}
-	defer source.Close()
-	if !info.IsDir() {
-		return nil
-	}
-	entries, err := source.ReadDir(-1)
-	if err != nil {
-		return nil
-	}
-	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 	var out []AgentRef
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.EqualFold(filepath.Ext(entry.Name()), ".md") {
-			continue
-		}
-		path := filepath.Join(root.Name(), dir, entry.Name())
-		body := agentSourceBody(root, filepath.Join(dir, entry.Name()))
-		if body == nil {
-			continue
-		}
-		fm, _ := frontmatter.SplitLegacy(string(body))
-		name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-		if declared := strings.TrimSpace(fm["name"]); IsValidName(declared) {
-			name = declared
-		}
-		if !IsValidName(name) {
-			continue
-		}
-		out = append(out, AgentRef{
-			Name:         name,
-			Description:  strings.TrimSpace(fm["description"]),
-			Path:         path,
-			Invocation:   "/" + name,
-			Model:        strings.TrimSpace(fm["model"]),
-			AllowedTools: splitCSV(fm["tools"]),
-		})
-	}
+	var seen []os.FileInfo
+	scanAgentRefs(root, dir, 1, &seen, &out)
 	return out
+}
+
+func parseAgentRef(root *os.Root, path, stem string) (AgentRef, bool) {
+	if !config.IsValidSkillName(stem) {
+		return AgentRef{}, false
+	}
+	body := agentSourceBody(root, path)
+	if body == nil {
+		return AgentRef{}, false
+	}
+	content := strings.TrimPrefix(strings.ReplaceAll(string(body), "\r\n", "\n"), "\uFEFF")
+	fm, _ := frontmatter.SplitLegacy(content)
+	name := config.ResolveSkillName(stem, fm["name"])
+	tools := fm["allowed-tools"]
+	if strings.TrimSpace(tools) == "" {
+		tools = fm["tools"]
+	}
+	return AgentRef{
+		Name:         name,
+		Description:  strings.TrimSpace(fm["description"]),
+		Path:         filepath.Join(root.Name(), path),
+		Invocation:   "/" + name,
+		Model:        strings.TrimSpace(fm["model"]),
+		AllowedTools: splitCSV(tools),
+	}, true
 }
 
 func splitCSV(raw string) []string {
