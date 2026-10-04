@@ -40,7 +40,7 @@ func renderItem(it *Item, width, shown int, hideRail bool) string {
 		// Thinking with nothing said after it is a step, not an answer: it gets
 		// its marker and no speaker header.
 		if strings.TrimSpace(it.Text) == "" {
-			if it.Reasoning == "" {
+			if !hasThought(it.Reasoning) {
 				return ""
 			}
 			return "\n" + thought(it, width)
@@ -88,7 +88,7 @@ func renderSayPart(text string, first bool, width int, hideRail bool) string {
 
 // withThought puts the thinking marker above the first stretch of an answer.
 func withThought(it *Item, shown, width int, out string) string {
-	if shown > 0 || it.Reasoning == "" {
+	if shown > 0 || !hasThought(it.Reasoning) {
 		return out
 	}
 	return "\n" + thought(it, width) + "\n" + out
@@ -351,3 +351,7 @@ func indent(block, prefix string) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// hasThought is false for reasoning that carries no text: a block of only
+// whitespace has nothing to fold, so it earns no "thought for 0s" marker.
+func hasThought(reasoning string) bool { return strings.TrimSpace(reasoning) != "" }
