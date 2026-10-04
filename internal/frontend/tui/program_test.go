@@ -79,6 +79,12 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			{"name": "deploy", "scope": "project", "enabled": false},
 			{"name": "audit", "scope": "global", "enabled": true, "subagent": true},
 		}})
+	case "/models":
+		_ = json.NewEncoder(w).Encode(map[string]any{"current": "alpha/fast", "models": []map[string]any{
+			{"ref": "alpha/fast", "provider": "alpha", "model": "fast", "active": true},
+			{"ref": "alpha/deep", "provider": "alpha", "model": "deep"},
+			{"ref": "beta/solo", "provider": "beta", "model": "solo"},
+		}})
 	case "/checkpoints":
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"turn": 0, "prompt": "read the code"}, {"turn": 1, "prompt": "fix the bug", "files": 2},
