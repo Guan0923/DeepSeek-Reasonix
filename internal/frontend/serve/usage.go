@@ -21,6 +21,12 @@ const (
 // date range. Explicit dates let the panel ask for a past calendar month
 // without pretending it ended today.
 func usageWindow(r *http.Request) (time.Time, time.Time, error) {
+	return usageWindowIn(r, time.Local)
+}
+
+// usageWindowIn is usageWindow with the zone that trailing windows count whole
+// days in; explicit ranges never consult it.
+func usageWindowIn(r *http.Request, loc *time.Location) (time.Time, time.Time, error) {
 	q := r.URL.Query()
 	fromRaw, toRaw, daysRaw := q.Get("from"), q.Get("to"), q.Get("days")
 	hasRange := fromRaw != "" || toRaw != ""
@@ -65,7 +71,7 @@ func usageWindow(r *http.Request) (time.Time, time.Time, error) {
 	}
 	// Whole days in local time: a range that ended mid-afternoon would drop the
 	// morning's turns from "today".
-	now := time.Now()
+	now := time.Now().In(loc)
 	to := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 	return to.AddDate(0, 0, -(days - 1)), to, nil
 }

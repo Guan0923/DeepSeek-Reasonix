@@ -88,11 +88,8 @@ func TestUsageInvalidDaysKeepsFieldDetails(t *testing.T) {
 // the serve process's timezone reinterpret that day: a remote workspace can run
 // in a different zone from the browser showing the panel.
 func TestUsageExplicitRangeTreatsDatesAsZoneLess(t *testing.T) {
-	original := time.Local
-	time.Local = time.FixedZone("browser-local", 13*60*60)
-	t.Cleanup(func() { time.Local = original })
-
-	from, to, err := usageWindow(httptest.NewRequest(http.MethodGet, "/usage?from=2026-08-01&to=2026-08-31", nil))
+	zone := time.FixedZone("browser-local", 13*60*60)
+	from, to, err := usageWindowIn(httptest.NewRequest(http.MethodGet, "/usage?from=2026-08-01&to=2026-08-31", nil), zone)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,6 +98,14 @@ func TestUsageExplicitRangeTreatsDatesAsZoneLess(t *testing.T) {
 	}
 	if from.Format(usageDayLayout) != "2026-08-01" || to.Format(usageDayLayout) != "2026-08-31" {
 		t.Fatalf("range = %s..%s, want 2026-08-01..2026-08-31", from.Format(usageDayLayout), to.Format(usageDayLayout))
+	}
+
+	from, to, err = usageWindowIn(httptest.NewRequest(http.MethodGet, "/usage?days=3", nil), zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if from.Location() != zone || to.Location() != zone {
+		t.Fatalf("trailing window locations = %s, %s; want %s", from.Location(), to.Location(), zone)
 	}
 }
 
