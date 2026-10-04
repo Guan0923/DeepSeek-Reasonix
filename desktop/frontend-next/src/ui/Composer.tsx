@@ -154,10 +154,13 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
     queueMicrotask(() => box.current?.focus());
   }, [quote?.n]);
 
+  const restoredAt = useRef(restore?.n ?? 0);
   useEffect(() => {
-    if (!restore?.n) return;
+    if (!restore?.n || restore.n === restoredAt.current) return;
+    restoredAt.current = restore.n;
     setText((prev) => {
-      const next = prev.trim() ? `${prev.replace(/\s+$/, "")}\n${restore.text}` : restore.text;
+      const next = !prev.trim() || prev.trim() === restore.text.trim()
+        ? restore.text : `${prev.replace(/\s+$/, "")}\n${restore.text}`;
       pending.current = next.length;
       return next;
     });
