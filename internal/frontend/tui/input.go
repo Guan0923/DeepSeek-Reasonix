@@ -350,7 +350,9 @@ func (m *model) send(steer bool) tea.Cmd {
 		}
 	}
 	m.tr.AddUser(display)
-	return tea.Batch(m.commit(), m.call("send", func(ctx context.Context) error { return m.client.Submit(ctx, text) }))
+	return tea.Batch(m.commit(), func() tea.Msg {
+		return sentMsg{display: display, err: m.client.Submit(m.ctx, text)}
+	})
 }
 
 // escape backs out of the most specific thing in progress: the running turn,

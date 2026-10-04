@@ -134,6 +134,10 @@ type (
 		what string
 		err  error
 	}
+	sentMsg struct {
+		display string
+		err     error
+	}
 	queuedMsg struct {
 		row    int
 		itemID string
@@ -387,6 +391,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // clipboard, the session list, the mouse and its timers.
 func (m *model) onScreenMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
+	case sentMsg:
+		return m.onSent(msg), true
 	case urlAnswerMsg:
 		return m.onURLAnswer(msg), true
 	case clipImageMsg:
