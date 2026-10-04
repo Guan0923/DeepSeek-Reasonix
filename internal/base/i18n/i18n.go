@@ -269,6 +269,21 @@ type Messages struct {
 	SlashUnknownSentAsMessage    string // suffix: the unrecognised "/cmd" line was sent as a regular message
 	SlashPromptEmpty             string // an MCP prompt returned no text to send
 	SlashMCPNone                 string // /mcp when no MCP servers are connected
+	McpPanelTitle                string // /mcp panel title
+	McpPanelSummaryFmt           string // /mcp panel: server and enabled counts
+	McpPanelToolsFmt             string // /mcp panel row: tool count
+	McpPanelHint                 string // /mcp panel keyboard hint
+	McpPanelDetailHint           string // /mcp server detail keyboard hint
+	McpPanelNoTools              string // /mcp server detail: nothing to list
+	McpPanelOff                  string // /mcp panel row: server switched off
+	McpToolDestructive           string // /mcp detail: tool tag
+	McpToolReadOnly              string // /mcp detail: tool tag
+	McpPanelConfirmFmt           string // /mcp: enabling a repository-declared server; server name and launch line
+	McpPanelErrFmt               string // /mcp: listing failed
+	McpActionErrFmt              string // /mcp: an action on one server failed; name and error
+	ListMoreAbove                string // panel scroll marker
+	ListMoreBelow                string // panel scroll marker
+	ListMoreFmt                  string // panel: count of rows not shown
 	CtrlCQuitHint                string // shown on first Ctrl+C while idle; second press exits
 	CompHintSlash                string // key hint footer under the slash-command menu
 	CompHintFile                 string // key hint footer under the @ file/resource menu

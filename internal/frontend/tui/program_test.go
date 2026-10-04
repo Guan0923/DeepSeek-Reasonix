@@ -85,6 +85,13 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			{"ref": "alpha/deep", "provider": "alpha", "model": "deep"},
 			{"ref": "beta/solo", "provider": "beta", "model": "solo"},
 		}})
+	case "/mcp":
+		_ = json.NewEncoder(w).Encode(map[string]any{"servers": []map[string]any{
+			{"name": "docs", "state": "ready", "enabled": true, "transport": "http", "source": "user", "tools": 2,
+				"toolList": []map[string]any{{"name": "search", "readOnly": true}, {"name": "purge", "destructive": true}}},
+			{"name": "db", "state": "disabled", "enabled": false, "transport": "stdio", "source": "project_mcp_json", "launch": "node db.js --token ***"},
+			{"name": "mail", "state": "disabled", "enabled": false, "transport": "stdio", "source": "user_config"},
+		}})
 	case "/checkpoints":
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"turn": 0, "prompt": "read the code"}, {"turn": 1, "prompt": "fix the bug", "files": 2},
