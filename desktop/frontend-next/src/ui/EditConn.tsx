@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import type { ProviderCheck, ProviderEntry } from "../port/port";
-import { clearModelCheckFacts, ModelChoice, type ModelFact } from "./ModelChoice";
+import { checkedFact, clearModelCheckFacts, ModelChoice, type ModelFact } from "./ModelChoice";
 import type { Port } from "./Providers";
 import { SAVED_NOT_APPLIED, reason } from "../i18n/kernel";
 import { HttpError } from "../port/port";
@@ -129,7 +129,7 @@ export function EditConn({
       });
       setFacts((current) => ({
         ...current,
-        [model]: { ...(current[model] ?? { origin: "configured" }), status: got.status, reason: got.reason },
+        [model]: checkedFact(current[model], "configured", got),
       }));
     } catch {
       setFacts((current) => ({

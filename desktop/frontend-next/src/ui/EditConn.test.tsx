@@ -84,6 +84,35 @@ it("keeps an exact unlisted model id and verifies it independently of the catalo
   }));
 });
 
+it("shows the HTTP status and the endpoint's own words when a model check is refused", async () => {
+  const checkProviderModel = vi.fn(async () => ({
+    model: "clef:27b",
+    status: "unknown" as const,
+    reason: "rejected" as const,
+    httpStatus: 400,
+    detail: "clef:27b does not support tools",
+  }));
+  const port = { checkProviderModel } as unknown as Port;
+  const entry: ProviderEntry = {
+    name: "ollama_local",
+    kind: "openai",
+    baseUrl: "http://localhost:11434/v1",
+    models: ["clef:27b"],
+    default: "clef:27b",
+    hasKey: false,
+    inUse: false,
+    preset: false,
+  };
+
+  render(<EditConn entry={entry} port={port} busy="" setBusy={() => {}} onDone={() => {}} />);
+  const row = screen.getAllByText("clef:27b").map((el) => el.closest(".mline")).find(Boolean) as HTMLElement;
+  await userEvent.click(within(row).getByRole("button", { name: "验证模型 clef:27b" }));
+
+  await waitFor(() => expect(within(row).getByText(/请求被拒绝，尚未确认/)).toBeTruthy());
+  expect(within(row).getByText("HTTP 400")).toBeTruthy();
+  expect(within(row).getByText("clef:27b does not support tools")).toBeTruthy();
+});
+
 it("preserves configured models that a refreshed catalog no longer returns", async () => {
   const port = {
     checkProvider: vi.fn(async () => ({ ok: true, models: ["deepseek-new"], vision: [] })),

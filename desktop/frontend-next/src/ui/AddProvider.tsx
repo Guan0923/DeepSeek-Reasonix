@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { t } from "../i18n";
 import type { Protocol, ProviderEntry, ProviderProbe } from "../port/port";
-import { clearModelCheckFacts, ModelChoice, type ModelFact } from "./ModelChoice";
+import { checkedFact, clearModelCheckFacts, ModelChoice, type ModelFact } from "./ModelChoice";
 import { KIND_LABEL, hostOf, nameFrom, sourceNameUsable, vendorLabel } from "./vendors";
 import type { Port } from "./Providers";
 import { reason } from "../i18n/kernel";
@@ -156,7 +156,7 @@ export function AddProvider({
       });
       setFacts((current) => ({
         ...current,
-        [model]: { ...(current[model] ?? { origin: "manual" }), status: got.status, reason: got.reason },
+        [model]: checkedFact(current[model], "manual", got),
       }));
     } catch {
       setFacts((current) => ({
