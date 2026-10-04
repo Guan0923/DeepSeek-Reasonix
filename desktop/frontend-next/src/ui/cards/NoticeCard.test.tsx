@@ -117,6 +117,14 @@ describe("a coded notice with a payload", () => {
     expect(box.querySelector(".find .why")).toBeNull();
   });
 
+  it("words the currency change from the stored value and draws no second line for it", () => {
+    const box = draw({ code: "display_currency", text: "fee display currency set to USD (resolved: USD)", detail: "USD" });
+    expect(box.querySelector(".find .t")?.textContent).toBe(t("费用显示币种已设为 {mode}", { mode: "USD" }));
+    expect(box.querySelector(".find .why")).toBeNull();
+    const auto = draw({ code: "display_currency", text: "kernel", detail: "" });
+    expect(auto.querySelector(".find .t")?.textContent).toBe(t("费用显示币种已设为 {mode}", { mode: "auto" }));
+  });
+
   it("falls back to the kernel's text when the figures do not decode", () => {
     const box = draw({ code: "context_budget", text: "kernel english", detail: "not json" });
     expect(box.querySelector(".find .t")?.textContent).toContain("kernel english");

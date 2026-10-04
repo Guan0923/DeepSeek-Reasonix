@@ -22,6 +22,14 @@ export const EN_USAGE: Record<string, string> = {
   "以检查点版本覆盖": "Overwrite with the checkpoint's",
   "保留当前版本": "Keep the current one",
   "用量": "Usage",
+  "费用显示币种": "Cost display currency",
+  "只决定费用以哪种货币显示，不改动各来源的价目表。「自动」跟随账户余额的币种，没有余额信息时按价目表的币种显示。":
+    "Only decides which currency costs are shown in; each source's price list is untouched. Auto follows the account balance's currency, and falls back to the price list's currency when there is no balance.",
+  "显示币种": "Display currency",
+  "当前会话的费用、余额与用量页立即按所选币种显示，无需重启。": "The session's cost, the balance and the usage page switch to the chosen currency at once, no restart.",
+  "人民币 CNY": "Chinese yuan (CNY)",
+  "美元 USD": "US dollar (USD)",
+  "无法读取币种设置。": "Could not read the currency setting.",
   "用量与成本": "Usage & cost",
   "本机记录的 token 用量与花费，仅保存在这台机器上，不会上传。命中缓存的输入按缓存价计费，因此命中率直接影响费用。":
     "Token usage and cost recorded on this machine only; nothing is uploaded. Input that hits the cache is billed at the cache rate, so the hit rate drives the bill.",

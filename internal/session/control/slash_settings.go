@@ -283,7 +283,7 @@ func ParseDisplayCurrency(arg string) (string, error) {
 	case "USD":
 		return "USD", nil
 	}
-	return "", fmt.Errorf("pricing currency %q: must be auto|CNY|USD", arg)
+	return "", fmt.Errorf("%w: %q must be auto|CNY|USD", ErrDisplayCurrencyInvalid, arg)
 }
 
 func currencyDisplay(pref string) string {
@@ -327,23 +327,7 @@ func (c *Controller) currencyNotice(fields []string) {
 		c.notice(err.Error())
 		return
 	}
-	path := config.UserConfigPath()
-	if path == "" {
-		c.notice("currency: cannot resolve user config path")
-		return
-	}
-	var resolved string
-	err = config.EditConfigFile(path, func(cfg *config.Config) error {
-		if err := cfg.SetDisplayCurrency(mode); err != nil {
-			return err
-		}
-		resolved = cfg.ResolveDisplayCurrency()
-		return nil
-	})
-	if err != nil {
+	if err := c.SaveDisplayCurrency(mode); err != nil {
 		c.notice("currency: " + err.Error())
-		return
 	}
-	c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Code: event.NoticeCodeDisplayCurrency,
-		Text: fmt.Sprintf(i18n.M.CurrencyChangedFmt, currencyDisplay(mode), resolved), Detail: mode})
 }

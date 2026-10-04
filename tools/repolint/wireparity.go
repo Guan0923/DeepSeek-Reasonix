@@ -98,6 +98,7 @@ var mirroredWireTypes = []wireMirror{
 	// A stall report a desktop reads only half of says "stalled" without the
 	// count or the cause, and the reader invents one.
 	{"internal/contract/eventwire/progress_watch.go", "ProgressWatch", tsWireFile, "ProgressWatch"},
+	{"internal/session/control/display_currency.go", "DisplayCurrencySettings", tsBoundaryFile, "DisplayCurrencySettings"},
 	{"internal/session/control/progress_watch_settings.go", "ProgressWatchSettings", tsBoundaryFile, "ProgressWatchSettings"},
 	// RemoteHostEdit is left out on purpose: the kernel still takes the single
 	// `workspace` an old row was saved with, which the page deliberately does

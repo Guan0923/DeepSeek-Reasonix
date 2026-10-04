@@ -481,6 +481,9 @@ export const ACTIONS: UIAction[] = [
   { id: "browser-tools.enabled", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   // Read by the running turn at its next round, so no rebuild stands between the
   // click and the canonical change.
+  // The kernel announces the change on the stream, so no rebuild stands between
+  // the click and the canonical change.
+  { id: "currency.mode", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "progress-watch.pause", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "progress-watch.rounds", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "progress-watch.token-multiple", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
