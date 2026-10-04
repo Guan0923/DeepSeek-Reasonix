@@ -309,8 +309,8 @@ export function Usage({ port }: { port: AgentPort }) {
             if (customValid) setRange({ kind: "custom", from: customFrom, to: customTo });
           }}
         >
-          <label>{t("开始日期")}<input type="date" value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} required /></label>
-          <label>{t("结束日期")}<input type="date" value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)} required /></label>
+          <label>{t("开始日期")}<input data-action="usage.range.start" type="date" value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} required /></label>
+          <label>{t("结束日期")}<input data-action="usage.range.end" type="date" value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)} required /></label>
           <button type="submit" disabled={!customValid}>{t("应用")}</button>
         </form>
       )}
@@ -319,6 +319,7 @@ export function Usage({ port }: { port: AgentPort }) {
         <label className="umonth">
           {t("选择月份")}
           <input
+            data-action="usage.range.month"
             type="month"
             value={month}
             onChange={(e) => {

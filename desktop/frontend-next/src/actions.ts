@@ -389,6 +389,11 @@ export const ACTIONS: UIAction[] = [
   { id: "theme.import", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "theme.folder", kind: "repeatable", target: "none", proof: "interaction" },
 
+  // Usage changes what report is read, not canonical session state.
+  { id: "usage.range.start", kind: "view", target: "none", proof: "interaction" },
+  { id: "usage.range.end", kind: "view", target: "none", proof: "interaction" },
+  { id: "usage.range.month", kind: "view", target: "none", proof: "interaction" },
+
   // ── How the window looks ─────────────────────────────────────────────────
   // Named for what a person is doing, not for the control they reached for.
   // The interface scale has a row of presets and a slider beside it, and both
