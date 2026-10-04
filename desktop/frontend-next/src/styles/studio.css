@@ -435,7 +435,7 @@ body { background: var(--page); }
   --text: #e7e8e3;
   --muted: #b4b7b0;
   --faint: #8e9289;
-  --ghost: #70746c;
+  --ghost: #8e9289;
   --shadow-float: 0 0 0 1px rgb(0 0 0 / .42), 0 18px 48px -18px rgb(0 0 0 / .76);
 }
 
@@ -456,7 +456,7 @@ body { background: var(--page); }
   --text: #292b29;
   --muted: #5e625c;
   --faint: #666a63;
-  --ghost: #92968e;
+  --ghost: #666a63;
 }
 
 body { background: var(--page) !important; }

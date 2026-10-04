@@ -54,6 +54,7 @@ node perf/i18n.mjs       # 词表守卫：源码用到的中文 key 与英文词
 node perf/selfcheck.mjs  # 守卫的守卫：往每个断言脚本塞一条必假断言，看它是否真的会红
 node perf/codes.mjs      # 码的守卫：内核发的每个拒绝码，前端都要有话说
 node perf/tokens.mjs     # 变量的守卫：样式里不带兜底的 var(--x)，都得真有人赋过值
+node perf/tiers.mjs      # 墨色分档的守卫：每档的正文/次要/淡/幽灵色不低于首次绘制的那一步，且都过 AA
 node perf/contrast.mjs   # 对比度的守卫：每一段正文对它真正落在的那块底够不够 AA
 node perf/idle.mjs       # 闲置的守卫：看不见的东西不许动，闲着的窗口不许烧 CPU
 node perf/shipped.mjs    # 产物的守卫：dist 里的东西必须比源码新（构建可以成功而编的是别的树）
