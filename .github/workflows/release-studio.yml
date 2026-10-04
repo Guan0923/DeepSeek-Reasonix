@@ -757,14 +757,18 @@ jobs:
       - name: Cross-compile and archive
         env:
           VERSION: ${{ needs.resolve.outputs.version }}
+          SHA: ${{ needs.resolve.outputs.sha }}
         run: |
           set -euo pipefail
           mkdir -p dist
+          built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          pkg=reasonix/internal/tools/productdocs
           for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
             os="${target%/*}"; arch="${target#*/}"; ext=""
             [ "$os" = windows ] && ext=".exe"
             CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath \
-              -ldflags "-s -w -X main.version=$VERSION" -o "reasonix$ext" ./cmd/reasonix
+              -ldflags "-s -w -X main.version=$VERSION -X main.gitCommit=${SHA:0:12} -X main.buildTimeUTC=$built -X $pkg.linkedVersion=$VERSION -X $pkg.linkedRevision=$SHA" \
+              -o "reasonix$ext" ./cmd/reasonix
             if [ "$os" = windows ]; then
               zip -qj "dist/reasonix-$os-$arch.zip" "reasonix$ext"
             else
