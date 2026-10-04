@@ -521,6 +521,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 				sessionInUse(w, err)
 				return
 			}
+			keepUsedWorkspace(ctrl.WorkspaceRoot())
 		}
 	}
 	submitOrShell(ctrl, r, body.Input, body.Format, body.RefuseUnknownSlash, body.LocalShell)
