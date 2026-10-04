@@ -9,7 +9,7 @@ export const NOTICE_TEXT: Record<string, string> = {
   workspace_lease: "另一个会话持有重叠的写入范围，取得所需范围后会自动继续",
   workspace_lease_resumed: "这个会话已取得所需的写入范围，现已继续",
   workspace_lease_abandoned: "尚未取得所需的写入范围，这次等待已结束",
-  permission_saved: "已记住这项授权，以后同样的操作不再询问",
+  permission_saved: "已记住这项授权，以后同样的操作自动允许，不再询问",
   permission_covered: "已有的授权规则覆盖了这项操作，无需另存",
   permission_save_failed: "授权没能保存，只在本次会话内有效",
   project_programs_awaiting_approval: "这个项目自带的钩子等程序要你批准后才会运行",
