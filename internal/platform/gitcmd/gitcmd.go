@@ -64,9 +64,18 @@ func argsFor(goos, dir string, extraConfig []string, args ...string) []string {
 		out = append(out, "-c", "submodule.recurse=false")
 	}
 	if dir != "" {
-		out = append(out, "-C", dir)
+		out = append(out, "-C", dirOperand(dir))
 	}
 	return append(out, hardenSubcommand(args)...)
+}
+
+// dirOperand spells a relative directory that starts with "-" as "./dir",
+// the same directory, so no -C value can be read as an option.
+func dirOperand(dir string) string {
+	if dashed.MatchString(dir) {
+		return "./" + dir
+	}
+	return dir
 }
 
 // noRecurse are the subcommands a user's own submodule.recurse=true would carry

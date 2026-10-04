@@ -44,13 +44,18 @@ var shortRefused = map[string]string{
 var remoteOK = map[string]bool{"branch": true, "submodule": true, "for-each-ref": true}
 
 // screen returns args unchanged unless one is a refused option. Arguments
-// after "--" are operands and are never options.
+// after "--" are operands and are never options. Every argument is classified
+// by dashed first, so only a value that is not an option reaches out unchecked.
 func screen(args []string) ([]string, error) {
 	sub := subcommandIndex(args)
 	out := make([]string, 0, len(args))
 	operands := false
 	for i, a := range args {
-		if operands || !dashed.MatchString(a) {
+		if !dashed.MatchString(a) {
+			out = append(out, a)
+			continue
+		}
+		if operands {
 			out = append(out, a)
 			continue
 		}
