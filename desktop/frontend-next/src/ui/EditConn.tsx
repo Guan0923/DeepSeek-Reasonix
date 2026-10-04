@@ -35,7 +35,7 @@ export function EditConn({
   const [diff, setDiff] = useState(() => initialCheck?.ok ? catalogDiff(entry.models, initialCheck.models ?? []) : null);
   const [checkingModel, setCheckingModel] = useState("");
   const [def, setDef] = useState(entry.default || entry.models[0] || "");
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState<{ text: string; kind: "refresh" | "save" | "unapplied" } | null>(null);
   const [more, setMore] = useState(declare);
   const [win, setWin] = useState(entry.contextWindow ? String(entry.contextWindow) : "");
   const [maxOut, setMaxOut] = useState(entry.maxOutputTokens ? String(entry.maxOutputTokens) : "");
@@ -87,7 +87,7 @@ export function EditConn({
   // provider with no credential at all, which fails before it reaches the host.
   const refetch = async () => {
     setBusy(`refresh:${entry.name}`);
-    setErr("");
+    setErr(null);
     try {
       const refreshed = apiKey.trim()
         ? await port.probeProvider(baseUrl.trim(), apiKey.trim())
@@ -106,7 +106,7 @@ export function EditConn({
       setVision((current) => [...new Set([...current, ...readers])]);
       setVisionSettable((current) => current ? [...new Set([...current, ...readers])] : current);
     } catch (e) {
-      setErr(reason(e));
+      setErr({ text: reason(e), kind: "refresh" });
     } finally {
       setBusy("");
     }
@@ -174,7 +174,7 @@ export function EditConn({
 
   const save = async () => {
     setBusy(`edit:${entry.name}`);
-    setErr("");
+    setErr(null);
     try {
       await port.editProvider({
         name: entry.name,
@@ -195,10 +195,11 @@ export function EditConn({
       });
       onDone();
     } catch (e) {
-      setErr(reason(e));
+      const unapplied = e instanceof HttpError && SAVED_NOT_APPLIED.includes(e.reason?.code ?? "");
+      setErr({ text: reason(e), kind: unapplied ? "unapplied" : "save" });
       // Saved but not yet applied: the list has to show what is on file while
       // the form stays open to say why.
-      if (e instanceof HttpError && SAVED_NOT_APPLIED.includes(e.reason?.code ?? "")) onSaved?.();
+      if (unapplied) onSaved?.();
     } finally {
       setBusy("");
     }
@@ -377,9 +378,9 @@ export function EditConn({
       </details>
 
       {err && (
-        <div className="find" data-lvl="warn">
-          <span className="t">{t("没保存成功")}</span>
-          <span className="why">{err}</span>
+        <div className="find" data-lvl={err.kind === "unapplied" ? "warn" : "err"} role={err.kind === "unapplied" ? "status" : "alert"}>
+          <span className="t">{t(err.kind === "unapplied" ? "已保存，尚未生效" : err.kind === "save" ? "保存失败" : "刷新模型目录失败")}</span>
+          <span className="why">{err.text}</span>
         </div>
       )}
 
