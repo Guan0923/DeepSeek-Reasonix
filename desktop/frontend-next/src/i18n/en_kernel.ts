@@ -240,6 +240,7 @@ export const EN_KERNEL: Record<string, string> = {
   "无法解析该会话路径": "That conversation path does not resolve",
   "打不开这个会话": "Could not open that conversation",
   "该路径位于会话目录之外": "That path is outside the conversations directory",
+  "没有这个会话": "No such conversation",
   "该地址不接受此种请求方式": "That address does not accept this request method",
   "请求体必须是 application/json": "The request body must be application/json",
   "这台服务器未开放权限编辑": "This server does not open permission editing",

@@ -78,6 +78,7 @@ const SAID: Record<string, string> = {
   "session.bad_path": "无法解析该会话路径",
   "session.open_failed": "打不开这个会话",
   "session.outside_dir": "该路径位于会话目录之外",
+  "session.unknown": "没有这个会话",
   "request.method_not_allowed": "该地址不接受此种请求方式",
   "request.bad_content_type": "请求体必须是 application/json",
   "permissions.editing_disabled": "这台服务器未开放权限编辑",

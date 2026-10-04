@@ -271,3 +271,22 @@ func TestStatusCarriesTheWorkTreeAndTheDefaultEffort(t *testing.T) {
 		}
 	}
 }
+
+// "/rename <n> <title>" names the nth saved session, as 1.x does; without a
+// number the kernel renames the open one.
+func TestRenameByIndexTitlesTheNthSavedSession(t *testing.T) {
+	m, k := queueModel(t, map[string]any{
+		"GET /sessions": []map[string]any{{"name": "a", "path": "/s/a.jsonl", "current": true}, {"name": "b", "path": "/s/b.jsonl"}},
+	})
+	queueSend(m, "/rename 2 Release  notes")
+	if !strings.Contains(k.seen(), `POST /sessions/rename {"id":"b","title":"Release  notes"}`) {
+		t.Fatalf("rename did not target the second session:\n%s", k.seen())
+	}
+	if got := queueLastNotice(m); got != `session renamed to "Release  notes"` {
+		t.Fatalf("notice = %q", got)
+	}
+	queueSend(m, "/rename 9 x")
+	if got := queueLastNotice(m); !strings.Contains(got, "1–2") {
+		t.Fatalf("out-of-range notice = %q", got)
+	}
+}
