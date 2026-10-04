@@ -401,3 +401,45 @@ func TestExportAndPreviewMaskEndpointAndArgCredentials(t *testing.T) {
 		}
 	}
 }
+
+func TestBackupOfAProviderWithAPrivateKeySlotRestores(t *testing.T) {
+	slot, err := config.FreeAPIKeyEnvFor("relay", nil)
+	must(t, err)
+	_, err = config.SetCredential(slot, "sk-held")
+	must(t, err)
+	slot, err = config.FreeAPIKeyEnvFor("relay", []config.ProviderEntry{{Name: "relay", APIKeyEnv: slot}})
+	must(t, err)
+	if !strings.HasPrefix(slot, "REASONIX_CONNECTION_") {
+		t.Fatalf("slot %q is not private", slot)
+	}
+	machine(t, "[[providers]]\nname = \"relay\"\nkind = \"openai\"\nbase_url = \"https://r.example/v1\"\napi_key_env = \""+slot+"\"\nmodels = [\"m\"]\n")
+	_, err = config.SetCredential(slot, "sk-private")
+	must(t, err)
+	s := collectAll(t, CategorySettings, CategorySecrets)
+	sealed, err := Seal(s, passphrase)
+	must(t, err)
+	back, err := Open(sealed, passphrase)
+	if err != nil {
+		t.Fatalf("a backup this build wrote does not open: %v", err)
+	}
+	if !slices.ContainsFunc(back.Items, func(it Item) bool { return it.Kind == KindSecret && it.Name == slot }) {
+		t.Fatal("the private slot's key left the backup")
+	}
+}
+
+func TestPrivateKeySlotRuleIsExact(t *testing.T) {
+	id := "0123456789ABCDEF0123456789ABCDEF"
+	for key, want := range map[string]bool{
+		"REASONIX_CONNECTION_" + id + "_KEY":                  true,
+		"REASONIX_CONNECTION_" + id:                           false,
+		"REASONIX_CONNECTION_" + id[:30] + "_KEY":             false,
+		"REASONIX_CONNECTION_" + strings.ToLower(id) + "_KEY": false,
+		"REASONIX_CONNECTION_" + id + "_KEY_X":                false,
+		"REASONIX_ACCOUNTS_URL":                               false,
+		accountTokenKey:                                       false,
+	} {
+		if got := !deniedKey(key); got != want {
+			t.Errorf("%q allowed=%v, want %v", key, got, want)
+		}
+	}
+}
