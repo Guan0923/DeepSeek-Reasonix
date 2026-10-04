@@ -18,6 +18,9 @@ const AUTHORED = new Set(["await_user"]);
 // These carry the figures their sentence needs as JSON in the detail; the
 // sentence has placeholders for them, so the detail is not drawn a second time.
 const FIGURES = new Set(["context_budget"]);
+// The detail is the stored value itself, empty for the automatic mode; the
+// sentence names it, so it is not drawn a second time either.
+const STORED = new Set(["display_currency"]);
 
 function figures(detail?: string): Record<string, number> | undefined {
   try {
@@ -32,7 +35,8 @@ export function NoticeCard({ item }: { item: Extract<Item, { t: "notice" }> }) {
   const lvl = item.level === "error" ? "err" : item.level === "warn" ? "warn" : undefined;
   // The kernel writes in English for its own logs. Where this build has the
   // same notice in the reader's language, that is the one to show.
-  const vars = item.code && FIGURES.has(item.code) ? figures(item.detail) : undefined;
+  const stored = item.code !== undefined && STORED.has(item.code);
+  const vars = item.code && FIGURES.has(item.code) ? figures(item.detail) : stored ? { mode: item.detail || "auto" } : undefined;
   const wording = item.code && (!FIGURES.has(item.code) || vars) ? NOTICE_TEXT[item.code] : undefined;
   const claim = item.workspaceLease;
   const detail = claim
