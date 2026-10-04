@@ -276,30 +276,31 @@ func (m *model) send(steer bool) tea.Cmd {
 	if cmd, ok := m.queueSlash(display); ok {
 		return cmd
 	}
+	name, _, _ := strings.Cut(display, " ")
 	switch {
-	case isHelp(display):
+	case isHelp(name):
 		m.composer.Reset()
 		m.tr.AddEcho(display)
 		return tea.Batch(m.commit(), m.showHelp())
-	case display == "/mouse" && m.scr != nil:
+	case name == "/mouse" && m.scr != nil:
 		m.composer.Reset()
 		return m.toggleMouse()
-	case display == "/resume":
+	case name == "/resume":
 		m.composer.Reset()
 		return m.openPicker()
 	case display == "/rewind" && !m.tr.Running:
 		m.composer.Reset()
 		m.tr.AddEcho(display)
 		return tea.Batch(m.commit(), m.openRewind())
-	case display == "/clear" && !m.tr.Running:
+	case name == "/clear" && !m.tr.Running:
 		m.composer.Reset()
 		m.tr.AddEcho(display)
 		return tea.Batch(m.commit(), m.askClear())
-	case isSetup(display) && !m.tr.Running:
+	case isSetup(name) && !m.tr.Running:
 		m.composer.Reset()
 		m.tr.AddEcho(display)
 		return tea.Batch(m.commit(), m.openSetup())
-	case display == "/version":
+	case name == "/version":
 		m.composer.Reset()
 		version := m.opts.Version
 		if version == "" {
@@ -308,7 +309,7 @@ func (m *model) send(steer bool) tea.Cmd {
 		m.tr.AddNotice("info", "reasonix "+version)
 		return m.commit()
 	}
-	if display == "/paste-image" {
+	if name == "/paste-image" {
 		m.composer.Reset()
 		return m.pasteClipboard()
 	}

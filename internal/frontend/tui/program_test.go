@@ -252,7 +252,7 @@ func TestEnterSubmitsWhenIdleAndQueuesWhileRunning(t *testing.T) {
 	run(m, press(m, "ctrl+s"))
 	calls := strings.Join(k.seen(), "\n")
 	for _, want := range []string{
-		`POST /submit {"input":"hello","refuseUnknownSlash":true}`,
+		`POST /submit {"input":"hello"}`,
 		`POST /inbox/items {"input":"and tests","intent":"followup"}`,
 		`POST /inbox/items {"input":"stop, use make","intent":"steer"}`,
 	} {
@@ -732,7 +732,7 @@ func TestPastedImageSendsItsReference(t *testing.T) {
 		t.Fatalf("composer = %q", got)
 	}
 	run(m, press(m, "enter"))
-	if calls := strings.Join(k.seen(), "\n"); !strings.Contains(calls, `{"input":"what is this @.reasonix/attachments/shot.png",`) {
+	if calls := strings.Join(k.seen(), "\n"); !strings.Contains(calls, `{"input":"what is this @.reasonix/attachments/shot.png"}`) {
 		t.Fatalf("submit missing the reference:\n%s", calls)
 	}
 }
