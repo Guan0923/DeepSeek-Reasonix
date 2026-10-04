@@ -2756,6 +2756,7 @@
   .srv[data-st="ready"] .pip { background: var(--ok) }
   .srv[data-st="connecting"] .pip { background: var(--net); animation: tick 1.6s ease-in-out infinite }
   .srv[data-st="failed"] .pip { background: var(--err) }
+  .srv[data-st="pending"] .pip { background: var(--warn-ink) }
   .srv[data-st="disabled"] .pip { background: var(--ghost) }
   .srv[data-st="disabled"] .nm, .srv[data-st="disabled"] .meta { color: var(--faint) }
 
@@ -2766,6 +2767,19 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     font: var(--w-reg) var(--fs-meta) var(--mono); color: var(--faint) }
   .srv .acts { flex: none }
+  .mcp-server { container: mcp-server / inline-size }
+  @container mcp-server (max-width: 560px) {
+    .srv > summary, .srv > .srv-hd { flex-wrap: wrap; row-gap: 8px }
+    .srv > summary > .nm, .srv > .srv-hd > .nm { flex: 1; min-width: 0 }
+    .srv > summary > .meta, .srv > .srv-hd > .meta {
+      order: 1; flex: 1 0 calc(100% - 15px); margin-left: 15px;
+      overflow: visible; overflow-wrap: anywhere; white-space: normal;
+    }
+    .srv > summary > .exc, .srv > .srv-hd > .exc { order: 2; margin-left: 15px }
+    .srv > summary > .acts, .srv > .srv-hd > .acts {
+      order: 2; margin-left: auto; max-width: 100%; flex-wrap: wrap; justify-content: flex-end;
+    }
+  }
   .srv .why { margin: 4px 0 0 15px; font: var(--w-reg) var(--fs-ui)/1.55 var(--ui); color: var(--err) }
   .srv .why[role="status"] { color: var(--muted) }
   .srv .peek { margin: 7px 0 1px 15px }
