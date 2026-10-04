@@ -194,6 +194,7 @@ export const EN_KERNEL: Record<string, string> = {
   "远端配置未完成，请稍后重试": "The remote setup did not complete; try again shortly",
   "没有这个模型连接": "There is no such model connection",
   "该连接没有可存放密钥的变量，请先在配置中为它指定 api_key_env": "This connection has no variable to store a key in — set its api_key_env in the configuration first",
+  "该 key 含有无法安全保存的字符组合，请重新复制": "That key contains a character combination that cannot be stored safely — copy it again",
   "该 key 超长或含换行，请重新复制": "That key is too long or spans several lines — copy it again",
   "已保存的密钥在此期间被改动，请重新打开配置再试": "The stored keys changed in the meantime — reopen the setup and try again",
   "密钥已保存，但连接尚未生效，请重试": "The key was saved but the connection is not active yet — try again",
