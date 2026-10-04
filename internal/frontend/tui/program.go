@@ -513,11 +513,11 @@ func (m *model) settledChunk(it *Item) (settledPrint, bool) {
 	p := settledPrint{render: func(w int, hideRail bool) string {
 		return withThought(&row, shown, w, renderSayPart(row.Text[shown:end], shown == 0, w, hideRail))
 	}}
-	if m.scr != nil && shown == 0 && row.Reasoning != "" {
+	if m.scr != nil && shown == 0 && hasThought(row.Reasoning) {
 		row.Fold = foldShut
 		p.row = &row
 	}
-	if m.verbose && shown == 0 && row.Reasoning != "" {
+	if m.verbose && shown == 0 && hasThought(row.Reasoning) {
 		row.Fold = m.verboseFold()
 	}
 	return p, true
