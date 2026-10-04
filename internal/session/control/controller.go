@@ -14,7 +14,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"reasonix/internal/state/sessionstore"
@@ -648,28 +647,6 @@ type preparedInvocationTurn struct {
 	inlineSkillNames []string
 }
 
-// compactAndReport folds the context and says what happened. A fold the kernel
-// declined is an answer about this transcript — nothing left worth folding —
-// and reporting it as a failure sent people looking for a broken kernel.
-func (c *Controller) compactAndReport(focus string) {
-	verdict, err := c.Compact(context.Background(), agent.CompactRequest{Instructions: focus})
-	switch {
-	case err == nil && verdict.Compacted():
-		c.notice("compacted")
-		if err := c.SnapshotRewrite(); err != nil {
-			slog.Warn("controller: snapshot after compact", "err", err)
-		}
-	case err == nil:
-		// The host settled which economics declined; saying it in the kernel's
-		// own words beats a frontend inferring one from an empty result.
-		c.notice("nothing to compact — " + agent.CompactDeclineText(verdict.Reason))
-	case agent.IsCompactionDeclined(err):
-		c.notice("nothing to compact — " + agent.CompactionDeclineReason(err))
-	default:
-		c.notice("compaction failed: " + err.Error())
-	}
-}
-
 // prometheusPrompt is the strategic planner system prompt.
 const prometheusPrompt = "You are Prometheus, a strategic planner. Interview the user one question at a time. Cover: scope, modules, files, constraints, tests. When ready, output a numbered plan with each step tagged by module. End by calling update_goal with status complete. Do not implement.\n\nFor independent research directions, use parallel_tasks before planning."
 
@@ -870,8 +847,8 @@ func (c *Controller) Compact(ctx context.Context, req agent.CompactRequest) (age
 	// The rotation gate keeps a turn from starting while a manual compaction is
 	// building and installing a new model-visible projection.
 	if err := c.beginRotation(); err != nil {
-		if errors.Is(err, errTurnRunningRotation) {
-			return agent.CompactVerdict{}, fmt.Errorf("cannot compact while a turn is running")
+		if errors.Is(err, errTurnRunningRotation) || errors.Is(err, errRotationInProgress) {
+			return agent.CompactVerdict{}, errors.Join(errCompactBusy, err)
 		}
 		return agent.CompactVerdict{}, err
 	}
