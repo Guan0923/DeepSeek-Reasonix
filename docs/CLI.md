@@ -39,7 +39,7 @@ is configured.
 | `--allowed-tools RULES` | Add session-only permission allow rules. Repeatable; `--allowedTools` is an alias. |
 | `--permission-mode MODE` | Start with a specific permission posture: `read-only`, `ask`, `auto`, `acceptEdits`, `dontAsk`, `plan` or `bypassPermissions`. 1.x's `workspace-write` and `danger-full-access` also work, as Auto and Yolo. Without it, see [Default posture](#default-posture). |
 | `--yolo` | Start in YOLO mode; alias for `--dangerously-skip-permissions`. It skips approval prompts only: the sandbox, network policy and deny rules still apply. The first interactive use asks once. |
-| `--inline` | Write the conversation into the terminal's scrollback instead of taking the full screen. |
+| `--inline` | Write the conversation into the terminal's scrollback instead of taking the full screen. Only `reasonix tui --inline` takes it; a bare `reasonix --inline` is an unknown command and exits `2`. |
 
 Flags may appear before or after the prompt where applicable.
 
@@ -204,7 +204,7 @@ and `--auto` / `-y` (an alias for `--permission-mode auto`).
 - Flags written before `run` move after it only when both the terminal UI
   (plus `-y` and `-p`) and `run` take every one of them the same way:
   `reasonix -y run "task"` is `reasonix run -y "task"`.
-- A terminal-UI-only leading flag (`--inline`, `-r`, `--resume` with no value)
+- A terminal-UI-only leading flag (`-r`, `--resume` with no value)
   sends the whole command line to the terminal UI instead.
 - So does a run-only leading flag (`--output-format`, `--metrics`): the
   terminal UI then reports it. Write such flags after `run`.

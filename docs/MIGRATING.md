@@ -95,11 +95,15 @@ To make a script behave as it did in 1.x, trust the folder once (`reasonix trust
 | Area | 1.x | 2.x |
 | --- | --- | --- |
 | `reasonix config compact-ratio` | Accepts 30 to 85 | Accepts any percentage above 0 and below 100, so every 1.x value still works. The default differs from 1.x, and the status line reads `to compaction N%`. |
-| Unknown `/command` | Sent to the model as a message, with a notice (#5756, `internal/cli/chat_tui_slash_fallback.go`) | The same (`answerUnresolvedSlash` in the controller). |
-| Permission mode cycle | Shift+Tab cycles Workspace, YOLO, Plan, Read only | Shift+Tab cycles Auto, YOLO, Plan, Read only, Ask. Entering YOLO asks for a one-time confirmation. Ctrl+Y also toggles YOLO. Auto asks first for nested or indirect shell such as `python3 -c '...'`, so expect more prompts. |
+| Unknown `/command` | Sent to the model as an ordinary message, with a notice that names the command | The same. |
+| Permission mode cycle | Shift+Tab cycles Workspace, YOLO, Plan, Read only | Shift+Tab cycles Auto, YOLO, Plan, Read only, Ask. Shift+Tab and Ctrl+Y enter YOLO at once, with no confirmation, as in 1.x; starting with `--yolo` or `--permission-mode yolo` asks once the first time. Auto asks first for nested or indirect shell such as `python3 -c '...'`, so expect more prompts. |
 | Status line | `workspace@branch` and a compaction threshold | Same row; the threshold reads `to compaction N%`. The peak or off-peak label is not drawn in 2.x. |
 | `REASONIX_CHROME` | Path of the browser the browser tool launches | Not read. Set `[browser] executable` in the config; with none set, 2.x looks for Chrome, Edge or Chromium. |
 | `REASONIX_SESSION_LOG` | `v1` switched session saves back to the schema-1 writer | Removed. 2.x writes one session format. |
+| Default permission mode | Workspace | Auto, 1.x's Workspace, where the OS sandbox confines writes and the folder is trusted; Ask otherwise. See [Trusting a folder](#trusting-a-folder). |
+| `/recover-context`, `/continue-checks` | Slash commands | Retired; 2.x has no such command. |
+| `/web` | Slash command | Not a slash command in 2.x. Run `reasonix web` from the shell. |
+| Studio-only slash commands | None | `/version`, `/feedback`, `/locate`, `/setup` and `/auth`. `/setup` and `/auth` open the setup panel; `/locate` is a built-in read-only skill that returns file and line ranges. |
 | `reasonix bot` | IM gateway | Removed. The `[bot]` config section is kept untouched. |
 
 ## Steps: run 2.x beside 1.x
