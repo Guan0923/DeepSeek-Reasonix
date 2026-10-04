@@ -97,7 +97,7 @@ To make a script behave as it did in 1.x, trust the folder once (`reasonix trust
 | `reasonix config compact-ratio` | Accepts 30 to 85 | Accepts any percentage above 0 and below 100, so every 1.x value still works. The default differs from 1.x, and the status line reads `to compaction N%`. |
 | Unknown `/command` | Sent to the model as an ordinary message, with a notice that names the command | The same. |
 | Permission mode cycle | Shift+Tab cycles Workspace, YOLO, Plan, Read only | Shift+Tab cycles Auto, YOLO, Plan, Read only, Ask. Shift+Tab and Ctrl+Y enter YOLO at once, with no confirmation, as in 1.x; starting with `--yolo` or `--permission-mode yolo` asks once the first time. Auto asks first for nested or indirect shell such as `python3 -c '...'`, so expect more prompts. |
-| Status line | `workspace@branch` and a compaction threshold | Same row; the threshold reads `to compaction N%`. The peak or off-peak label is not drawn in 2.x. |
+| Status line | `workspace@branch` and a compaction threshold | Same row; the threshold reads `to compaction N%`. The footer and turn receipt name the peak or off-peak rate a spend was billed at, as 1.x does, only when the vendor's own schedule priced it. |
 | `REASONIX_CHROME` | Path of the browser the browser tool launches | Not read. Set `[browser] executable` in the config; with none set, 2.x looks for Chrome, Edge or Chromium. |
 | `REASONIX_SESSION_LOG` | `v1` switched session saves back to the schema-1 writer | Removed. 2.x writes one session format. |
 | Default permission mode | Workspace | Auto, 1.x's Workspace, where the OS sandbox confines writes and the folder is trusted; Ask otherwise. See [Trusting a folder](#trusting-a-folder). |
