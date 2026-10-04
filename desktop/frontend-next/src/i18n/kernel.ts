@@ -177,6 +177,7 @@ const SAID: Record<string, string> = {
   "provider.setup_failed": "远端配置未完成，请稍后重试",
   "provider.unknown": "没有这个模型连接",
   "provider.no_key_slot": "该连接没有可存放密钥的变量，请先在配置中为它指定 api_key_env",
+  "provider.key_unstorable": "该 key 含有无法安全保存的字符组合，请重新复制",
   "provider.key_invalid": "该 key 超长或含换行，请重新复制",
   "provider.credentials_changed": "已保存的密钥在此期间被改动，请重新打开配置再试",
   "provider.activation_failed": "密钥已保存，但连接尚未生效，请重试",
