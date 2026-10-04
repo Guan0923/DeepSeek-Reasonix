@@ -23,6 +23,7 @@ export function EditConn({
   const seededModels = [...new Set([...entry.models, ...(initialCheck?.models ?? [])])];
   const seededVision = [...new Set([...(entry.visionModels ?? []), ...(initialCheck?.vision ?? [])])];
   const [baseUrl, setBaseUrl] = useState(entry.baseUrl);
+  const [completed, setCompleted] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [models, setModels] = useState<string[]>(seededModels);
   const [picked, setPicked] = useState<string[]>(entry.models);
@@ -91,6 +92,9 @@ export function EditConn({
       const refreshed = apiKey.trim()
         ? await port.probeProvider(baseUrl.trim(), apiKey.trim())
         : await port.checkProvider(entry.name);
+      const changed = !!refreshed.baseUrl && refreshed.baseUrl !== baseUrl.trim();
+      if (changed) setBaseUrl(refreshed.baseUrl!);
+      setCompleted(changed ? refreshed.baseUrl! : "");
       const found = refreshed.models ?? [];
       if (found.length === 0) throw new Error("这个端点没报出任何聊天模型");
       const readers = refreshed.vision ?? [];
@@ -253,6 +257,9 @@ export function EditConn({
         <p className="mguide">
           {t("目录只用于发现，不是白名单。未列出的模型会按原始 ID 保存；验证会发送一次最小请求，可能产生少量 Token 费用。")}
         </p>
+        {completed !== "" && completed === baseUrl.trim() && (
+          <p className="mdiff" role="status">{t("接口地址已补全为 {url}", { url: completed })}</p>
+        )}
         {diff && (diff.added > 0 || diff.missing > 0) && (
           <p className="mdiff" role="status">
             {diff.added > 0 && t("发现 {n} 个新模型。", { n: diff.added })}
