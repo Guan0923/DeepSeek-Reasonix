@@ -299,6 +299,10 @@ func (m *model) send(steer bool) tea.Cmd {
 		m.tr.AddNotice("info", "reasonix "+version)
 		return m.commit()
 	}
+	if display == "/paste-image" {
+		m.composer.Reset()
+		return m.pasteClipboard()
+	}
 	if cmd, ok := m.miscSlash(display); ok {
 		return cmd
 	}

@@ -447,6 +447,10 @@ func (c *Controller) managementNotice(trimmed string) bool {
 	switch fields[0] {
 	case "/model":
 		c.notice(c.modelListText())
+	case "/preset", "/work-mode", "/profile":
+		c.presetNotice(fields)
+	case "/remote":
+		c.remoteNotice()
 	case "/provider":
 		if len(fields) >= 2 {
 			c.notice(c.providerSwitchText(fields[1]))
