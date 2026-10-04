@@ -574,12 +574,7 @@ func applyClaudeConventionDirs(root string, manifest *Manifest) []string {
 			manifest.Commands = append(manifest.Commands, rel)
 		}
 	}
-	for _, rel := range claudeConventionAgentDirs {
-		dir := filepath.Join(root, filepath.FromSlash(rel))
-		if dirContainsAgentMd(dir) && !containsPathEntry(manifest.Agents, rel) {
-			manifest.Agents = append(manifest.Agents, rel)
-		}
-	}
+	applyClaudeAgentDirs(root, manifest)
 	return warnings
 }
 

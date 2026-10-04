@@ -479,30 +479,54 @@ func compatibilityFor(pkg Package, issues []CompatibilityIssue) Compatibility {
 	return Compatibility{Status: status, Mapped: mapped, Skipped: issues}
 }
 
-func dirContainsAgentMd(dir string) bool { return len(loadAgentRefs(dir)) > 0 }
-
 func (p Package) agentRefs() []AgentRef {
+	root, err := os.OpenRoot(p.Root)
+	if err != nil {
+		return nil
+	}
+	defer root.Close()
+	var dirs []string
+	for _, raw := range p.Manifest.Agents {
+		dir, err := cleanPortableRelativePath(raw)
+		if err != nil || strings.TrimSpace(raw) == "" || !filepath.IsLocal(dir) {
+			continue
+		}
+		dirs = append(dirs, filepath.FromSlash(dir))
+	}
+	slices.Sort(dirs)
 	var out []AgentRef
-	for _, root := range p.AgentRoots() {
-		out = append(out, loadAgentRefs(root)...)
+	for _, dir := range dirs {
+		out = append(out, loadAgentRefs(root, dir)...)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
 
-func loadAgentRefs(dir string) []AgentRef {
-	entries, err := os.ReadDir(dir)
+func loadAgentRefs(root *os.Root, dir string) []AgentRef {
+	if !filepath.IsLocal(dir) {
+		return nil
+	}
+	info, source := agentPathInfo(root, dir)
+	if source == nil {
+		return nil
+	}
+	defer source.Close()
+	if !info.IsDir() {
+		return nil
+	}
+	entries, err := source.ReadDir(-1)
 	if err != nil {
 		return nil
 	}
+	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 	var out []AgentRef
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.EqualFold(filepath.Ext(entry.Name()), ".md") {
 			continue
 		}
-		path := filepath.Join(dir, entry.Name())
-		body, err := fileencoding.ReadFileUTF8(path)
-		if err != nil {
+		path := filepath.Join(root.Name(), dir, entry.Name())
+		body := agentSourceBody(root, filepath.Join(dir, entry.Name()))
+		if body == nil {
 			continue
 		}
 		fm, _ := frontmatter.SplitLegacy(string(body))
