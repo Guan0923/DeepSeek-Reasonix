@@ -681,8 +681,7 @@ func TestUTF16Offsets(t *testing.T) {
 	}
 }
 
-// The task list is read from the kernel when it says the list moved, and drawn
-// while it still has work in it.
+// The task list is read from the kernel when it says the list moved.
 func TestTodosFollowTheKernel(t *testing.T) {
 	m, _ := testModel(t)
 	_, cmd := m.Update(updateMsg{us: []Update{{Event: eventwire.Event{Kind: "todo_progress"}}}, ok: true})
@@ -692,10 +691,6 @@ func TestTodosFollowTheKernel(t *testing.T) {
 		if !strings.Contains(v, want) {
 			t.Fatalf("view missing %q:\n%s", want, v)
 		}
-	}
-	m.todos = []TodoItem{{Content: "done", Status: "completed"}}
-	if strings.Contains(m.View().Content, "To-dos") {
-		t.Fatal("a finished list stayed on screen")
 	}
 }
 

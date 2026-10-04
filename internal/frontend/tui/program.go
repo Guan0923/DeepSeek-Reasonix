@@ -305,6 +305,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// than apply a frame that follows a hole.
 				return m, tea.Batch(m.fetchHistory(false), rearm)
 			}
+			m.dropSpentTodos(u.Event.Kind)
 			m.tr.Apply(u.Event)
 			if u.Event.Kind == "turn_done" {
 				turnDone = true
@@ -360,9 +361,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.commit()
 	case todosMsg:
-		if msg.err == nil {
-			m.todos = msg.items
-		}
+		m.onTodos(msg)
 		return m, nil
 	case completionMsg:
 		m.onCompletion(msg)

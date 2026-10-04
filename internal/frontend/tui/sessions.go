@@ -165,7 +165,7 @@ func (m *model) onResumed(msg resumedMsg) tea.Cmd {
 	}
 	m.resetScreen()
 	title := m.emit(func(int, bool) string { return termrender.Accent("◆ ") + termrender.Bold(i18n.M.ResumedTitle) })
-	return tea.Sequence(title, m.fetchHistory(true), tea.Batch(m.fetchStatus(), m.fetchTodos(), m.fetchMeters()))
+	return tea.Sequence(title, m.fetchHistory(true), tea.Batch(m.fetchStatus(), m.fetchTodosForRebuild(), m.fetchMeters()))
 }
 
 // resetScreen drops the transcript this screen drew, for a conversation that
