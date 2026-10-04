@@ -449,6 +449,9 @@ type Messages struct {
 	WorkModeBalancedDesc         string
 	WorkModeDeliveryDesc         string
 	WorkModeUsage                string
+	PresetCurrentFmt             string // /preset with no argument: current setting and usage
+	PresetSetFmt                 string // /preset <name>: the setting now in effect
+	RemoteConnectHint            string // /remote: how to open one of the listed hosts
 	WorkModeSwitchUnavailable    string
 	WorkModeSwitchBusy           string
 	WorkModeAlreadyOnFmt         string
