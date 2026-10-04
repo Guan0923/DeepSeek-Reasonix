@@ -663,6 +663,11 @@ type Messages struct {
 	ProviderAlreadyOnFmt string // already on provider
 	ProviderUnknownFmt   string // unknown provider
 	ProviderPickLabel    string // label for provider model picker
+	SkillPickTitle       string // /skills panel title
+	SkillPickSummaryFmt  string // /skills panel: available and enabled counts
+	SkillPickSource      string // /skills panel: label before the source filter
+	SkillPickHint        string // /skills panel keyboard hint
+	SkillPickSavedFmt    string // after saving toggles: enabled and disabled counts
 	ProviderNoModelsFmt  string // provider has no models
 
 	// `reasonix upgrade` / `reasonix update` — self-update

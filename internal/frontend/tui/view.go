@@ -22,6 +22,8 @@ func (m *model) bottomLines() bottom {
 	rows = append(rows, m.todoLines()...)
 	open := m.tr.OpenPrompt()
 	switch {
+	case m.skills != nil:
+		rows = append(rows, m.skillsPanel()...)
 	case m.picker != nil:
 		rows = append(rows, m.pickerPanel()...)
 	case m.rewind != nil:
@@ -43,7 +45,7 @@ func (m *model) bottomLines() bottom {
 		rows = append(rows, w)
 	}
 	at := -1
-	if m.picker == nil && m.rewind == nil && m.copying == nil && m.clearing == nil && m.setup == nil && (open == nil || (open.Kind == ItemAsk && m.ask != nil && m.ask.entering())) {
+	if m.picker == nil && m.skills == nil && m.rewind == nil && m.copying == nil && m.clearing == nil && m.setup == nil && (open == nil || (open.Kind == ItemAsk && m.ask != nil && m.ask.entering())) {
 		at = len(rows)
 		rows = append(rows, m.composerLines()...)
 	}

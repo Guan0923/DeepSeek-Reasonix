@@ -617,6 +617,11 @@ var Chinese = Messages{
 	ProviderAlreadyOnFmt: "已经在使用供应商 %s",
 	ProviderUnknownFmt:   "未知供应商 %q",
 	ProviderPickLabel:    "选择 %s 的一个模型",
+	SkillPickTitle:       "管理技能",
+	SkillPickSummaryFmt:  "共 %d 个 · 已启用 %d 个",
+	SkillPickSource:      "来源：",
+	SkillPickHint:        "↑↓ 移动 · 空格 切换 · Enter 保存 · / 搜索 · s 来源 · Esc 取消",
+	SkillPickSavedFmt:    "技能已更新：启用 %d 个、停用 %d 个，从下一条消息起生效",
 	ProviderNoModelsFmt:  "供应商 %s 没有已配置的模型",
 
 	// 自更新

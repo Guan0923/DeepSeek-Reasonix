@@ -73,6 +73,12 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			{"name": "alpha", "kind": "openai", "models": 2, "keyRequired": true},
 			{"name": "beta", "kind": "anthropic", "models": 1, "active": true},
 		}})
+	case "/skills":
+		_ = json.NewEncoder(w).Encode(map[string]any{"skills": []map[string]any{
+			{"name": "test", "scope": "builtin", "enabled": true},
+			{"name": "deploy", "scope": "project", "enabled": false},
+			{"name": "audit", "scope": "global", "enabled": true, "subagent": true},
+		}})
 	case "/checkpoints":
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"turn": 0, "prompt": "read the code"}, {"turn": 1, "prompt": "fix the bug", "files": 2},
