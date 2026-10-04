@@ -50,3 +50,25 @@ func TestOperandsAfterDoubleDashAndOrdinaryFlagsPass(t *testing.T) {
 		}
 	}
 }
+
+func TestDashedDirectoryIsSpelledAsPathNotOption(t *testing.T) {
+	got := Args("-x/repo", nil, "status")
+	for i, a := range got {
+		if a == "-C" {
+			if got[i+1] != "./-x/repo" {
+				t.Fatalf("-C value = %q, want ./-x/repo", got[i+1])
+			}
+			return
+		}
+	}
+	t.Fatalf("no -C in %v", got)
+}
+
+func TestOrdinaryDirectoryIsUntouched(t *testing.T) {
+	got := Args("/work/repo", nil, "status")
+	for i, a := range got {
+		if a == "-C" && got[i+1] != "/work/repo" {
+			t.Fatalf("-C value = %q", got[i+1])
+		}
+	}
+}
