@@ -29,11 +29,12 @@ function monthBounds(month: string): { from: string; to: string } | null {
 
 // Sources are not a nominal category like models: two custom relays have no
 // natural order a reader can remember, so a stable hue gives the bar a second
-// channel beside its label.
+// channel beside its label. Lightness and chroma come from --chart so the
+// source cards keep the model cards' contrast in either theme.
 function sourceColor(source: string): string {
   let hue = 216;
   for (const ch of source) hue = (hue * 31 + (ch.codePointAt(0) ?? 0)) % 360;
-  return `hsl(${hue} 62% 48%)`;
+  return `oklch(from var(--chart) l c ${hue})`;
 }
 
 function providerFallback(kind?: string, host?: string): string {
@@ -173,8 +174,8 @@ function Bars({ rows }: { rows: BarRow[] }) {
 function DailyTable({ days }: { days: UsageDay[] }) {
   return (
     <section className="ucard udaily">
-      <div className="ucard-h"><h3>{t("每日明细")}</h3><span className="hint">{t("精确到每天")}</span></div>
-      <div className="utable-wrap">
+      <div className="ucard-h"><h3>{t("每日明细")}</h3><span className="hint">{t("精确到每天")} <span className="utable-scroll-hint">{t("左右滚动查看")}</span></span></div>
+      <div className="utable-wrap" role="region" aria-label={t("每日明细")} tabIndex={0}>
         <table className="utable" aria-label={t("每日明细")}>
           <thead>
             <tr><th>{t("日期")}</th><th>Tokens</th><th>{t("支出")}</th><th>{t("请求")}</th></tr>

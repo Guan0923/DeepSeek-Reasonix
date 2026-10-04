@@ -75,6 +75,7 @@ describe("usage is exact on every device", () => {
     expect(within(row!).getByText("2026-08-15")).toBeTruthy();
     expect(within(row!).getByText("1,234")).toBeTruthy();
     expect(within(row!).getByText("6")).toBeTruthy();
+    expect(screen.getByText(t("左右滚动查看"))).toBeTruthy();
   });
 
   it("shows the configured provider label and a distinct bar colour", async () => {
@@ -91,8 +92,11 @@ describe("usage is exact on every device", () => {
     expect(screen.queryByText("relay-a")).toBeNull();
     const fillA = screen.getByText("Relay Alpha").closest(".urow")?.querySelector<HTMLElement>(".ufill");
     const fillB = screen.getByText("Relay Beta").closest(".urow")?.querySelector<HTMLElement>(".ufill");
-    expect(fillA?.style.getPropertyValue("--row-color")).toBeTruthy();
-    expect(fillA?.style.getPropertyValue("--row-color")).not.toBe(fillB?.style.getPropertyValue("--row-color"));
+    const colorA = fillA?.style.getPropertyValue("--row-color") ?? "";
+    const colorB = fillB?.style.getPropertyValue("--row-color") ?? "";
+    expect(colorA).toMatch(/^oklch\(from var\(--chart\) l c \d+\)$/);
+    expect(colorB).toMatch(/^oklch\(from var\(--chart\) l c \d+\)$/);
+    expect(colorA).not.toBe(colorB);
   });
 
   it("uses provider kind and host when no display name is configured", async () => {

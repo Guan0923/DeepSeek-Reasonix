@@ -34,6 +34,7 @@ export const EN_USAGE: Record<string, string> = {
   "选择月份": "Choose month",
   "每日明细": "Daily details",
   "精确到每天": "Exact totals for each day",
+  "左右滚动查看": "Scroll sideways for all columns",
   "日期": "Date",
   "支出": "Spend",
   "请求": "Requests",
