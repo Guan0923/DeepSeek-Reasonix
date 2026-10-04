@@ -244,6 +244,11 @@ func renderUsage(u *eventwire.Usage, width int) string {
 			code = u.Currency
 		}
 		groups = append(groups, fmt.Sprintf("≈%s%.4f", pricing.CurrencySymbol(code), u.Cost))
+		if u.CostQuote != nil {
+			if band := rateBandText(u.CostQuote.RateBand); band != "" {
+				groups = append(groups, band)
+			}
+		}
 	}
 	if u.Estimated {
 		groups = append(groups, "estimated")

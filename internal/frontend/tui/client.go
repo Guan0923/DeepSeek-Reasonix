@@ -212,6 +212,7 @@ type CostQuote struct {
 	Original     Money  `json:"original"`
 	Selected     *Money `json:"selected"`
 	CostComplete bool   `json:"costComplete"`
+	RateBand     string `json:"rateBand"`
 }
 
 type Money struct {
