@@ -678,6 +678,8 @@ export const EN_SETTINGS: Record<string, string> = {
   "检测中…": "Checking…",
   "验证连接并读取": "Check connection and read models",
   "连接可用 · 找到 {n} 个模型": "Connection works · {n} models found",
+  "接口地址已补全为 {url}": "Address completed to {url}",
+  "刷新模型目录时，模型列表只在 {url} 下响应。聊天若能正常使用就不用改；可选：把接口地址改成它。": "The model list only answers at {url}. If chat already works, no change is needed; optionally set the address to it.",
   "启用的模型": "Enabled models",
   "目录只用于发现，不是白名单。直接输入服务商给出的原始模型 ID 即可。": "The catalogue is for discovery, not a whitelist. You can enter any exact model ID supplied by the service.",
   "阈值需至少为 1,000，并小于模型上下文窗口。": "The threshold must be at least 1,000 and below the model context window.",

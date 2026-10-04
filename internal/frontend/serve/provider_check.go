@@ -23,6 +23,9 @@ import (
 type providerCheck struct {
 	OK   bool   `json:"ok"`
 	Kind string `json:"kind,omitempty"`
+	// BaseURL is set only when the saved address is not the one chat needs; it
+	// is reported, never written, because a check must not edit what it tests.
+	BaseURL string `json:"baseUrl,omitempty"`
 	// Matches is whether that answer is consistent with the kind the entry
 	// declares. Protocols sharing a listing shape are consistent with each
 	// other, so a Responses source answering the OpenAI listing is not a change.
@@ -85,9 +88,14 @@ func (s *Server) checkProvider(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, providerCheck{Error: probeErr.Error()})
 		return
 	}
+	completed := ""
+	if got.BaseURL != strings.TrimSpace(entry.BaseURL) {
+		completed = got.BaseURL
+	}
 	writeJSON(w, providerCheck{
 		OK:        true,
 		Kind:      got.Kind,
+		BaseURL:   completed,
 		Matches:   config.ProtocolAnswerMatches(entry.Kind, got.Kind),
 		Models:    nonNilStrings(got.Models),
 		Vision:    nonNilStrings(got.Vision),
