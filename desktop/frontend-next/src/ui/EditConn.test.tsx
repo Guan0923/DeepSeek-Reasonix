@@ -166,3 +166,32 @@ it("refreshes the list when the save landed but the conversation keeps its setti
   expect(onDone).not.toHaveBeenCalled();
   expect(screen.getByText(/已保存。当前对话还有未结束的工作/)).toBeTruthy();
 });
+
+const rejecting = (status: number, code: string, error: string) => {
+  const editProvider = vi.fn(async () => {
+    throw new HttpError(status, error, { code, error });
+  });
+  const entry: ProviderEntry = {
+    name: "rich", kind: "openai", baseUrl: "https://gateway.invalid/v1",
+    models: ["alpha"], default: "alpha", hasKey: true, inUse: true, preset: false, canSetVision: false,
+  };
+  render(<EditConn entry={entry} port={{ editProvider } as unknown as Port} busy="" setBusy={() => {}} onDone={() => {}} onSaved={() => {}} />);
+  return userEvent.click(screen.getByRole("button", { name: "保存" }));
+};
+
+it("says a refused save failed, as an error alert", async () => {
+  await rejecting(400, "provider.endpoint_required", "no endpoint");
+  const alert = await screen.findByRole("alert");
+  expect(alert.getAttribute("data-lvl")).toBe("err");
+  expect(within(alert).getByText("保存失败")).toBeTruthy();
+  expect(screen.queryByText("没保存成功")).toBeNull();
+});
+
+it("does not call a saved-but-not-applied outcome a failed save", async () => {
+  await rejecting(409, "provider.saved_while_running", "saved");
+  const note = (await screen.findByText("已保存，尚未生效")).closest(".find")!;
+  expect(note.getAttribute("data-lvl")).toBe("warn");
+  expect(note.getAttribute("role")).toBe("status");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByText("保存失败")).toBeNull();
+});
