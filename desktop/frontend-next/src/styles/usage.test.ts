@@ -100,7 +100,11 @@ describe("usage remains readable on a phone", () => {
 
   it("stacks cards and keeps range labels intact on a phone", () => {
     expect(SHEET).toMatch(/\.uranges button\s*\{[^}]*white-space:\s*nowrap/);
-    expect(SHEET).toMatch(/@media\s*\(max-width:\s*560px\)[\s\S]*?\.utwo\s*\{\s*grid-template-columns:\s*1fr/);
+    expect(SHEET).toMatch(/@media\s*\(max-width:\s*560px\)[\s\S]*?\.utwo\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    expect(SHEET).toMatch(/\.ucard\s*\{[^}]*min-width:\s*0/);
+    expect(SHEET).toMatch(/\.urows,\s*\.urow,\s*\.urow-t\s*\{\s*min-width:\s*0/);
+    expect(SHEET).toMatch(/\.urow-t\s+\.n\s*\{[^}]*min-width:\s*0[^}]*text-overflow:\s*ellipsis/);
+    expect(SHEET).toMatch(/\.urow-t\s+\.v\s*\{[^}]*flex:\s*none[^}]*white-space:\s*nowrap/);
   });
 
   it("stacks the custom date fields before they squeeze the inputs", () => {

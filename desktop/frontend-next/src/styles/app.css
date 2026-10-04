@@ -5430,7 +5430,7 @@
 .utile .v { margin-top: 6px; font: var(--w-med) var(--fs-display)/1.1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: var(--track-tight) }
 .utile .m { margin-top: 4px; color: var(--muted); font: var(--w-reg) var(--fs-meta) var(--ui) }
 
-.ucard { padding: 16px 18px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md) }
+.ucard { min-width: 0; padding: 16px 18px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md) }
 .uhero, .utile, .ucard, .storage .item {
   transition: border-color var(--t-card) var(--ease-out), box-shadow var(--t-card) var(--ease-out);
 }
@@ -5480,10 +5480,11 @@
 .utable .ud { color: var(--text) }
 .utable-scroll-hint { display: none }
 .utable-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px }
+.urows, .urow, .urow-t { min-width: 0 }
 .urows { display: flex; flex-direction: column; gap: 10px; margin-top: 8px }
 .urow-t { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px }
-.urow-t .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-ui) var(--mono) }
-.urow-t .v { flex: none; color: var(--muted); font: var(--fs-ui) var(--mono); font-variant-numeric: tabular-nums }
+.urow-t .n { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-ui) var(--mono) }
+.urow-t .v { flex: none; white-space: nowrap; color: var(--muted); font: var(--fs-ui) var(--mono); font-variant-numeric: tabular-nums }
 .utrack { height: 6px; background: var(--hair); border-radius: var(--r-pill); overflow: hidden }
 
 .ufill { display: block; height: 100%; background: var(--row-color, var(--chart)); border-radius: var(--r-pill);
@@ -5497,7 +5498,7 @@
   .uhero-v { font-size: 30px; overflow-wrap: anywhere }
   .utiles { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .ucard { padding: 14px 12px 10px }
-  .utwo { grid-template-columns: 1fr }
+  .utwo { grid-template-columns: minmax(0, 1fr) }
   .udates { grid-template-columns: 1fr }
   .udates button { width: 100% }
   .umonth { max-width: none }
