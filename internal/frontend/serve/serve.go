@@ -830,7 +830,7 @@ func (s *Server) models(w http.ResponseWriter, _ *http.Request) {
 			ref := p.Name + "/" + model
 			seen[ref] = struct{}{}
 			routes = append(routes, modelRoute{
-				key:  strings.ToLower(strings.TrimRight(p.BaseURL, "/")) + "\x00" + model,
+				key:  modelRouteKey(p, model),
 				solo: len(models) == 1,
 			})
 			active := ref == current || p.Name == current

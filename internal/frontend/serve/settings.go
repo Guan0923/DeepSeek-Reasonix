@@ -263,6 +263,12 @@ type modelRoute struct {
 	solo bool
 }
 
+// modelRouteKey names where a model is reached: endpoint plus credential slot.
+// Two accounts at one endpoint are two routes.
+func modelRouteKey(p *config.ProviderEntry, model string) string {
+	return strings.ToLower(strings.TrimRight(p.BaseURL, "/")) + "\x00" + strings.TrimSpace(p.APIKeyEnv) + "\x00" + model
+}
+
 // collapseModelRoutes drops entries naming the same model at the same endpoint.
 // A multi-model provider block and a single-model block pinning one of them (to
 // attach its own price) are two config rows, not two models. The survivor is the
