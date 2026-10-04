@@ -177,7 +177,7 @@ echo "解释这段代码" | reasonix run
 - 参数可以夹在任务文字之间：`reasonix run fix --yolo bug` 以 bypassPermissions 执行任务 `fix bug`。
 - 写在 `run` 前面的参数，只有终端界面（加上 `-y`、`-p`）和 `run` 都以同样方式接受每一个时，才会移到它后面：`reasonix -y run "task"` 等同于
   `reasonix run -y "task"`。
-- 其中只要有一个是终端界面专用参数（`--inline`、`-r`、不带值的 `--resume`），整条命令行就交给终端界面。
+- 其中只要有一个是终端界面专用参数（`-r`、不带值的 `--resume`），整条命令行就交给终端界面。
 - 只有 `run` 接受的前置参数（`--output-format`、`--metrics`）也一样：整条命令行交给终端界面，由它报错。这类参数请写在 `run` 后面。
 - 前置的 `-p` 只在子命令之前才算数；写在 `run` 后面的 `-p` 属于 `run` 自己。
 - 前置参数之后的第一个词就是子命令，和不带参数时一样：`reasonix --yolo run the tests` 会无界面执行
