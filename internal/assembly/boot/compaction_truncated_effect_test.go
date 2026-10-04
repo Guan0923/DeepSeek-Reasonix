@@ -118,3 +118,28 @@ func TestEffectSummarizerRequestDoesNotInheritSessionEffort(t *testing.T) {
 		}
 	}
 }
+
+// A truncated digest must reach the user as its typed code on the automatic
+// path too, and must not leave automatic compaction blocked for good.
+func TestEffectTruncatedSummaryOnPressureKeepsCodeAndRetries(t *testing.T) {
+	rec, sink, run := buildTruncatingSession(t)
+	for range 10 {
+		run("keep going")
+	}
+	var code string
+	for _, e := range sink.ev {
+		if e.Kind == event.CompactionDone && e.Compaction.Messages == 0 {
+			code = e.Compaction.Code
+			break
+		}
+	}
+	if code != "summary_truncated" {
+		t.Fatalf("pressure card code = %q, want summary_truncated", code)
+	}
+	if n := len(rec.summarizerRequests()); n > 6 {
+		t.Fatalf("automatic compaction made %d summarizer attempts over 10 turns; retries must be bounded by input growth", n)
+	}
+	if n := len(rec.summarizerRequests()); n < 2 {
+		t.Fatalf("automatic compaction made %d summarizer attempt(s) over 10 turns; one truncation blocked it for the generation", n)
+	}
+}
