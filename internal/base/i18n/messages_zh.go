@@ -622,6 +622,12 @@ var Chinese = Messages{
 	SkillPickSource:      "来源：",
 	SkillPickHint:        "↑↓ 移动 · 空格 切换 · Enter 保存 · / 搜索 · s 来源 · Esc 取消",
 	SkillPickSavedFmt:    "技能已更新：启用 %d 个、停用 %d 个，从下一条消息起生效",
+	PickHint:             "输入以筛选 · ↑/↓ 选择 · Enter 确认 · Esc 取消",
+	PickModelTitle:       "选择模型",
+	PickProviderTitle:    "选择供应商",
+	NoConfiguredModels:   "没有已配置的对话模型",
+	ModelProviderFmt:     "供应商：%s",
+	ProviderModelsFmt:    "%d 个模型",
 	ProviderNoModelsFmt:  "供应商 %s 没有已配置的模型",
 
 	// 自更新

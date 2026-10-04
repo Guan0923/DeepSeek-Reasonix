@@ -621,6 +621,12 @@ var English = Messages{
 	SkillPickSource:      "Source: ",
 	SkillPickHint:        "↑↓ navigate · Space toggle · Enter save · / search · s source · Esc cancel",
 	SkillPickSavedFmt:    "skills updated: %d enabled, %d disabled — in effect from your next message",
+	PickHint:             "Type to filter · ↑/↓ navigate · Enter select · Esc cancel",
+	PickModelTitle:       "Select model",
+	PickProviderTitle:    "Select provider",
+	NoConfiguredModels:   "no configured chat models",
+	ModelProviderFmt:     "Provider: %s",
+	ProviderModelsFmt:    "%d model(s)",
 	ProviderNoModelsFmt:  "provider %s has no configured models",
 
 	// self-update
