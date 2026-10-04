@@ -1,11 +1,9 @@
 package config
 
 import (
-	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,7 +37,7 @@ func TestStateRootEntriesCoversEverythingWrittenThere(t *testing.T) {
 func stateRootJoins(dir string) (map[string]string, error) {
 	found := map[string]string{}
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if errors.Is(err, fs.ErrNotExist) {
+		if err != nil && vanishedMidWalk(path, err) {
 			return nil
 		}
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
