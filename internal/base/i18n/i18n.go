@@ -344,6 +344,8 @@ type Messages struct {
 	SetupTestOK          string
 	SetupTestFailed      string
 	SetupSaved           string
+	SetupOwed            string
+	SetupTurnRefused     string
 	CmdWorkMode          string // /work-mode
 	CmdDocs              string // /docs
 	CmdMemory            string // /memory

@@ -355,6 +355,8 @@ var Chinese = Messages{
 	SetupTestOK:          "连接测试成功，密钥尚未保存。",
 	SetupTestFailed:      "连接测试失败：%s",
 	SetupSaved:           "已为 %s 保存密钥并生效。",
+	SetupOwed:            "%s 还没有 API 密钥。选择一个连接并粘贴密钥；之后可用 /setup 再次打开此面板。",
+	SetupTurnRefused:     "当前模型没有 API 密钥，请用 /setup 添加。消息没有发出。",
 	CmdWorkMode:          "切换执行设定",
 	CmdDocs:              "搜索与当前版本匹配的内置文档",
 	CmdMemory:            "查看指令、记忆与恢复状态",

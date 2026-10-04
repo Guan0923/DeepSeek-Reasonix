@@ -23,6 +23,8 @@ type recordingKernel struct {
 	mu    sync.Mutex
 	calls []string
 	git   bool
+	// keyless makes the kernel refuse a turn the way it does with no key set.
+	keyless bool
 }
 
 func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +69,14 @@ func (k *recordingKernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/inbox/items":
 		_ = json.NewEncoder(w).Encode(map[string]string{"itemId": "q-7"})
 	case "/provider-setup":
-		_ = json.NewEncoder(w).Encode(map[string]any{"required": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"required": true, "provider": "beta", "model": "b1"})
+	case "/submit":
+		if k.keyless {
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": "provider.key_missing", "message": "no key"})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case "/provider-setup/connections":
 		_ = json.NewEncoder(w).Encode(map[string]any{"revision": "r1", "connections": []map[string]any{
 			{"name": "alpha", "kind": "openai", "models": 2, "keyRequired": true},

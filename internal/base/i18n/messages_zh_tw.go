@@ -343,6 +343,8 @@ var ChineseTraditional = Messages{
 	SetupTestOK:          "連線測試成功，金鑰尚未儲存。",
 	SetupTestFailed:      "連線測試失敗：%s",
 	SetupSaved:           "已為 %s 儲存金鑰並生效。",
+	SetupOwed:            "%s 還沒有 API 金鑰。選擇一個連線並貼上金鑰；之後可用 /setup 再次開啟此面板。",
+	SetupTurnRefused:     "目前模型沒有 API 金鑰，請用 /setup 新增。訊息沒有送出。",
 	CmdWorkMode:          "切換執行設定",
 	CmdDocs:              "搜尋與目前版本匹配的內建文件",
 	CmdMemory:            "檢視指令、記憶與復原狀態",

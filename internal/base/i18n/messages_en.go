@@ -354,6 +354,8 @@ var English = Messages{
 	SetupTestOK:          "Connection test succeeded. The credential has not been saved yet.",
 	SetupTestFailed:      "connection test: %s",
 	SetupSaved:           "Credential saved for %s and applied.",
+	SetupOwed:            "%s has no API key yet. Pick a connection and paste its key; /setup brings this panel back.",
+	SetupTurnRefused:     "The selected model has no API key; use /setup to add one. Nothing was sent.",
 	CmdWorkMode:          "switch execution setting",
 	CmdDocs:              "search version-matched embedded documentation",
 	CmdMemory:            "inspect instructions, memory, and recovery",

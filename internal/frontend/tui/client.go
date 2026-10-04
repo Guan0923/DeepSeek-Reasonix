@@ -39,6 +39,7 @@ func Code(err error) string {
 const (
 	CodeSessionBusy = "busy.session_running"
 	CodePlanStale   = "plan.decision_stale"
+	CodeKeyMissing  = "provider.key_missing"
 )
 
 // Client drives one runtime of a serve hub. Base is its route prefix, e.g.
