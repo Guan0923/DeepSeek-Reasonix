@@ -265,27 +265,28 @@ func (h *Hub) importLegacySessions(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, err)
 		return
 	}
-	known := false
+	known := ""
 	for _, ref := range h.roots() {
 		if ref.dir == workspace {
-			known = true
+			known = ref.dir
 			break
 		}
 	}
-	if !known {
+	if known == "" {
 		refuse(w, http.StatusForbidden, "workspace.unknown", "select a known workspace for recovered sessions", nil)
 		return
 	}
-	result := migration.RunLegacySessionImportInto(strings.TrimSpace(body.Path), SessionDirFor(workspace), event.Discard)
+	result := migration.RunLegacySessionImportInto(strings.TrimSpace(body.Path), SessionDirFor(known), event.Discard)
 	count := 0
 	for _, imported := range result.SessionImports {
 		count += imported.Count
 	}
 	writeJSON(w, struct {
-		Summary  string `json:"summary"`
-		Imported int    `json:"imported"`
-		Warnings int    `json:"warnings"`
-	}{Summary: result.Summary(), Imported: count, Warnings: len(result.SessionErrs)})
+		Summary    string `json:"summary"`
+		Imported   int    `json:"imported"`
+		Warnings   int    `json:"warnings"`
+		Recognised bool   `json:"recognised"`
+	}{Summary: result.Summary(), Imported: count, Warnings: len(result.SessionErrs), Recognised: !result.Unrecognised})
 }
 
 // recoveryLineageRoot names the conversation a copy belongs to. The stamped
