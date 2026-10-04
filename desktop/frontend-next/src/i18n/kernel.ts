@@ -18,7 +18,7 @@ export const PROVIDER_EDIT_DISABLED = "provider.editing_disabled";
 // A paired device answers this for every account route, votes included.
 export const ACCOUNT_SIGNIN_DISABLED = "account.signin_disabled";
 // The write landed and only applying it to the open conversation did not.
-export const SAVED_NOT_APPLIED: readonly string[] = ["provider.saved_while_running", "provider.saved_model_unlisted", "runtime.rebuild_failed"];
+export const SAVED_NOT_APPLIED: readonly string[] = ["provider.saved_while_running", "provider.saved_model_unlisted", "runtime.rebuild_failed", "runtime.saved_while_running"];
 
 const SAID: Record<string, string> = {
   "shell.destructive_target": "递归删除目标受保护或超出授权范围；请使用工作区或授权目录内的字面路径",
@@ -136,6 +136,7 @@ const SAID: Record<string, string> = {
   "provider.no_current_model": "当前没有正在使用的模型，无法记录其窗口大小",
   "context.window_after_this_turn": "窗口大小已记录，将在本轮结束后生效",
   "provider.saved_while_running": "已保存。当前对话还有未结束的工作（正在运行、等待你回答或有后台任务），仍按原设置进行；结束后再保存一次即可生效",
+  "runtime.saved_while_running": "已保存。当前对话还有未结束的工作（正在运行、等待你回答或有后台任务），仍按原设置进行；结束后再保存一次即可生效",
   "provider.saved_model_unlisted": "已保存。当前对话使用的模型已不在该来源的列表中，切换模型后才会生效",
   "provider.extra_body_null": "额外设置中的「{path}」不能为空值（null）",
   "provider.no_websearch_wire": "该协议不支持由端点自行搜索",
