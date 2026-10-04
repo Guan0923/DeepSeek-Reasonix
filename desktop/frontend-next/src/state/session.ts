@@ -52,7 +52,7 @@ export const initialState: SessionState = {
   waiting: {},
   running: false,
   doing: "空闲",
-  steerQueue: [], subagentPhase: {},
+  steerQueue: [], takenBack: [], subagentPhase: {},
   awaitingTurnStart: [],
   queueMoved: 0,
   browserTabsMoved: 0,
@@ -243,7 +243,7 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
     return {
       ...s,
       items: s.items.filter((i) => !(i.t === "user" && (i.id === ev.id || i.itemId === ev.id))),
-      steerQueue: s.steerQueue,
+      takenBack: [...s.takenBack, ev.id].slice(-32),
     };
   }
   // The card stays after the fact is dropped, marked: the transcript is the
