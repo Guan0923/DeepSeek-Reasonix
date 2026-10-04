@@ -13,9 +13,7 @@ import (
 	"reasonix/internal/base/testenv"
 	"reasonix/internal/contract/config"
 	"reasonix/internal/contract/event"
-	_ "reasonix/internal/model/anthropic"
 	_ "reasonix/internal/model/openai"
-	_ "reasonix/internal/model/responses"
 	"reasonix/internal/state/stats"
 )
 
@@ -25,6 +23,17 @@ func TestUsageDateRangeThroughBootBuild(t *testing.T) {
 	home := testenv.TempDir(t)
 	workspace := testenv.TempDir(t)
 	t.Setenv("REASONIX_HOME", home)
+	seed := `default_model = "boot/openai-compatible"
+
+[[providers]]
+name = "boot"
+kind = "openai"
+base_url = "https://example.com/v1"
+model = "openai-compatible"
+`
+	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(seed), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	day := time.Now().AddDate(0, -2, 0)
 	line := map[string]any{"ts": day.Format(time.RFC3339), "model": "deepseek-flash/deepseek-flash", "source": "desktop", "total": 100}
