@@ -148,8 +148,12 @@ func build(ctx context.Context, dir string, repoEnv, extraConfig, args []string)
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	overrides, err := driverOverrides(ctx, dir, repoEnv, args)
-	cmd := newCommand(ctx, Args(dir, append(slices.Clone(extraConfig), overrides...), args...), repoEnv)
+	screened, refused := screen(args)
+	overrides, err := driverOverrides(ctx, dir, repoEnv, screened)
+	cmd := newCommand(ctx, Args(dir, append(slices.Clone(extraConfig), overrides...), screened...), repoEnv)
+	if err == nil {
+		err = refused
+	}
 	if err != nil {
 		cmd.Err = err
 	}
