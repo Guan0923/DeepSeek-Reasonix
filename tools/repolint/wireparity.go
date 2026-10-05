@@ -25,6 +25,7 @@ const (
 	tsProviderFile  = "desktop/frontend-next/src/port/provider.ts"
 	tsFeedbackFile  = "desktop/frontend-next/src/port/feedback.ts"
 	tsWorkspaceFile = "desktop/frontend-next/src/port/workspace.ts"
+	tsLookFile      = "desktop/frontend-next/src/port/look.ts"
 )
 
 // mirroredWireTypes are the Go types the desktop keeps a second, hand-written
@@ -145,6 +146,11 @@ var mirroredWireTypes = []wireMirror{
 	{"internal/session/control/commit.go", "CommitRequest", tsWorkspaceFile, "CommitRequest"},
 	{"internal/session/control/commit.go", "CommitResult", tsWorkspaceFile, "CommitResult"},
 	{"internal/platform/gitcommit/gitcommit.go", "File", tsWorkspaceFile, "CommitFile"},
+	// The scale range the slider is drawn from. A bound the page cannot read is
+	// a slider with a range of its own, which is how it came to promise 2.5
+	// while the save held it to 1.8.
+	{"internal/frontend/serve/appearance.go", "appearanceView", tsLookFile, "Appearance"},
+	{"internal/frontend/serve/appearance.go", "zoomRangeView", tsLookFile, "ZoomRange"},
 }
 
 type wireMirror struct {
