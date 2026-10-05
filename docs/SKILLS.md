@@ -79,7 +79,26 @@ Each skill's body is loaded when that skill is invoked.
 | `disable-model-invocation` | `true` prevents model calls; the user can still invoke the skill explicitly. |
 | `requires` | Ready capabilities required for model invocation, e.g. `mcp-server:github`. See the MCP requirements example below. |
 
-Unknown keys are ignored, so a skill written for another agent loads as-is.
+Unknown legacy keys are ignored. The `delivery` and `authority` namespaces
+have explicit validation rules:
+
+1. A subagent profile MAY declare the typed verdict it owes with
+   `delivery.review-report`. The accepted scalar values are `review` and
+   `security`, case-insensitive:
+
+   ```yaml
+   delivery:
+     review-report: review
+   ```
+
+2. `delivery` MUST be a mapping with only recognized fields. An unknown field,
+   a non-scalar `review-report`, or an unsupported verdict rejects the skill
+   during loading. Correct the declaration before trying to invoke it.
+3. Authors MUST NOT declare `authority`, including an empty block. The host
+   owns the authority to satisfy a review obligation; declaring a delivery
+   requirement does not grant it. A skill declaring `authority` is rejected.
+4. A top-level `review-report` is diagnosed but does not set the delivery
+   requirement. Move it under `delivery` as shown above.
 
 ## Managing skills
 
