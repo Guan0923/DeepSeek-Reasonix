@@ -455,7 +455,10 @@ export const EN_SETTINGS: Record<string, string> = {
   "折叠结果没能保存": "The folded result could not be saved",
   "压缩未完成": "Compaction did not complete",
   "生成摘要的请求失败了": "The request that writes the summary failed",
-  "生成摘要的请求超时了": "The request that writes the summary timed out",
+  "生成摘要的请求停滞了：连续 6 分钟没有任何输出":
+    "The request that writes the summary stalled: no output for 6 minutes",
+  "生成摘要的请求运行满 30 分钟仍未完成，已停止":
+    "The request that writes the summary was still running after 30 minutes and was stopped",
   "摘要在输出上限处被截断，没有采用": "The summary hit the output limit and was discarded",
   "待折叠的内容缩减后仍超过单次摘要请求的容量": "The content to fold still exceeds one summary request after shortening",
   "摘要生成期间对话发生了变化，已放弃这次折叠": "The conversation changed while the summary was written, so this fold was dropped",
