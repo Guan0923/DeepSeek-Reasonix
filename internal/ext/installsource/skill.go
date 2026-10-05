@@ -141,16 +141,20 @@ func (t *Tool) verifySkill(scope, name string, act *action) error {
 	if !ok {
 		return newErr(ErrSourceUnreadable, "skill %q is installed but not discoverable", name)
 	}
-	act.Discoverable = true
-	act.CanonicalPath = sk.Path
-	for _, listed := range store.List() {
-		if listed.Name == name {
-			act.Indexed = true
-			break
+	installedPath := config.CanonicalSkillPath(act.CanonicalPath)
+	if config.CanonicalSkillPath(sk.Path) != installedPath {
+		act.Warnings = append(act.Warnings, fmt.Sprintf("skill %q installed at %s is shadowed in this workspace by %s", name, act.CanonicalPath, sk.Path))
+	} else {
+		act.Discoverable = true
+		for _, listed := range store.List() {
+			if listed.Name == name && config.CanonicalSkillPath(listed.Path) == installedPath {
+				act.Indexed = true
+				break
+			}
 		}
-	}
-	if strings.TrimSpace(sk.Description) == "" {
-		act.Warnings = append(act.Warnings, fmt.Sprintf("skill %q has no description frontmatter; it is installed but the skills index will use a placeholder", name))
+		if strings.TrimSpace(sk.Description) == "" {
+			act.Warnings = append(act.Warnings, fmt.Sprintf("skill %q has no description frontmatter; it is installed but the skills index will use a placeholder", name))
+		}
 	}
 	if msg := strings.TrimSpace(stderr.String()); msg != "" {
 		act.Warnings = append(act.Warnings, msg)
