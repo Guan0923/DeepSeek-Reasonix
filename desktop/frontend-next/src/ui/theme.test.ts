@@ -145,3 +145,48 @@ describe("a pack's inks answer to the reader's contrast", () => {
     expect(Number(read("--bg-overlay"))).toBeCloseTo(0.72);
   });
 });
+
+describe("decorative roles are themeable and the status hues are not", () => {
+  const decorated: ThemePack = {
+    ...pack,
+    tokens: {
+      light: { ...pack.tokens.light, link: "#111111", brand: "#222222", halo: "#333333", labelAgent: "#444444" },
+      dark: { ...pack.tokens.dark, link: "#eeeeee", brand: "#dddddd", halo: "#cccccc", labelAgent: "#bbbbbb" },
+    },
+  };
+
+  it("maps each decorative token onto its own variable", () => {
+    apply(decorated, "light");
+    expect(read("--link")).toBe("#111111");
+    expect(read("--brand")).toBe("#222222");
+    expect(read("--halo")).toBe("#333333");
+    expect(read("--label-agent")).toBe("#444444");
+    apply(decorated, "dark");
+    expect(read("--link")).toBe("#eeeeee");
+  });
+
+  it("tints the washes from the decorative colour on the pack's own ground", () => {
+    apply(decorated, "light");
+    expect(read("--brand-wash")).toBe("color-mix(in srgb, #222222 12%, #FFFFFF)");
+    expect(read("--label-agent-wash")).toBe("color-mix(in srgb, #444444 12%, #FFFFFF)");
+  });
+
+  it("leaves the washes on their defaults when the pack names no decorative colour", () => {
+    apply(pack, "light");
+    for (const name of ["--link", "--brand", "--halo", "--label-agent", "--brand-wash", "--label-agent-wash"]) {
+      expect(read(name), name).toBe("");
+    }
+  });
+
+  it("never writes a status variable, whatever the pack carries", () => {
+    const hostile = {
+      ...decorated,
+      tokens: { light: { ...decorated.tokens.light, net: "#ff00ff", deleg: "#00ffff", ok: "#ff0000", err: "#00ff00", focus: "#ffff00" }, dark: {} },
+    } as unknown as ThemePack;
+    apply(hostile, "light");
+    for (const name of ["--net", "--deleg", "--ok", "--warn", "--err", "--add", "--del", "--focus", "--net-wash", "--deleg-wash"]) {
+      expect(read(name), name).toBe("");
+    }
+    expect(read("--link")).toBe("#111111");
+  });
+});

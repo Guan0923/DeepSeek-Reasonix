@@ -65,6 +65,8 @@
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     --grain-a: .026;
     --focus: var(--net);
+    --link: var(--net); --brand: var(--net); --brand-wash: var(--net-wash);
+    --halo: var(--net); --label-agent: var(--deleg); --label-agent-wash: var(--deleg-wash);
     --lit: inset 0 1px 0 rgb(255 255 255 / .055);
     --sunk: inset 0 1px 2px rgb(0 0 0 / .16);
     --ease: cubic-bezier(.22, .68, .26, 1);

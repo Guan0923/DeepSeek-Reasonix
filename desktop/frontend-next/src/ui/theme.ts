@@ -19,6 +19,10 @@ const SURFACE: Record<string, string[]> = {
   fgStrong: ["--text-strong"],
   accent: ["--accent"],
   accentFg: ["--accent-fg"],
+  link: ["--link"],
+  brand: ["--brand"],
+  halo: ["--halo"],
+  labelAgent: ["--label-agent"],
   float: ["--float"],
   floatHi: ["--float-hi"],
   codeBg: ["--face-code"],
@@ -42,6 +46,12 @@ const DERIVED: [string, { source: string; paint: (t: Record<string, string>) => 
   ["floatHi", { source: "bgElev", paint: (t) => t.bgElev }],
   ["codeBg", { source: "bgSoft", paint: (t) => `color-mix(in srgb, ${t.bgSoft} 50%, ${t.bg ?? t.bgSoft})` }],
   ["sunkBg", { source: "bg", paint: (t) => t.bg }],
+];
+
+// Tinted backgrounds that follow a decorative colour, as --accent-wash follows the accent.
+const WASHES: [string, string][] = [
+  ["brand", "--brand-wash"],
+  ["labelAgent", "--label-agent-wash"],
 ];
 
 // What a pack may not touch. ok/warn/err/net/deleg encode what is happening —
@@ -135,6 +145,9 @@ function declarations(pack: ThemePack, scheme: "light" | "dark", busy: boolean, 
   // move them too or the tinted backgrounds keep pointing at the old hue.
   if (tokens.accent) {
     out.push(["--accent-wash", `color-mix(in srgb, ${tokens.accent} 12%, ${tokens.bg ?? "transparent"})`]);
+  }
+  for (const [token, wash] of WASHES) {
+    if (tokens[token]) out.push([wash, `color-mix(in srgb, ${tokens[token]} 12%, ${tokens.bg ?? "transparent"})`]);
   }
 
   // The sky is drawn rather than placed, so it is independent of the picture:
