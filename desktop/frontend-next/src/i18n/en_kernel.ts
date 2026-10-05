@@ -3,6 +3,7 @@
 // code adds one here. i18n.test.ts is what stops one from being forgotten.
 
 export const EN_KERNEL: Record<string, string> = {
+  "内核繁忙或无法连接，这次回答可能没有被收到，重试前请先确认": "The kernel is busy or unreachable; the answer may not have been received - check before retrying",
   "递归删除目标受保护或超出授权范围；请使用工作区或授权目录内的字面路径": "The recursive delete target is protected or outside the granted roots; use a literal path inside the workspace or a granted directory",
   "无法确定递归删除范围；请使用字面命令名、路径和解释器内容": "The recursive delete extent is unknown; use a literal command name, path and interpreter payload",
   "请拆分命令；递归删除前只能使用字面路径切换目录，不能依赖变量赋值": "Split the call; only literal directory changes may precede a recursive delete, without relying on variable assignments",

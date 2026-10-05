@@ -1,4 +1,4 @@
-import { HttpError } from "../port/port";
+import { HttpError, KernelBusyError } from "../port/port";
 import { t } from "./index";
 
 // What the kernel says when it refuses, in the language the reader uses.
@@ -441,6 +441,7 @@ export function say(reason: Reason | null | undefined, fallback = ""): string {
  *  window's language, anything else prints as itself. One call so no display
  *  site has to know which kind it caught. */
 export function reason(e: unknown): string {
+  if (e instanceof KernelBusyError) return t("内核繁忙或无法连接，这次回答可能没有被收到，重试前请先确认");
   if (e instanceof HttpError && e.reason) return say(e.reason, e.message);
   // Nothing came back but a status: printing message here would put a path and
   // a number in front of the user. The status is the only identity there is.

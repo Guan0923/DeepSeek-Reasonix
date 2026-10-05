@@ -46,6 +46,7 @@ import { RMark } from "./RMark";
 import { speedOf } from "./speed";
 import { RuntimeBar } from "./RuntimeBar";
 import { PostureNote } from "./PostureNote";
+import { useStatusPoll } from "./useStatusPoll";
 import { LiveWork, useLiveWork } from "../state/foldpref";
 
 // PaneReport is what the window's own chrome needs from whichever pane has
@@ -186,9 +187,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
     setStatus((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   }, []);
 
-  const refreshStatus = useCallback(() => {
-    port.status().then(applyStatus).catch(() => {});
-  }, [port, applyStatus]);
+  const refreshStatus = useCallback(() => port.status().then(applyStatus).catch(() => {}), [port, applyStatus]);
 
   const [wallet, refreshWallet] = useWallet(port);
   const hideAmounts = useHidesAmounts();
@@ -368,13 +367,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
 
   // /status is the only source for background jobs and for settings the run does
   // not echo, so a live turn has to re-read it rather than infer from events.
-  useEffect(() => {
-    if (!running || !visible) return;
-    const tick = () => refreshStatus();
-    tick();
-    const t = setInterval(tick, 250);
-    return () => clearInterval(t);
-  }, [running, visible, refreshStatus]);
+  useStatusPoll(running && visible, refreshStatus);
 
   useEffect(() => {
     void port.surfaceSlots().then(setSlots).catch(() => setSlots({}));
