@@ -17,6 +17,22 @@ the gate is named.
 - `interpolate-size: allow-keywords` lets `height: auto` take part in a
   transition; engines without it jump, which is the prior behaviour.
 
+## Theme packs
+
+- A pack's values are the declarations of one generated rule,
+  `:root:root[data-pack]`, in a `<style id="pack-theme">` appended to `<head>`
+  when a pack is first applied and left where it is.
+- Nothing is written to the root's inline style: a stylesheet of equal
+  specificity added later wins without `!important`, and one already present
+  loses the tie.
+- The selector ties the contrast tiers (`:root[data-theme][data-contrast]`) and
+  beats them by order. With no pack there is no element: the tiers alone carry
+  the inks, and the reader's contrast is theirs.
+- A pack's own inks take the reader's contrast as a relative-colour lightness
+  offset inside that rule; the built-in inks need none.
+- `--ok --warn --err --net --deleg --add --del --focus` are not in the pack
+  vocabulary and are never written.
+
 ## Faces
 
 The interface ships its own faces. On Windows it otherwise resolved to Segoe UI
@@ -195,6 +211,10 @@ raised with its ratios kept.
   line and the other two step up; the body end does not move, because near-white
   on a dark ground haloes and narrowing the span is what "softer" means.
   Enforced by `perf/contrast.mjs`.
+- `--ghost` is `--faint`'s value in every tier: a lighter one fails the floor.
+- `perf/tiers.mjs` holds every tier: each ink is at least as legible as the
+  default palette stepped once (3.0/10.1, 3.5/7.5 and 3.5/7.0 lightness points
+  for text, muted and faint) and as the floors recorded there, on both grounds.
 - `prefers-contrast: more` is followed when the user has not chosen a tier.
   Light and dark are judged separately: a manual dark choice under a light
   system scheme would otherwise paint the light theme's dark body text onto a
