@@ -181,6 +181,31 @@ porting to `studio`; do not open the same PR against both.
 5. Ensure `gofmt -l .` shows no changes
 6. Submit a pull request to that same branch
 
+## Pull request policy
+
+**Open PR cap.** Keep at most three open (ready-for-review) pull requests per
+contributor at a time. Further work stays as drafts or branches until a slot
+frees up. Maintainers approve CI runs and review ready PRs first. Related
+changes of one pattern (a series) belong in one tracking issue plus one PR, or
+at most two.
+
+**Issue first for features.** A change that adds behaviour rather than fixing a
+defect should link an issue the maintainers have agreed to before the work
+starts. A fix for a reproducible defect may open directly, with the failing test
+in the PR. Documentation-only and test-only PRs are reviewed at lower priority.
+
+**Review tiers.**
+
+- Changes under the `sensitive:` paths declared in `REASONIX.md` get a full
+  review plus a security review, regardless of author.
+- Every PR carries the four sections of the PR template: Cause, Blast radius,
+  Neighbouring behaviours tested, Why this layer.
+- The new test must fail without the change.
+
+**Transparency.** The PR template has an optional checkbox for disclosing AI
+assistance. It is for transparency only and does not change how a change is
+reviewed.
+
 ## Reporting issues
 
 Open an issue on GitHub with:
