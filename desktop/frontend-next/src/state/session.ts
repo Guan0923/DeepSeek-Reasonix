@@ -18,16 +18,17 @@ import { askFromCall, promptOpen, prompted, sealByReceipt } from "./prompts";
 import { nameTurnStart, othersSteer } from "./turn_start";
 import { appendText, foldMessage, sealSay } from "./say";
 import { nextId } from "./ids";
+import { chipLabel, IDLE, RUNNING } from "./chip";
 import { foldStall } from "./stall";
 import { nameQueued } from "./queued";
 import { dropTool, foldLastRead, foldTool, isSubagentProgress, mergeReads, notePhase } from "./fold";
+export { chipLabel };
 export { quoteAmount };
 export { setShowsReceipt, showsReceipt };
 
 // doing is what the status chip prints. These two values are also read back by
 // the reducer, so they get a name: a comparison against a sentence is one copy
 // pass away from never matching again, and nothing fails when it stops.
-const RUNNING = "运行中";
 const WAITING_WORKSPACE = "等待工作区";
 // What the turn is doing between a tool finishing and the model's next packet.
 // The chip used to keep printing the tool that had already returned, so the
@@ -51,7 +52,7 @@ export const initialState: SessionState = {
     estimated: false, coverage: "none", incompleteReason: "", alt: null, turn: 0, rounds: [] },
   waiting: {},
   running: false,
-  doing: "空闲",
+  doing: IDLE,
   steerQueue: [], takenBack: [], subagentPhase: {},
   awaitingTurnStart: [],
   queueMoved: 0,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fromHistory, initialState, reduce, type Item, type SessionEvent, type SessionState } from "./session";
+import { chipLabel, fromHistory, initialState, reduce, type Item, type SessionEvent, type SessionState } from "./session";
 import type { HistoryMessage } from "../port/port";
 
 // vitest runs these in Node, where there is no localStorage. The preference
@@ -618,5 +618,24 @@ describe("a receipt that arrives after the delivery it is for", () => {
 
   it("still names a line the kernel has not delivered yet", () => {
     expect(users(run([sent, receipt]))[0]).toMatchObject({ pending: true, itemId: "it1" });
+  });
+});
+
+describe("chipLabel", () => {
+  it("says the turn is running for a client that joined after turn_started", () => {
+    expect(chipLabel(initialState, true)).toBe("运行中");
+    const done = run([{ kind: "turn_started" } as SessionEvent, { kind: "turn_done" } as SessionEvent]);
+    expect(chipLabel(done, true)).toBe("运行中");
+  });
+
+  it("keeps what the stream says once it has said something", () => {
+    const s = reduce(initialState, { kind: "tool_dispatch", tool: { id: "t1", name: "bash" } } as SessionEvent);
+    expect(chipLabel(s, true)).toBe("bash");
+  });
+
+  it("leaves a settled turn and a live one alone", () => {
+    expect(chipLabel(initialState, false)).toBe("空闲");
+    const live = run([{ kind: "turn_started" } as SessionEvent]);
+    expect(chipLabel(live, true)).toBe(live.doing);
   });
 });

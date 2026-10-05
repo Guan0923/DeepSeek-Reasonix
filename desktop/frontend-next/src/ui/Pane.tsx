@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { HttpError, type AgentPort, type Checkpoint, type ChipCall, type ContextBreakdown, type JobEntry, type McpEntry, type SessionStatus, type WorkspaceChanges } from "../port/port";
 import type { RuntimeView } from "../port/hub";
 import type { TrajectoryRead } from "../port/wire";
-import { currentStep, fromHistory, initialState, localId, quoteAmount, reduce, stepDone, stepLabel } from "../state/session";
+import { chipLabel, currentStep, fromHistory, initialState, localId, quoteAmount, reduce, stepDone, stepLabel } from "../state/session";
 import { pairCheckpoints } from "../state/checkpoints";
 import { DeckChips, type Deck } from "./DeckChips";
 import { Plan } from "./Plan";
@@ -663,7 +663,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
             data-idle={running || blocked ? undefined : ""}
           >
             <RMark />
-            <span>{t(s.doing || "运行中")}</span>
+            <span>{t(chipLabel(s, running))}</span>
             <RunTokens sent={sent} received={received} estimated={s.outLive > 0} />
           </div>
         )}
