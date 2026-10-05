@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { tx } from "../i18n/rich";
 import { reason } from "../i18n/kernel";
@@ -24,6 +24,7 @@ export function Memory({ port }: { port: AgentPort }) {
   const [edit, setEdit] = useState<MemoryEdit | null>(null);
   const [past, setPast] = useState<Record<string, MemoryEntry[]>>({});
   const [showPast, setShowPast] = useState("");
+  const historyRequests = useRef<Record<string, object>>({});
 
   const reload = () => {
     port
@@ -72,6 +73,17 @@ export function Memory({ port }: { port: AgentPort }) {
       </>
     );
 
+  const refreshMemory = (name: string) => {
+    delete historyRequests.current[name];
+    setPast((p) => {
+      const next = { ...p };
+      delete next[name];
+      return next;
+    });
+    setShowPast((shown) => shown === name ? "" : shown);
+    reload();
+  };
+
   const save = async () => {
     if (!edit) return;
     setBusy(edit.name);
@@ -79,7 +91,7 @@ export function Memory({ port }: { port: AgentPort }) {
     try {
       await port.saveMemory(edit);
       setEdit(null);
-      reload();
+      refreshMemory(edit.name);
     } catch (e) {
       setError(reason(e));
     } finally {
@@ -92,12 +104,16 @@ export function Memory({ port }: { port: AgentPort }) {
     setShowPast(name);
     setError("");
     if (past[name]) return;
+    const request = {};
+    historyRequests.current[name] = request;
     try {
       const list = await port.memoryRevisions(name);
+      if (historyRequests.current[name] !== request) return;
       setPast((p) => ({ ...p, [name]: list }));
     } catch (e) {
+      if (historyRequests.current[name] !== request) return;
       setError(reason(e));
-      setShowPast("");
+      setShowPast((shown) => shown === name ? "" : shown);
     }
   };
 
@@ -106,15 +122,7 @@ export function Memory({ port }: { port: AgentPort }) {
     setError("");
     try {
       await port.restoreMemory(name, revision);
-      // The restore wrote a new revision, so the cached list is now one short.
-      // Drop the key rather than emptying it — an empty array reads as cached.
-      setPast((p) => {
-        const next = { ...p };
-        delete next[name];
-        return next;
-      });
-      setShowPast("");
-      reload();
+      refreshMemory(name);
     } catch (e) {
       setError(reason(e));
     } finally {
@@ -127,7 +135,7 @@ export function Memory({ port }: { port: AgentPort }) {
     setError("");
     try {
       await port.forgetMemory(name);
-      reload();
+      refreshMemory(name);
     } catch (e) {
       setError(reason(e));
     } finally {
