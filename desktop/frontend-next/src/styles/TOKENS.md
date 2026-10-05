@@ -32,6 +32,30 @@ the gate is named.
   offset inside that rule; the built-in inks need none.
 - `--ok --warn --err --net --deleg --add --del --focus` are not in the pack
   vocabulary and are never written.
+- Decoration that is not a status has its own tokens, which a pack may set
+  (see Decorative roles). A pack that names `net` or `deleg` has them dropped
+  with a warning by the kernel; the frontend has no entry that could write them.
+
+## Decorative roles
+
+`net` and `deleg` say what the agent is doing: running, connected, delegated
+out. A hyperlink, the product accent and a hover halo are not that, so they read
+their own tokens. Each default is the status colour it replaces, in both schemes
+and at every contrast step, so nothing paints differently until a pack sets one.
+
+| Pack key | Variable | Default | Job |
+| --- | --- | --- | --- |
+| `link` | `--link` | `--net` | Hyperlinks and URLs: `.md a`, `.fbk a`, `.lk`, `.hit-row .u` |
+| `brand` | `--brand` | `--net` | The product's own tint: wallet and toolbar icons, info notes, feedback status chips, skill chips, the selected option and the open workspace's bar |
+| `halo` | `--halo` | `--net` | Hover and drag-over emphasis: card hover, screenshot hover, the reference-drop ring |
+| `labelAgent` | `--label-agent` | `--deleg` | An agent's name: `.who` labels and sub-agent chips |
+| derived | `--brand-wash` | `--net-wash` | Tint behind `brand`; a pack that sets `brand` derives it at 12% over its ground, as `--accent-wash` follows `accent` |
+| derived | `--label-agent-wash` | `--deleg-wash` | Tint behind `labelAgent`, derived the same way |
+
+- `--halo` is not `--glow`: `--glow` is the running compose ring's own local
+  variable, set to `--net` while a turn runs, and stays a status.
+- The running compose ring, call lines, pips, carets and the delegated nest keep
+  `net` and `deleg`.
 
 ## Faces
 
