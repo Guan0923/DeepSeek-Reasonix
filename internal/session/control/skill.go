@@ -203,7 +203,7 @@ func (c *Controller) AllSkills() []skill.Skill {
 
 // DisabledSkills returns all discoverable skills that are off in this project.
 func (c *Controller) DisabledSkills() []skill.Skill {
-	resolve := c.skillActivation()
+	resolve := c.SkillActivation()
 	var out []skill.Skill
 	for _, sk := range c.AllSkills() {
 		if !resolve(sk.Name) {
@@ -215,13 +215,13 @@ func (c *Controller) DisabledSkills() []skill.Skill {
 
 // SkillEnabled reports whether a skill is on in this project.
 func (c *Controller) SkillEnabled(name string) bool {
-	return c.skillActivation()(name)
+	return c.SkillActivation()(name)
 }
 
-// skillActivation resolves several names against one config and one store read.
+// SkillActivation resolves several names against one config and one store read.
 // skills.disabled_skills stays readable as the declared default, so a
 // hand-written config keeps working even though the switch no longer writes it.
-func (c *Controller) skillActivation() func(string) bool {
+func (c *Controller) SkillActivation() func(string) bool {
 	declared := func(string) bool { return true }
 	if cfg, err := config.Load(); err == nil {
 		declared = func(name string) bool { return !cfg.IsSkillDisabled(name) }
