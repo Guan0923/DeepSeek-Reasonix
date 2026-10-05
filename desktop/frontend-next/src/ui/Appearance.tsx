@@ -9,6 +9,7 @@ import { Notifications } from "./Notifications";
 import { Folding } from "./Folding";
 import { Switch } from "./Switch";
 import { ThemeImport } from "./ThemeImport";
+import { useThemeInventory } from "./useThemeInventory";
 import { setShowsReceipt, showsReceipt } from "../state/session";
 
 // "" follows the machine; the rest are explicit, the same shape the light/dark
@@ -121,7 +122,7 @@ function useCrop(url: string | undefined, box: HTMLElement | null) {
 }
 
 export function Appearance({ port, theme, onTheme, contrast, onContrast, weight, onWeight, reloadThemes, look, onLook }: Props) {
-  const [{ packs, unread }, setThemes] = useState<{ packs: ThemePack[]; unread: string }>({ packs: [], unread: "" });
+  const { packs, unread, load } = useThemeInventory(port);
   // null in a browser tab, where there is no window to keep running and no
   // icon to bring one back. The whole section goes with it.
   const [tray, setTray] = useState<TrayPrefs | null>(null);
@@ -149,13 +150,6 @@ export function Appearance({ port, theme, onTheme, contrast, onContrast, weight,
     },
     [port, tray],
   );
-
-  const load = useCallback(() => {
-    port.themes()
-      .then((packs) => setThemes({ packs, unread: "" }))
-      .catch((e) => setThemes((prev) => ({ ...prev, unread: reason(e) })));
-  }, [port]);
-  useEffect(load, [load]);
 
   // Activating repaints through App's own theme effect, so this only refreshes
   // the list and asks App to re-read which pack is active.
