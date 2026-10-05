@@ -449,7 +449,7 @@ func (t *Tool) localSkillActions(req request, path string, info os.FileInfo) ([]
 			if root == "" {
 				root = filepath.Dir(path)
 			}
-			return []action{t.skillRootAction(req, root, []string{cand.Name})}, nil
+			return []action{t.skillRootAction(req, root, []skillCandidate{cand})}, nil
 		}
 		return []action{t.skillAction(req, cand, modeForSingleSkill(req.Mode))}, nil
 	}
@@ -465,7 +465,7 @@ func (t *Tool) localSkillActions(req request, path string, info os.FileInfo) ([]
 			cand.Name = req.Name
 		}
 		if req.Mode == "register" {
-			return []action{t.skillRootAction(req, filepath.Dir(path), []string{cand.Name})}, nil
+			return []action{t.skillRootAction(req, filepath.Dir(path), []skillCandidate{cand})}, nil
 		}
 		return []action{t.skillAction(req, cand, modeForSingleSkill(req.Mode))}, nil
 	}
@@ -481,20 +481,18 @@ func (t *Tool) localSkillActions(req request, path string, info os.FileInfo) ([]
 		mode = "register"
 	}
 	if mode == "register" {
-		byRoot := map[string][]string{}
+		byRoot := map[string][]skillCandidate{}
 		for _, cand := range cands {
 			root := cand.RootPath
 			if root == "" {
 				root = path
 			}
-			byRoot[root] = append(byRoot[root], cand.Name)
+			byRoot[root] = append(byRoot[root], cand)
 		}
 		roots := slices.Sorted(maps.Keys(byRoot))
 		actions := make([]action, 0, len(roots))
 		for _, root := range roots {
-			rootNames := byRoot[root]
-			slices.Sort(rootNames)
-			actions = append(actions, t.skillRootAction(req, root, rootNames))
+			actions = append(actions, t.skillRootAction(req, root, byRoot[root]))
 		}
 		return actions, nil
 	}

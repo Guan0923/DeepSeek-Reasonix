@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -79,8 +80,19 @@ func skillActionRisk(mode string, cand skillCandidate) (RiskLevel, []string) {
 }
 
 // skillRootAction builds the DTO for registering a whole skill directory.
-func (t *Tool) skillRootAction(req request, path string, names []string) action {
+func (t *Tool) skillRootAction(req request, path string, candidates []skillCandidate) action {
 	scope := t.installScope(req, "skill", path)
+	names := make([]string, 0, len(candidates))
+	files := make(map[string][]string)
+	for _, cand := range candidates {
+		names = append(names, cand.Name)
+		file := cand.SourcePath
+		if cand.IsDir {
+			file = filepath.Join(file, skill.SkillFile)
+		}
+		files[cand.Name] = append(files[cand.Name], file)
+	}
+	slices.Sort(names)
 	return action{
 		Kind:        "skill",
 		Action:      "register_skill_root",
@@ -96,6 +108,7 @@ func (t *Tool) skillRootAction(req request, path string, names []string) action 
 		InstallRoot: path,
 		RiskLevel:   RiskMedium,
 		RiskReasons: []string{"adds a new skill root to the active config"},
+		skillFiles:  files,
 	}
 }
 
