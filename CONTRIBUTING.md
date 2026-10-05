@@ -183,11 +183,8 @@ porting to `studio`; do not open the same PR against both.
 
 ## Pull request policy
 
-**Open PR cap.** Keep at most three open (ready-for-review) pull requests per
-contributor at a time. Further work stays as drafts or branches until a slot
-frees up. Maintainers approve CI runs and review ready PRs first. Related
-changes of one pattern (a series) belong in one tracking issue plus one PR, or
-at most two.
+**Related changes.** If you have several related changes of one pattern, a
+tracking issue plus one pull request is easiest to review.
 
 **Issue first for features.** A change that adds behaviour rather than fixing a
 defect should link an issue the maintainers have agreed to before the work
