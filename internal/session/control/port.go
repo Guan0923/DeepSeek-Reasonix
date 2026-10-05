@@ -204,6 +204,7 @@ type Skills interface {
 	AllSkills() []skill.Skill
 	DisabledSkills() []skill.Skill
 	SkillEnabled(name string) bool
+	SkillActivation() func(name string) bool
 	SkillOverrideScope(name string) (config.ActivationScope, bool)
 	SetSkillEnabled(name string, scope config.ActivationScope, enabled bool) error
 	ClearSkillOverride(name string, scope config.ActivationScope) error
