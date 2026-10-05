@@ -96,6 +96,7 @@ func (s *skillSet) bySlashName(name string) (skill.Skill, bool) {
 }
 
 func (s *skillSet) prepare(sk skill.Skill) skill.Skill {
+	sk = sk.Complete()
 	if s.store != nil {
 		return s.store.Prepare(sk)
 	}
@@ -112,7 +113,7 @@ func (s *skillSet) forModel(sk skill.Skill) (skill.Skill, error) {
 	if err := s.store.ValidateInvocation(sk); err != nil {
 		return skill.Skill{}, err
 	}
-	return sk, nil
+	return sk.Complete(), nil
 }
 
 // modelGate judges the model's slash entries once per call; a session with no
