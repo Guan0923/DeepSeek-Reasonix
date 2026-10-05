@@ -503,7 +503,11 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
             attempt: ev.retryAttempt ?? 0,
             max: ev.retryMax ?? 0,
             scope: ev.retryScope,
-            since: s.waiting.retry?.since ?? Date.now(),
+            cause: ev.retryCause,
+            status: ev.retryStatus,
+            delayMs: ev.retryDelayMs,
+            timeoutSecs: ev.retryTimeoutSecs,
+            since: Date.now(),
           },
         },
       };

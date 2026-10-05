@@ -125,6 +125,7 @@ const SAID: Record<string, string> = {
   "provider.bad_context_window": "上下文长度不能是负数；填 0 表示不自动压缩",
   "provider.bad_token_limit": "Token 上限不能是负数",
   "provider.bad_max_output_tokens": "最大输出 Token 不能是负数",
+  "provider.bad_idle_timeout": "无响应超时须在 {min} 到 {max} 秒之间；留空使用默认值",
   "provider.bad_reasoning_protocol": "无法识别「{protocol}」这种思考协议",
   "provider.default_effort_not_listed": "默认档位「{level}」不在填写的档位里",
   "provider.model_default_effort_not_listed": "{model} 的默认档位「{level}」不在为它选的档位里",

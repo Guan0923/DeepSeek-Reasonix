@@ -351,6 +351,7 @@ func (c *client) sendOpts(hint provider.RequestHint) provider.SendOptions {
 		KeyPresent:     c.apiKey() != "",
 		RetryAuth:      c.learned.authed.Load(),
 		BadRequestHint: hint,
+		HeaderTimeout:  c.idleTimeout,
 	}
 }
 
