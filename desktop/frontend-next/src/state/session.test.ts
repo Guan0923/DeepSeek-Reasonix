@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { chipLabel, fromHistory, initialState, reduce, type Item, type SessionEvent, type SessionState } from "./session";
 import type { HistoryMessage } from "../port/port";
 
@@ -403,10 +403,44 @@ describe("the retry line", () => {
     expect(s.waiting.retry?.attempt).toBe(1);
   });
 
-  it("times the stall from its first attempt, not its latest", () => {
-    const first = run([started(), retrying(1, "stream")]);
-    const second = reduce(first, retrying(2, "stream"));
-    expect(second.waiting.retry?.since).toBe(first.waiting.retry?.since);
+  // The notice fires when an attempt fails, so the clock it starts is the next
+  // attempt's wait: a counter that carried over would claim the whole stall as
+  // one wait.
+  it("restarts the clock for each attempt", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1000);
+      const first = run([started(), retrying(1, "headers")]);
+      vi.setSystemTime(61_000);
+      const second = reduce(first, retrying(2, "headers"));
+      expect(first.waiting.retry?.since).toBe(1000);
+      expect(second.waiting.retry?.since).toBe(61_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("carries the failure class, backoff and answer bound the kernel sent", () => {
+    const s = run([
+      started(),
+      {
+        kind: "retrying",
+        retryAttempt: 1,
+        retryMax: 10,
+        retryScope: "headers",
+        retryCause: "upstream_status",
+        retryStatus: 502,
+        retryDelayMs: 1250,
+        retryTimeoutSecs: 300,
+      } as SessionEvent,
+    ]);
+    expect(s.waiting.retry).toMatchObject({ cause: "upstream_status", status: 502, delayMs: 1250, timeoutSecs: 300 });
+  });
+
+  it("leaves the class unset for a kernel that does not send one", () => {
+    const s = run([started(), retrying(1, "headers")]);
+    expect(s.waiting.retry?.cause).toBeUndefined();
+    expect(s.waiting.retry?.delayMs).toBeUndefined();
   });
 
   it("comes down when the turn ends", () => {

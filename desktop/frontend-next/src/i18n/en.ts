@@ -56,11 +56,27 @@ export const EN: Record<string, string> = {
   "可读取代码、查找资料、运行工具并修改文件。完整执行过程可在「轨迹」中查看。":
     "It can read code, research, run tools, and edit files. The full run stays visible in the Trajectory.",
   "等待回包 {secs}s": "Waiting for a response · {secs}s",
-  "连接在响应头前断了，重试 {attempt}/{max} · {secs}s":
-    "Connection dropped before the headers · retry {attempt}/{max} · {secs}s",
-  "回包写到一半断了，重放 {attempt}/{max} · {secs}s":
-    "The response was cut mid-stream · replay {attempt}/{max} · {secs}s",
-  "连接已断开，重试 {attempt}/{max} · {secs}s": "Connection dropped · retry {attempt}/{max} · {secs}s",
+  "连接被中断": "Connection closed",
+  "服务器没有及时响应": "The server did not answer in time",
+  "服务器返回 HTTP {status}": "Server returned HTTP {status}",
+  "回包停住了": "The response stalled",
+  "服务器在回包中途报错": "The server reported an error mid-response",
+  "回包写到一半断了": "The response was cut mid-stream",
+  "请求没有成功": "The request did not succeed",
+  "连接已断开": "Connection dropped",
+  "{n}s 后重试 {attempt}/{max}": "next retry ({attempt}/{max}) in {n} s",
+  "{n}s 后重放 {attempt}/{max}": "next replay ({attempt}/{max}) in {n} s",
+  "重试 {attempt}/{max} · 等待服务器响应 {secs}s（超过 {limit}s 视为无响应）":
+    "Retry {attempt}/{max} · waiting for the server to answer {secs} s ({limit} s counts as no answer)",
+  "重试 {attempt}/{max} · 等待服务器响应 {secs}s": "Retry {attempt}/{max} · waiting for the server to answer {secs} s",
+  "重放 {attempt}/{max} · 等待服务器响应 {secs}s": "Replay {attempt}/{max} · waiting for the server to answer {secs} s",
+  "无响应超时": "No-answer timeout",
+  "默认 {n}": "Default {n}",
+  "秒": "s",
+  "{n} 秒无响应超时": "{n} s no-answer timeout",
+  "等待响应头、以及回包过程中无新内容超过这个时间，就按连接中断处理并重试。本地模型处理长上下文时可能需要调大。":
+    "If the server sends nothing for this long, while waiting for the response headers or in the middle of a reply, the call is treated as dropped and retried. A local model working through a long context may need it raised.",
+  "须是 {min} 到 {max} 之间的整数秒；留空使用默认值。": "Enter a whole number of seconds from {min} to {max}; leave it empty for the default.",
   "Agent": "Agent",
   "思考中…": "Thinking…",
   "思考中 {secs} 秒": "Thinking · {secs}s",

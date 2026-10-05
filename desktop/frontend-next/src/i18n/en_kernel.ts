@@ -286,6 +286,7 @@ export const EN_KERNEL: Record<string, string> = {
   "上下文长度不能是负数；填 0 表示不自动压缩": "The context window cannot be negative; 0 means no automatic compaction",
   "Token 上限不能是负数": "The token limit cannot be negative",
   "最大输出 Token 不能是负数": "The maximum output tokens cannot be negative",
+  "无响应超时须在 {min} 到 {max} 秒之间；留空使用默认值": "The no-answer timeout must be between {min} and {max} seconds; leave it empty for the default",
   "无法识别「{protocol}」这种思考协议": "Unrecognised reasoning protocol “{protocol}”",
   "默认档位「{level}」不在填写的档位里": "The default level “{level}” is not one of the levels listed",
   "{model} 的默认档位「{level}」不在为它选的档位里": "The default level “{level}” for {model} is not one of the levels picked for it",

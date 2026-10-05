@@ -3135,6 +3135,7 @@
   .probe-ok { margin: 8px 0 0; font: var(--w-reg) var(--fs-meta) var(--ui); color: var(--ok) }
   .unit-field { display: flex; min-width: 0; align-items: stretch; border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--raised); overflow: hidden }
   .unit-field:focus-within { outline: 2px solid var(--focus); outline-offset: 1px }
+  .unit-field:has(input[aria-invalid="true"]) { border-color: var(--err) }
   .unit-field input { min-width: 0; width: 100%; border: 0 !important; outline: 0 !important; background: transparent !important }
   .unit-field > i { flex: none; display: flex; align-items: center; padding: 0 9px; border-left: 1px solid var(--hair); color: var(--faint); font: var(--w-reg) var(--fs-micro) var(--mono); font-style: normal }
   .addp-footer { justify-content: flex-end; padding-top: 14px; border-top: 1px solid var(--hair) }
