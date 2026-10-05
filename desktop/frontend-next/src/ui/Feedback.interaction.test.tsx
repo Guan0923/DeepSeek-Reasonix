@@ -452,3 +452,22 @@ describe("dialog", () => {
     await waitFor(() => expect(document.querySelectorAll(".fbk-shots li")).toHaveLength(2));
   });
 });
+
+describe("feedback dialog size", () => {
+  it("fills the window on request and returns to the reading column", async () => {
+    setup({}, "mine");
+    const dialog = screen.getByRole("dialog");
+    const toggle = screen.getByRole("button", { name: "铺满窗口" });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(dialog.hasAttribute("data-wide")).toBe(false);
+
+    await userEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(dialog.hasAttribute("data-wide")).toBe(true);
+    expect(screen.getByRole("tab", { name: "我的反馈" }).getAttribute("aria-selected")).toBe("true");
+
+    await userEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(dialog.hasAttribute("data-wide")).toBe(false);
+  });
+});
