@@ -367,6 +367,7 @@ type Settings interface {
 	SetReasoningLanguage(lang string)
 	SetDisplayRecorder(fn func(content, display string))
 	ModelModes() []ModelModeView
+	ModelFace() (ModelFace, bool)
 	SetModelMode(id string) error
 }
 

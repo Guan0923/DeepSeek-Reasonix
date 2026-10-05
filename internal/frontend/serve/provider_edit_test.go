@@ -66,6 +66,7 @@ func newRichProviderServerAs(t *testing.T, wrap func(control.SessionAPI) control
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{
 		Sink: bc, Label: "alpha", ModelRef: "rich/alpha", SessionDir: testenv.TempDir(t),
+		ModelEntry: richModelEntry(t),
 	})
 	s := New(wrap(ctrl), bc, config.ServeConfig{})
 	s.AllowProviderEdit()
@@ -729,4 +730,17 @@ func TestEditProviderStillRefusesNegativeLimitsAndAcceptsAZeroWindow(t *testing.
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("a zero window turns compaction off and must be accepted, got %d", resp.StatusCode)
 	}
+}
+
+func richModelEntry(t *testing.T) *config.ProviderEntry {
+	t.Helper()
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, ok := cfg.ResolveModel("rich/alpha")
+	if !ok {
+		t.Fatal("rich/alpha does not resolve")
+	}
+	return entry
 }
