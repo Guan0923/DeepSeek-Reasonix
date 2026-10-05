@@ -25,7 +25,7 @@ const STORED = new Set(["display_currency"]);
 
 // The detail is a compaction code; the sentence names its reason, so a code this
 // build cannot word leaves the kernel's own text standing.
-const REASONED = new Set(["compact_declined", "compact_failed"]);
+const REASONED = new Set(["compact_declined", "compact_failed", "compact_held"]);
 
 function figures(detail?: string): Record<string, number> | undefined {
   try {

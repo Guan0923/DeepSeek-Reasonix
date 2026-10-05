@@ -25,5 +25,6 @@ export const NOTICE_TEXT: Record<string, string> = {
   compacted: "已压缩",
   compact_declined: "无需压缩：{why}",
   compact_failed: "压缩失败：{why}",
+  compact_held: "自动压缩暂缓，上次尝试没有完成：{why}",
   perseveration_loop: "模型卡在重复输出同一段文字，这一轮已停止；可以重试、补充引导，或换一个供应商/模型",
 };

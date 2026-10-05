@@ -69,4 +69,6 @@ const (
 	NoticeCodeCompactDeclined = "compact_declined"
 	// /compact failed; Detail is the failure code, its text the English fallback.
 	NoticeCodeCompactFailed = "compact_failed"
+	// Automatic compaction is due but an earlier attempt's failure still holds the retry; Detail is that failure's code.
+	NoticeCodeCompactHeld = "compact_held"
 )
