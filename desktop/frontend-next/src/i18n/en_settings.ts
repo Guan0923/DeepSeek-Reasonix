@@ -264,6 +264,11 @@ export const EN_SETTINGS: Record<string, string> = {
   "当前项目的配置文件开启了它，此工作区仍会提供内置浏览器。": "This project's config file turns it on, so this workspace still has the built-in browser.",
   "当前项目的配置文件关闭了它，此工作区不会提供内置浏览器。": "This project's config file turns it off, so this workspace has no built-in browser.",
 
+  "在侧栏隐藏": "Hide from the rail",
+  "在侧栏显示": "Show in the rail",
+  "启用这台主机": "Turn this machine on",
+  "停用这台主机": "Turn this machine off",
+
   "宣告做完": "Claims it is done",
   "还在做": "Still working",
   "卡住了，要你介入": "Stuck — needs you",
