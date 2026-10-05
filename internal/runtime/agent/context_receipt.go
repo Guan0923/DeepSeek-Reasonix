@@ -26,7 +26,7 @@ func (a *contextWindow) contextMaintenanceInputHash(visible []provider.Message) 
 // the input or the install, so retrying the same input cannot change it.
 func transientSummaryFailure(code string) bool {
 	switch CompactionNoopReason(code) {
-	case FailSummaryTruncated, FailSummaryTimeout, FailSummaryFailed:
+	case FailSummaryTruncated, FailSummaryTimeout, FailSummaryCeiling, FailSummaryFailed:
 		return true
 	}
 	return false
