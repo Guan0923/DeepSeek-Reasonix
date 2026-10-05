@@ -573,6 +573,8 @@ export const EN: Record<string, string> = {
   "仓库地址，或将文件夹拖入此处": "A repository address, or drop a folder in",
   "选文件夹": "Choose a folder",
   "将添加": "Will be added",
+  "已截断": "Shortened",
+  "此项的部分内容过长，预览只显示了一部分；确认的是完整的安装计划。": "Part of this item is too long and the preview shows only some of it; what you confirm is the complete install plan.",
   "需填写": "Needs filling in",
   "不可用": "Unusable",
   "更新": "Update",

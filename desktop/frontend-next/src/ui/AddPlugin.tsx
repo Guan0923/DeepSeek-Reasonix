@@ -171,6 +171,7 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
             ))}
           </section>
         ))}
+        <PreviewCut shown={plan.previewTruncated} />
         {plan.warnings?.map((wmsg) => (
           <div className="why" key={wmsg}>
             {wmsg}
@@ -263,6 +264,12 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
   );
 }
 
+// The kernel shortened something in this plan; what the person confirms is the
+// complete plan, never the text drawn from it.
+export function PreviewCut({ shown }: { shown?: boolean }) {
+  return shown ? <div className="why" data-testid="preview-cut">{t("此项的部分内容过长，预览只显示了一部分；确认的是完整的安装计划。")}</div> : null;
+}
+
 // The plan's own riskReasons are written for the model that reads the tool's
 // JSON. What the user needs is the same facts as rows they can scan, so the
 // structured counts are rendered here and the kernel's wording stays behind a
@@ -303,6 +310,12 @@ export function Candidate({ a }: { a: PluginAction }) {
           <span className="why">{s.reason}</span>
         </div>
       ))}
+      {a.previewTruncated && (
+        <div className="risk" data-kind="shell">
+          <span className="lb">{t("已截断")}</span>
+          <span className="why">{t("此项的部分内容过长，预览只显示了一部分；确认的是完整的安装计划。")}</span>
+        </div>
+      )}
       {a.riskReasons?.length ? (
         <details className="reasons">
           <summary>{t("内核给出的判定（{n}）", { n: a.riskReasons.length })}</summary>

@@ -108,6 +108,8 @@ export interface PluginAction {
   warnings?: string[];
   error?: string;
   next?: string;
+  // The kernel shortened a field or list of this step; what is shown is not all of it.
+  previewTruncated?: boolean;
 }
 
 // The same object answers a preview and an apply; status says which happened —
@@ -122,6 +124,7 @@ export interface PluginPlan {
   warnings?: string[];
   error?: string;
   next?: string;
+  previewTruncated?: boolean;
   // The package landed but the running session could not be rebuilt — almost
   // always because a turn is in flight. Not a failed install.
   reloadError?: string;

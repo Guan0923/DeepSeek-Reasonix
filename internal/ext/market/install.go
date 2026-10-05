@@ -158,7 +158,7 @@ func (s *Service) execute(ctx context.Context, pkg Package, v Version, expect st
 		}
 	}
 	raw, _ := json.Marshal(body)
-	out, err := s.NewInstaller().Execute(ctx, raw)
+	out, applied, err := s.NewInstaller().ExecuteApplied(ctx, raw)
 	if err != nil {
 		return Outcome{Version: v}, err
 	}
@@ -167,7 +167,7 @@ func (s *Service) execute(ctx context.Context, pkg Package, v Version, expect st
 		return Outcome{Version: v}, err
 	}
 	if apply {
-		if items := doneItems(fields["actions"]); len(items) > 0 {
+		if items := doneItems(applied); len(items) > 0 {
 			rec := Record{Slug: pkg.Slug, Kind: pkg.Kind, Version: v.Version, ContentHash: expect,
 				Unreviewed: unreviewed, Items: items, At: s.now().UTC().Format(time.RFC3339)}
 			if err := saveRecord(s.Home, rec); err != nil {
@@ -320,22 +320,9 @@ func themesOnly(raw json.RawMessage) bool {
 	return true
 }
 
-func doneItems(raw json.RawMessage) []Installed {
-	var actions []struct {
-		Kind       string `json:"kind"`
-		Name       string `json:"name"`
-		Status     string `json:"status"`
-		Target     string `json:"target"`
-		ConfigPath string `json:"configPath"`
-	}
-	if json.Unmarshal(raw, &actions) != nil {
-		return nil
-	}
+func doneItems(applied []installsource.AppliedItem) []Installed {
 	var out []Installed
-	for _, a := range actions {
-		if a.Status != "done" {
-			continue
-		}
+	for _, a := range applied {
 		target := a.Target
 		if a.Kind == "mcp" {
 			target = a.ConfigPath

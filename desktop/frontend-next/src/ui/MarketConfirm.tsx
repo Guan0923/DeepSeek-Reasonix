@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { t } from "../i18n";
 import type { MarketPlan } from "../port/port";
-import { Candidate, ORDER } from "./AddPlugin";
+import { Candidate, ORDER, PreviewCut } from "./AddPlugin";
 
 // Titled for what a person has to do with each group, not for what the kernel
 // fears: a high grade here is as often "many skills from one address" as it is
@@ -81,6 +81,7 @@ export function PlanConfirm({ slug, plan, busy, error, onCancel, onInstall, own 
           ))}
         </section>
       ))}
+      <PreviewCut shown={plan.previewTruncated} />
       {plan.warnings?.map((w) => (
         <div className="why" key={w}>
           {w}
