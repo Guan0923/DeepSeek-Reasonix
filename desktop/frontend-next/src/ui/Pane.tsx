@@ -653,11 +653,11 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
             className="studio-runstate"
             role="status"
             aria-live="polite"
+            data-running={running && !blocked ? "" : undefined}
             data-waiting={blocked ? "" : undefined}
             data-idle={running || blocked ? undefined : ""}
           >
-            <RMark />
-            <span>{t(chipLabel(s, running))}</span>
+            <span className="studio-runlabel"><RMark /><span>{t(chipLabel(s, running))}</span></span>
             <RunTokens sent={sent} received={received} estimated={s.outLive > 0} />
           </div>
         )}

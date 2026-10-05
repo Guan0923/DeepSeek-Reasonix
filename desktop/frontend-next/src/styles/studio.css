@@ -922,7 +922,14 @@ body { background: var(--page) !important; }
 .ws-reading .studio-icon { width: 12px; height: 12px; flex: none; color: var(--net); animation: tool-running 2.4s linear infinite; }
 .ws-reading-t { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .ws-reading .studio-icon { animation: none; } }
-.activity-running { color: var(--net); font: 500 9.5px/1.5 var(--ui); }
+.activity-running {
+  flex: none;
+  padding: 3px 7px;
+  border-radius: 4px;
+  color: var(--net);
+  background: var(--net-wash);
+  font: 650 11px/1.3 var(--ui);
+}
 .activity-title { color: var(--text); font: 590 11px/1.5 var(--ui); }
 .activity-errors { color: var(--err-ink); font: 500 9.5px/1.5 var(--ui); }
 .activity-count { margin-left: auto; color: var(--faint); font: 450 10px/1.5 var(--ui); }
@@ -3173,11 +3180,32 @@ body { font-size: 14px; line-height: 1.75; }
   color: var(--muted);
   font: 550 10px/1.2 var(--ui);
 }
+.studio-runlabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font: inherit;
+}
+.studio-runlabel > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-runstate[data-running] .studio-runlabel {
+  padding: 5px 8px;
+  border-radius: 4px;
+  color: var(--net);
+  background: var(--net-wash);
+  font: 650 11px/1.2 var(--ui);
+}
+.studio-runstate .studio-runtokens { flex: none; }
 .studio-runstate .rmark {
   width: 15px;
   height: 15px;
   color: var(--accent);
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 28%, transparent));
+}
+.studio-runstate[data-running] .rmark {
+  flex: none;
+  color: currentColor;
+  filter: none;
 }
 .studio-runstate .rmark path {
   stroke-dasharray: 24 76;
