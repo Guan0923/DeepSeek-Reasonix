@@ -222,6 +222,10 @@ export function AddProvider({
             value={baseUrl}
             placeholder="https://api.moonshot.cn/v1"
             onChange={(e) => {
+              if (e.target.value.trim() !== baseUrl.trim()) {
+                setProbe(null);
+                setCompleted("");
+              }
               setBaseUrl(e.target.value);
               setFacts(clearModelCheckFacts);
             }}
