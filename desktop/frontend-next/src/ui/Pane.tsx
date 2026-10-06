@@ -18,6 +18,8 @@ import { RunTokens } from "./RunTokens";
 import { useRewindActions } from "./rewind";
 import { initialTraj, reduceTraj } from "../state/trajectory";
 import { Transcript } from "./Transcript";
+import { useBackgroundDeltas } from "./deltas";
+import { PaneShown } from "./shown";
 import { Composer } from "./Composer";
 import { draftKey } from "./drafts";
 import { Queue, waiting } from "./Queue";
@@ -163,6 +165,8 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   const received = s.metrics.out + s.outLive;
   const speed = useMemo(() => speedOf(traj.rows), [traj.rows]);
 
+  const { pacer, shown } = useBackgroundDeltas(visible, dispatch, trajDispatch);
+
   const reloadMcp = useCallback(() => {
     void port.mcp().then((c) => setMcp(c.servers)).catch(() => setMcp([]));
   }, [port]);
@@ -204,8 +208,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
     () =>
       port.subscribe(
         (ev) => {
-          dispatch(ev);
-          trajDispatch(ev);
+          pacer.push(ev);
           // A server finishing its handshake changes what /mcp answers, and this
           // is the only precise signal for it — the turn boundary below is the
           // fallback for changes that arrive without an event.
@@ -223,11 +226,12 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
           if (ev.kind === "notice" && ev.code === "display_currency") revalue();
         },
         () => {
+          pacer.drop();
           rebuild();
           refreshStatus();
         },
       ),
-    [port, reloadMcp, rebuild, refreshStatus, revalue],
+    [port, pacer, reloadMcp, rebuild, refreshStatus, revalue],
   );
 
   // What the rows cover is dispatched before the rows themselves, so the table
@@ -483,7 +487,8 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   );
   const find = useFind(s.items, findPulse, active, useCallback(() => showView("flow"), [showView]));
 
-  const { quote, reply, onResend } = useReplyActions({ port, items: s.items, checkpoints, running, model: status?.label, submit, reloadSession, onSettings, onRunDetail: () => showView("analysis"), onError: fail });
+  const onRunDetail = useCallback(() => showView("analysis"), [showView]);
+  const { quote, reply, onResend } = useReplyActions({ port, items: s.items, checkpoints, running, model: status?.label, submit, reloadSession, onSettings, onRunDetail, onError: fail });
 
   // Where the bottom is moves as blocks mount under it, so this only asks the
   // transcript to follow again and lets it scroll itself into place.
@@ -541,6 +546,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
       <div className="pbody" data-dock={tab === "flow" ? "" : undefined} data-full={tab === "browser" ? "" : undefined}>
       <div className="pviews">
 
+      <PaneShown.Provider value={shown}>
       <LiveWork.Provider value={live}>
       <Transcript
         reply={reply}
@@ -576,6 +582,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
         onKeepHere={onKeepHere}
       />
       </LiveWork.Provider>
+      </PaneShown.Provider>
 
       <div className="scroll" data-pane="analysis" hidden={tab !== "analysis"}>
         {tab === "analysis" && (
