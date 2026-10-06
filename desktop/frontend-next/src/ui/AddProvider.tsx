@@ -344,6 +344,12 @@ export function AddProvider({
             </button>
           )}
         </div>
+        {err && !errOnSave && (
+          <div className="find" data-lvl="warn" role="alert">
+            <span className="t">{t("无法连接")}</span>
+            <span className="why">{err}</span>
+          </div>
+        )}
         {probe && <p className="probe-ok">{t("连接可用 · 找到 {n} 个模型", { n: probe.models.length })}</p>}
         {completed !== "" && completed === baseUrl.trim() && <p className="probe-ok">{t("接口地址已补全为 {url}", { url: completed })}</p>}
         <div className="mlist">
@@ -372,9 +378,9 @@ export function AddProvider({
         <button className="act" onClick={onCancel} disabled={busy || checkingModel !== ""}>{t("取消")}</button>
       </div>
 
-      {err && (
+      {err && errOnSave && (
         <div className="find" data-lvl="warn">
-          <span className="t">{errOnSave ? t("无法保存") : t("无法连接")}</span>
+          <span className="t">{t("无法保存")}</span>
           <span className="why">{err}</span>
         </div>
       )}

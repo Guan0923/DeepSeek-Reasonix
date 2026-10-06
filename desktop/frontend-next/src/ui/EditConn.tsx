@@ -34,10 +34,11 @@ export function EditConn({
     entry.visionSettable ? [...new Set([...entry.visionSettable, ...(initialCheck?.vision ?? [])])] : undefined,
   );
   const [facts, setFacts] = useState<Record<string, ModelFact>>(() => modelFacts(entry.models, initialCheck));
-  const [diff, setDiff] = useState(() => initialCheck?.ok ? catalogDiff(entry.models, initialCheck.models ?? []) : null);
+  const [diff, setDiff] = useState(() => initialCheck?.ok ? catalogDiff(entry.models, initialCheck.models ?? [], false) : null);
   const [checkingModel, setCheckingModel] = useState("");
   const [def, setDef] = useState(entry.default || entry.models[0] || "");
-  const [err, setErr] = useState<{ text: string; kind: "refresh" | "save" | "unapplied" } | null>(null);
+  const [err, setErr] = useState<{ text: string; kind: "save" | "unapplied" } | null>(null);
+  const [refreshFail, setRefreshFail] = useState("");
   const [more, setMore] = useState(declare);
   const [win, setWin] = useState(entry.contextWindow ? String(entry.contextWindow) : "");
   const [maxOut, setMaxOut] = useState(entry.maxOutputTokens ? String(entry.maxOutputTokens) : "");
@@ -92,12 +93,14 @@ export function EditConn({
   const refetch = async () => {
     setBusy(`refresh:${entry.name}`);
     setErr(null);
+    setRefreshFail("");
+    setDiff(null);
     try {
       const refreshed = apiKey.trim()
         ? await port.probeProvider(baseUrl.trim(), apiKey.trim())
         : await port.checkProvider(entry.name);
       if ("ok" in refreshed && !refreshed.ok) {
-        setErr({ text: checkFailure(refreshed), kind: "refresh" });
+        setRefreshFail(checkFailure(refreshed));
         return;
       }
       const changed = !!refreshed.baseUrl && refreshed.baseUrl !== baseUrl.trim();
@@ -105,19 +108,19 @@ export function EditConn({
       setCompleted(changed ? refreshed.baseUrl! : "");
       const found = refreshed.models ?? [];
       if (found.length === 0) {
-        setErr({ text: say({ code: "provider.probe.no_chat_models", params: { count: 0 } }), kind: "refresh" });
+        setRefreshFail(say({ code: "provider.probe.no_chat_models", params: { count: 0 } }));
         return;
       }
       const readers = refreshed.vision ?? [];
       setModels((current) => {
-        setDiff(catalogDiff(current, found));
+        setDiff(catalogDiff(current, found, true));
         setFacts((factsNow) => refreshedFacts(current, found, factsNow));
         return [...new Set([...found, ...current])];
       });
       setVision((current) => [...new Set([...current, ...readers])]);
       setVisionSettable((current) => current ? [...new Set([...current, ...readers])] : current);
     } catch (e) {
-      setErr({ text: reason(e), kind: "refresh" });
+      setRefreshFail(reason(e));
     } finally {
       setBusy("");
     }
@@ -246,6 +249,8 @@ export function EditConn({
           <input value={baseUrl} onChange={(e) => {
             setBaseUrl(e.target.value);
             setFacts(clearModelCheckFacts);
+            setRefreshFail("");
+            setDiff(null);
           }} disabled={busy !== "" || checkingModel !== ""} spellCheck={false} />
         </label>
         <label className="grow full">
@@ -254,6 +259,8 @@ export function EditConn({
             onChange={(e) => {
               setApiKey(e.target.value);
               setFacts(clearModelCheckFacts);
+              setRefreshFail("");
+            setDiff(null);
             }} disabled={busy !== "" || checkingModel !== ""} spellCheck={false} />
         </label>
       </div>
@@ -293,6 +300,15 @@ export function EditConn({
         </p>
         {completed !== "" && completed === baseUrl.trim() && (
           <p className="mdiff" role="status">{t("接口地址已补全为 {url}", { url: completed })}</p>
+        )}
+        {refreshFail && (
+          <div className="find" data-lvl="err" role="alert">
+            <span className="t">{t("刷新模型目录失败")}</span>
+            <span className="why">{refreshFail}</span>
+          </div>
+        )}
+        {diff && diff.fresh && diff.added === 0 && diff.missing === 0 && (
+          <p className="mdiff" role="status">{t("没有发现新模型")}</p>
         )}
         {diff && (diff.added > 0 || diff.missing > 0) && (
           <p className="mdiff" role="status">
@@ -432,7 +448,7 @@ export function EditConn({
 
       {err && (
         <div className="find" data-lvl={err.kind === "unapplied" ? "warn" : "err"} role={err.kind === "unapplied" ? "status" : "alert"}>
-          <span className="t">{t(err.kind === "unapplied" ? "已保存，尚未生效" : err.kind === "save" ? "保存失败" : "刷新模型目录失败")}</span>
+          <span className="t">{t(err.kind === "unapplied" ? "已保存，尚未生效" : "保存失败")}</span>
           <span className="why">{err.text}</span>
         </div>
       )}
@@ -471,10 +487,11 @@ function refreshedFacts(models: string[], found: string[], current: Record<strin
   return out;
 }
 
-function catalogDiff(before: string[], found: string[]) {
+function catalogDiff(before: string[], found: string[], fresh: boolean) {
   const had = new Set(before);
   const now = new Set(found);
   return {
+    fresh,
     added: found.filter((model) => !had.has(model)).length,
     missing: before.filter((model) => !now.has(model)).length,
   };
