@@ -152,7 +152,7 @@ export function AddProvider({
         apiKey: apiKey.trim(),
         kind,
         authHeader: probe?.authHeader ?? false,
-        noProxy: probe?.noProxy ?? false,
+        noProxy: noProxy || (probe?.noProxy ?? false),
       });
       setFacts((current) => ({
         ...current,
@@ -306,7 +306,10 @@ export function AddProvider({
               <small>{t("仅当该地址通过系统代理无法连接、直连可用时开启。")}</small>
             </span>
             <button type="button" className="switch-control" data-action="provider.draft" data-value="no-proxy" role="switch" aria-label={t("绕过系统代理")} aria-checked={noProxy || (probe?.noProxy ?? false)}
-              disabled={busy || checkingModel !== "" || probe?.noProxy === true} onClick={() => setNoProxy((v) => !v)}><span /></button>
+              disabled={busy || checkingModel !== "" || probe?.noProxy === true} onClick={() => {
+                setNoProxy((v) => !v);
+                setFacts(clearModelCheckFacts);
+              }}><span /></button>
           </div>
           <label className="advanced-field">
             <span>{t("额外请求头")}</span>
