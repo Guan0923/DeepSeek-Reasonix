@@ -229,7 +229,7 @@ func (s *Server) probeProvider(w http.ResponseWriter, r *http.Request) {
 		Direct:  direct,
 	})
 	if err != nil {
-		writeProbeFailure(w, err)
+		writeProbeFailure(w, err, body.APIKey)
 		return
 	}
 	writeJSON(w, struct {
@@ -540,13 +540,19 @@ func probeReasonRefusal(reason catalog.ProbeReason) (status int, code string) {
 	}
 }
 
-// writeProbeFailure sends the diagnosis out under its own code.
-func writeProbeFailure(w http.ResponseWriter, err error) {
+// writeProbeFailure sends the diagnosis out under its own code. What the
+// endpoint said reaches the message only through endpointDetail: its body can
+// echo the request, and this route receives the key typed into the draft.
+func writeProbeFailure(w http.ResponseWriter, err error, apiKey string) {
 	var probe *catalog.ProbeError
 	if !errors.As(err, &probe) {
-		writeErr(w, http.StatusBadGateway, err)
+		refuse(w, http.StatusInternalServerError, codeProbeFailed, "provider probe failed", nil)
 		return
 	}
 	status, code := probeReasonRefusal(probe.Reason)
-	refuse(w, status, code, probe.Error(), probe.Params)
+	message := "probe: " + string(probe.Reason)
+	if detail := endpointDetail(probe.Body, func() string { return apiKey }); detail != "" {
+		message += ": " + detail
+	}
+	refuse(w, status, code, message, probe.Params)
 }
