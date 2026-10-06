@@ -16,10 +16,10 @@ import { ModelLimits, limitTextOf, limitsToSend, type LimitText } from "./ModelL
 // declare opens the form on the reasoning fields: the composer sends a user
 // here when the endpoint reported no effort levels.
 export function EditConn({
-  entry, initialCheck, port, busy, setBusy, onDone, onRevert, onSaved, declare = false, justSaved = false,
+  entry, initialCheck, port, busy, setBusy, onDone, onRevert, onSaved, onDirty, declare = false, justSaved = false,
 }: {
   entry: ProviderEntry; initialCheck?: ProviderCheck; port: Port;
-  busy: string; setBusy: (b: string) => void; onDone: () => void | Promise<void>; onRevert: () => void; onSaved?: () => void;
+  busy: string; setBusy: (b: string) => void; onDone: () => void | Promise<void>; onRevert: () => void; onSaved?: () => void; onDirty?: (dirty: boolean) => void;
   declare?: boolean; justSaved?: boolean;
 }) {
   const seededModels = [...new Set([...entry.models, ...(initialCheck?.models ?? [])])];
@@ -212,6 +212,8 @@ export function EditConn({
   // seeded into the form is a change until it is saved.
   const [stored, setStored] = useState(() => fingerprint(entry.visionModels ?? []));
   const dirty = fingerprint() !== stored;
+  useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
+  useEffect(() => () => onDirty?.(false), [onDirty]);
   const [edited, setEdited] = useState(false);
   if (dirty && !edited) setEdited(true);
 

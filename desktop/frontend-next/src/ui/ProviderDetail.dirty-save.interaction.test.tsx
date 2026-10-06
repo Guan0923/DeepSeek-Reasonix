@@ -198,6 +198,7 @@ it("leaving a service with unsaved edits drops them, and Saved does not follow t
   await open();
   await typeWin("64000");
   await userEvent.click(rows()[1]);
+  await userEvent.click(screen.getByRole("button", { name: "放弃更改并离开" }));
   await waitFor(() => expect(url().value).toBe("https://other.example/v1"));
   expect(state()).toBe("没有更改");
   await userEvent.click(rows()[0]);

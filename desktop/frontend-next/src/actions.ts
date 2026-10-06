@@ -341,6 +341,7 @@ export const ACTIONS: UIAction[] = [
   { id: "extensions.submit", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "provider.probe", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "provider.draft", kind: "interaction", target: "none", proof: "interaction" },
+  { id: "provider.discard-edits", kind: "destructive", target: "none", proof: "interaction" },
   { id: "provider.revert", kind: "interaction", target: "none", proof: "interaction" },
   { id: "provider.model-check", kind: "repeatable", target: "entity", proof: "interaction" },
   { id: "provider.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
