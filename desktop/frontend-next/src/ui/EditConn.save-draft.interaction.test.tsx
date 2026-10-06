@@ -26,20 +26,21 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function Host({ port, onDone, onSaved }: { port: SsePort; onDone: () => void; onSaved: () => void }) {
+function Host({ port, onDone, onRevert, onSaved }: { port: SsePort; onDone: () => void; onRevert: () => void; onSaved: () => void }) {
   const [busy, setBusy] = useState("");
   const [revision, setRevision] = useState(0);
   return <EditConn key={revision} entry={entry} port={port} busy={busy} setBusy={setBusy}
-    onDone={() => { onDone(); setRevision((n) => n + 1); }} onSaved={onSaved} />;
+    onDone={() => { onDone(); setRevision((n) => n + 1); }} onRevert={() => { onRevert(); setRevision((n) => n + 1); }} onSaved={onSaved} />;
 }
 
 function draw(strict: boolean, port: SsePort) {
   localStorage.setItem(STORAGE, "zh");
   boot();
   const onDone = vi.fn();
+  const onRevert = vi.fn();
   const onSaved = vi.fn();
-  const host = <Host port={port} onDone={onDone} onSaved={onSaved} />;
-  return { ...render(strict ? <StrictMode>{host}</StrictMode> : host), onDone, onSaved };
+  const host = <Host port={port} onDone={onDone} onRevert={onRevert} onSaved={onSaved} />;
+  return { ...render(strict ? <StrictMode>{host}</StrictMode> : host), onDone, onRevert, onSaved };
 }
 
 function snapshot(container: HTMLElement) {
@@ -78,6 +79,7 @@ it.each([false, true].flatMap((strict) => ["success", "failure", "unapplied"].ma
     }));
     const { container, onDone, onSaved } = draw(strict, new SsePort("http://kernel.example"));
     await userEvent.click(container.querySelector("summary")!);
+    await userEvent.type(screen.getByLabelText("上下文窗口"), "1");
     const before = snapshot(container);
     await userEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(sent).toHaveLength(1);
@@ -97,7 +99,7 @@ it.each([false, true].flatMap((strict) => ["success", "failure", "unapplied"].ma
     expect(defaultHeld).toBe("false");
     expect(visionHeld).toBe("false");
     expect(pickedHeld).toBe("true");
-    expect(sent[0]).toMatchObject({ models: ["alpha", "beta"], default: "alpha", vision: ["alpha"], contextWindow: 32000,
+    expect(sent[0]).toMatchObject({ models: ["alpha", "beta"], default: "alpha", vision: ["alpha"], contextWindow: 320001,
       maxOutputTokens: 4000, idleTimeoutSeconds: 120, reasoningProtocol: "openai", supportedEfforts: ["low", "high"],
       modelLimits: { alpha: { contextWindow: 48000, maxOutputTokens: 6000 } }, headers: { "X-Site": "studio" }, extraBody: { temperature: 0.2 } });
     expect(sent).toHaveLength(1);
@@ -118,10 +120,10 @@ it.each([false, true].flatMap((strict) => ["success", "failure", "unapplied"].ma
   },
 );
 
-it.each([false, true])("keeps normal edits and cancel available before saving (StrictMode=%s)", async (strict) => {
+it.each([false, true])("keeps normal edits and revert available before saving (StrictMode=%s)", async (strict) => {
   const fetch = vi.fn();
   vi.stubGlobal("fetch", fetch);
-  const { container, onDone } = draw(strict, new SsePort("http://kernel.example"));
+  const { container, onDone, onRevert } = draw(strict, new SsePort("http://kernel.example"));
   const win = screen.getByLabelText<HTMLInputElement>("上下文窗口");
   await userEvent.clear(win);
   await userEvent.type(win, "64000");
@@ -129,7 +131,8 @@ it.each([false, true])("keeps normal edits and cancel available before saving (S
   await userEvent.click(container.querySelector("summary")!);
   await userEvent.selectOptions(screen.getByLabelText<HTMLSelectElement>(/^思考参数/), "none");
   expect(screen.getByLabelText<HTMLSelectElement>(/^思考参数/).value).toBe("none");
-  await userEvent.click(screen.getByRole("button", { name: "取消" }));
-  expect(onDone).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByRole("button", { name: "还原" }));
+  expect(onRevert).toHaveBeenCalledTimes(1);
+  expect(onDone).not.toHaveBeenCalled();
   expect(fetch).not.toHaveBeenCalled();
 });

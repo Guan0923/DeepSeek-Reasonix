@@ -128,14 +128,13 @@ it("never writes the pre-save values back when Save is pressed again before the 
   await userEvent.click(save());
   await waitFor(() => expect(h.edits).toHaveLength(1));
   await userEvent.click(save());
+  expect(h.edits).toHaveLength(1);
   await h.releaseReads();
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-
+  await waitFor(() => expect(url().disabled).toBe(false));
+  expect(save().hasAttribute("disabled")).toBe(true);
   await userEvent.click(save());
-  await waitFor(() => expect(h.edits.length).toBeGreaterThanOrEqual(2));
-  for (const e of h.edits) {
-    expect(e).toMatchObject({ baseUrl: "https://moved.example/v1", contextWindow: 64000, vision: ["vision-chat"] });
-  }
+  expect(h.edits).toHaveLength(1);
+  expect(h.edits[0]).toMatchObject({ baseUrl: "https://moved.example/v1", contextWindow: 64000, vision: ["vision-chat"] });
 });
 
 it("does not let the form be edited between the write and the re-read", async () => {
@@ -180,11 +179,11 @@ it("a save that is stored but not applied keeps the draft open and refreshes the
   expect(visionTag().getAttribute("aria-pressed")).toBe("true");
 });
 
-it("cancel puts back what is stored", async () => {
+it("revert puts back what is stored", async () => {
   const h = harness();
   await open();
   await draft("https://moved.example/v1", "64000");
-  await userEvent.click(within(detail()).getByRole("button", { name: "取消" }));
+  await userEvent.click(within(detail()).getByRole("button", { name: "还原" }));
   await waitFor(() => expect(url().value).toBe("https://relay.example/v1"));
   expect(win().value).toBe("32000");
   expect(visionTag().getAttribute("aria-pressed")).toBe("false");
@@ -199,7 +198,7 @@ it("two saves in a row each show and send what was typed last", async () => {
   await userEvent.click(save());
   await waitFor(() => expect(h.edits).toHaveLength(1));
   await h.releaseReads();
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+  await waitFor(() => expect(url().disabled).toBe(false));
 
   await userEvent.clear(url());
   await userEvent.type(url(), "https://second.example/v1");
@@ -208,7 +207,7 @@ it("two saves in a row each show and send what was typed last", async () => {
   await waitFor(() => expect(h.edits).toHaveLength(2));
   expect(url().value).toBe("https://second.example/v1");
   await h.releaseReads();
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+  await waitFor(() => expect(url().disabled).toBe(false));
   expect(url().value).toBe("https://second.example/v1");
   expect(h.edits[1]).toMatchObject({ baseUrl: "https://second.example/v1", contextWindow: 64000, vision: ["vision-chat"] });
 });
@@ -219,7 +218,7 @@ it("shows the saved values again after leaving the service and coming back", asy
   await draft("https://moved.example/v1", "64000");
   await userEvent.click(save());
   await waitFor(() => expect(h.edits).toHaveLength(1));
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+  await waitFor(() => expect(url().disabled).toBe(false));
 
   const rows = screen.getAllByRole("button").filter((b) => b.dataset.actionClick === "provider.select");
   await userEvent.click(rows[1]);

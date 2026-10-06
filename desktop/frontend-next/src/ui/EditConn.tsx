@@ -8,7 +8,7 @@ import { checkFailure } from "./provider_check";
 import { HttpError } from "../port/port";
 import { IDLE_TIMEOUT_MAX, IDLE_TIMEOUT_MIN, THINKING, headerLines, parseEffortLevels, parseExtraBody, parseHeaders, parseIdleTimeout } from "./provider_compat";
 import { ModelEfforts } from "./ModelEfforts";
-import type { ModelEffort, ModelLimit } from "../port/port";
+import type { ModelEffort, ModelLimit, ProviderEdit } from "../port/port";
 import { ModelLimits, limitTextOf, limitsToSend, type LimitText } from "./ModelLimits";
 
 // Only what this form owns is sent: the entry keeps its prices, effort
@@ -16,10 +16,11 @@ import { ModelLimits, limitTextOf, limitsToSend, type LimitText } from "./ModelL
 // declare opens the form on the reasoning fields: the composer sends a user
 // here when the endpoint reported no effort levels.
 export function EditConn({
-  entry, initialCheck, port, busy, setBusy, onDone, onSaved, declare = false,
+  entry, initialCheck, port, busy, setBusy, onDone, onRevert, onSaved, declare = false, justSaved = false,
 }: {
   entry: ProviderEntry; initialCheck?: ProviderCheck; port: Port;
-  busy: string; setBusy: (b: string) => void; onDone: () => void | Promise<void>; onSaved?: () => void; declare?: boolean;
+  busy: string; setBusy: (b: string) => void; onDone: () => void | Promise<void>; onRevert: () => void; onSaved?: () => void;
+  declare?: boolean; justSaved?: boolean;
 }) {
   const seededModels = [...new Set([...entry.models, ...(initialCheck?.models ?? [])])];
   const seededVision = [...new Set([...(entry.visionModels ?? []), ...(initialCheck?.vision ?? [])])];
@@ -182,35 +183,54 @@ export function EditConn({
     };
   };
 
+  const draft = (): ProviderEdit => ({
+    name: entry.name,
+    baseUrl: baseUrl.trim(),
+    apiKey: apiKey.trim(),
+    models: picked,
+    default: picked.includes(def) ? def : picked[0] ?? "",
+    vision: vision.filter((m) => picked.includes(m)),
+    contextWindow: Number(win.replace(/\D/g, "")) || 0,
+    maxOutputTokens: Number(maxOut.replace(/\D/g, "")) || 0,
+    idleTimeoutSeconds: idle.ok ? idle.secs : 0,
+    reasoningProtocol: think,
+    supportedEfforts: levels,
+    defaultEffort: levels.includes(defEffort) ? defEffort : "",
+    modelEfforts: Object.fromEntries(picked.filter((m) => ownEfforts[m]).map((m) => [m, ownEfforts[m]])),
+    modelLimits: limitsToSend(picked, limitText, entry.modelLimits ?? {}),
+    headers: parseHeaders(heads),
+    extraBody: parseExtraBody(extra) ?? {},
+  });
+
+  // What a save would send, with order and unparsable text normalised: ticking
+  // a row off and on again, or typing a value back, is no change.
+  const fingerprint = (readers = vision) => JSON.stringify({
+    ...draft(), models: [...picked].sort(), vision: readers.filter((m) => picked.includes(m)).sort(),
+    idle: idle.ok ? idle.secs : idleText, extra: parseExtraBody(extra) ?? extra,
+  });
+  // The baseline is the saved configuration; image support a connection test
+  // seeded into the form is a change until it is saved.
+  const [stored, setStored] = useState(() => fingerprint(entry.visionModels ?? []));
+  const dirty = fingerprint() !== stored;
+  const [edited, setEdited] = useState(false);
+  if (dirty && !edited) setEdited(true);
+
   const save = async () => {
     setBusy(`edit:${entry.name}`);
     setErr(null);
+    const sent = fingerprint();
     try {
-      await port.editProvider({
-        name: entry.name,
-        baseUrl: baseUrl.trim(),
-        apiKey: apiKey.trim(),
-        models: picked,
-        default: picked.includes(def) ? def : picked[0] ?? "",
-        vision: vision.filter((m) => picked.includes(m)),
-        contextWindow: Number(win.replace(/\D/g, "")) || 0,
-        maxOutputTokens: Number(maxOut.replace(/\D/g, "")) || 0,
-        idleTimeoutSeconds: idle.ok ? idle.secs : 0,
-        reasoningProtocol: think,
-        supportedEfforts: levels,
-        defaultEffort: levels.includes(defEffort) ? defEffort : "",
-        modelEfforts: Object.fromEntries(picked.filter((m) => ownEfforts[m]).map((m) => [m, ownEfforts[m]])),
-        modelLimits: limitsToSend(picked, limitText, entry.modelLimits ?? {}),
-        headers: parseHeaders(heads),
-        extraBody: parseExtraBody(extra) ?? {},
-      });
+      await port.editProvider(draft());
       await onDone();
     } catch (e) {
       const unapplied = e instanceof HttpError && SAVED_NOT_APPLIED.includes(e.reason?.code ?? "");
       setErr({ text: reason(e), kind: unapplied ? "unapplied" : "save" });
       // Saved but not yet applied: the list has to show what is on file while
       // the form stays open to say why.
-      if (unapplied) onSaved?.();
+      if (unapplied) {
+        setStored(sent);
+        onSaved?.();
+      }
     } finally {
       setBusy("");
     }
@@ -416,10 +436,13 @@ export function EditConn({
       )}
 
       <div className="acts">
-        <button className="act" data-action="provider.save" data-primary onClick={save} disabled={busy !== "" || checkingModel !== "" || picked.length === 0 || extraBad || !idle.ok}>
+        <button className="act" data-action="provider.save" data-primary onClick={save} disabled={(!dirty && err?.kind !== "unapplied") || busy !== "" || checkingModel !== "" || picked.length === 0 || extraBad || !idle.ok}>
           {t(saving ? "保存中…" : "保存")}
         </button>
-        <button className="act" onClick={onDone} disabled={busy !== "" || checkingModel !== ""}>{t("取消")}</button>
+        <button className="act" data-action="provider.revert" onClick={onRevert} disabled={!dirty || busy !== "" || checkingModel !== ""}>{t("还原")}</button>
+        <span className="acts-state" role="status" data-dirty={dirty || undefined}>
+          {t(dirty ? "有未保存的更改" : justSaved && !edited ? "已保存" : "没有更改")}
+        </span>
       </div>
     </fieldset>
   );
