@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -247,5 +248,47 @@ func TestCheckProviderStillWaitsOnTheGrantAndKnowsUnknownNames(t *testing.T) {
 	raw, _ := readAllString(resp)
 	if resp.StatusCode != http.StatusForbidden || !strings.Contains(raw, "provider.editing_disabled") {
 		t.Fatalf("ungranted check = %d %s, want 403 provider.editing_disabled", resp.StatusCode, raw)
+	}
+}
+
+// The probe receives the key typed into the draft, and an endpoint's refusal can
+// echo it; the refusal keeps the code and leaves the key behind.
+func TestProbeRefusalNeverEchoesTheKey(t *testing.T) {
+	s := newProviderEditServer(t)
+	s.AllowProviderEdit()
+	srv := httptest.NewServer(operatorHandler(s))
+	defer srv.Close()
+	for _, body := range []string{
+		`{"error":{"message":"bad key ` + typedCheckKey + `"}}`,
+		"bad key\n" + typedCheckKey + "\x1b[31m and more",
+	} {
+		upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(body))
+		}))
+		draft, _ := json.Marshal(map[string]string{"baseUrl": upstream.URL + "/v1", "apiKey": typedCheckKey})
+		resp := postProvider(t, srv.URL, "/providers/probe", string(draft))
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		upstream.Close()
+		if strings.Contains(string(raw), typedCheckKey) {
+			t.Fatalf("probe refusal leaked the key: %s", raw)
+		}
+		var got Reason
+		if err := json.Unmarshal(raw, &got); err != nil || resp.StatusCode != http.StatusUnauthorized || got.Code != codeProbeUnauthorized {
+			t.Fatalf("probe = %d %s, want 401 %s", resp.StatusCode, raw, codeProbeUnauthorized)
+		}
+	}
+}
+
+func TestProbeRefusalWithoutAProbeIdentityIsTyped(t *testing.T) {
+	rec := httptest.NewRecorder()
+	writeProbeFailure(rec, errors.New("kernel fault "+typedCheckKey), typedCheckKey)
+	var got Reason
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || got.Code != codeProbeFailed {
+		t.Fatalf("refusal = %d %s, want code %s", rec.Code, rec.Body.String(), codeProbeFailed)
+	}
+	if rec.Code != http.StatusInternalServerError || strings.Contains(rec.Body.String(), typedCheckKey) {
+		t.Fatalf("refusal = %d %s, want 500 without the error's text", rec.Code, rec.Body.String())
 	}
 }
