@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import type { ProviderCheck, ProviderEntry } from "../port/port";
 import { checkedFact, clearModelCheckFacts, ModelChoice, type ModelFact } from "./ModelChoice";
@@ -36,6 +36,9 @@ export function EditConn({
   const [facts, setFacts] = useState<Record<string, ModelFact>>(() => modelFacts(entry.models, initialCheck));
   const [diff, setDiff] = useState(() => initialCheck?.ok ? catalogDiff(entry.models, initialCheck.models ?? [], false) : null);
   const [checkingModel, setCheckingModel] = useState("");
+  const [batch, setBatch] = useState<"idle" | "running" | "stopped">("idle");
+  const run = useRef<AbortController | null>(null);
+  const testing = checkingModel !== "" || batch === "running";
   const [def, setDef] = useState(entry.default || entry.models[0] || "");
   const [err, setErr] = useState<{ text: string; kind: "save" | "unapplied" } | null>(null);
   const [refreshFail, setRefreshFail] = useState("");
@@ -159,6 +162,43 @@ export function EditConn({
     }
   };
 
+  const stopBatch = useCallback(() => {
+    if (!run.current) return false;
+    run.current.abort();
+    run.current = null;
+    setFacts(stopChecking);
+    setBatch("stopped");
+    return true;
+  }, []);
+
+  const testAll = async () => {
+    if (run.current || picked.length === 0) return;
+    const ctl = new AbortController();
+    run.current = ctl;
+    setBatch("running");
+    const queue = [...picked];
+    const lane = async () => {
+      for (let model = queue.shift(); model !== undefined && !ctl.signal.aborted; model = queue.shift()) {
+        const m = model;
+        setFacts((cur) => ({ ...cur, [m]: { ...(cur[m] ?? { origin: "configured" }), checking: true } }));
+        let next: (fact: ModelFact | undefined) => ModelFact;
+        try {
+          const got = await port.checkProviderModel({ name: entry.name, model: m, baseUrl: baseUrl.trim(), apiKey: apiKey.trim(), kind: entry.kind });
+          next = (fact) => ({ ...checkedFact(fact, "configured", got), checking: false });
+        } catch {
+          next = (fact) => ({ ...(fact ?? { origin: "configured" }), status: "unknown", reason: "network", checking: false });
+        }
+        if (ctl.signal.aborted) return;
+        setFacts((cur) => ({ ...cur, [m]: next(cur[m]) }));
+      }
+    };
+    await Promise.all([lane(), lane()]);
+    if (run.current === ctl) {
+      run.current = null;
+      setBatch("idle");
+    }
+  };
+
   // A connection list typed here is what every inheriting model gets; with
   // none typed, the kernel's answer holds only while the form still matches
   // what was saved.
@@ -214,9 +254,14 @@ export function EditConn({
   // The baseline is the saved configuration; image support a connection test
   // seeded into the form is a change until it is saved.
   const [stored, setStored] = useState(() => fingerprint(entry.visionModels ?? []));
-  const dirty = fingerprint() !== stored;
+  const draftKey = fingerprint();
+  const dirty = draftKey !== stored;
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
   useEffect(() => () => onDirty?.(false), [onDirty]);
+  useEffect(() => {
+    if (!stopBatch()) setBatch((b) => (b === "stopped" ? "idle" : b));
+  }, [draftKey, stopBatch]);
+  useEffect(() => () => run.current?.abort(), []);
   const [edited, setEdited] = useState(false);
   if (dirty && !edited) setEdited(true);
 
@@ -260,7 +305,7 @@ export function EditConn({
               setApiKey(e.target.value);
               setFacts(clearModelCheckFacts);
               setRefreshFail("");
-            setDiff(null);
+              setDiff(null);
             }} disabled={busy !== "" || checkingModel !== ""} spellCheck={false} />
         </label>
       </div>
@@ -290,17 +335,22 @@ export function EditConn({
         <div className="mlhead">
           <span className="ttl">{t("模型")}</span>
           <span className="count">{t("已启用 {on}/{all}", { on: picked.length, all: models.length })}</span>
-          <button className="mrefresh" data-action="provider.probe" onClick={refetch} disabled={busy !== "" || checkingModel !== ""}
+          <button className="mrefresh" data-action="provider.probe" onClick={refetch} disabled={busy !== "" || testing}
             title={t("重新向该端点获取模型列表，适用于端点新增或下架模型之后")}>
             {t(refreshing ? "正在刷新…" : "刷新模型目录")}
           </button>
+          <button className="mrefresh" data-action="provider.model-check-all" onClick={testAll}
+            disabled={busy !== "" || testing || picked.length === 0} aria-busy={batch === "running" || undefined}>
+            {t("测试已启用模型（{n}）", { n: picked.length })}
+          </button>
         </div>
         <p className="mguide">
-          {t("目录只用于发现，不是白名单。未列出的模型会按原始 ID 保存；验证会发送一次最小请求，可能产生少量 Token 费用。")}
+          {t("目录只用于发现，不是白名单。未列出的模型会按原始 ID 保存；「测试已启用模型」会给每个已勾选的模型各发送一次小请求，可能产生少量 Token 费用。")}
         </p>
         {completed !== "" && completed === baseUrl.trim() && (
           <p className="mdiff" role="status">{t("接口地址已补全为 {url}", { url: completed })}</p>
         )}
+        {batch === "stopped" && <p className="mdiff" role="status">{t("已停止启动新的验证：草稿已改动")}</p>}
         {refreshFail && (
           <div className="find" data-lvl="err" role="alert">
             <span className="t">{t("刷新模型目录失败")}</span>
@@ -324,7 +374,7 @@ export function EditConn({
           facts={facts}
           visionLocked={visionLocked}
           onCheck={checkModel}
-          checkDisabled={busy !== "" || checkingModel !== ""}
+          checkDisabled={busy !== "" || testing}
           onToggle={(m) => toggle(picked, setPicked, m)}
           onVision={(m) => toggle(vision, setVision, m)}
           onDefault={setDef}
@@ -454,10 +504,10 @@ export function EditConn({
       )}
 
       <div className="acts">
-        <button className="act" data-action="provider.save" data-primary onClick={save} disabled={(!dirty && err?.kind !== "unapplied") || busy !== "" || checkingModel !== "" || picked.length === 0 || extraBad || !idle.ok}>
+        <button className="act" data-action="provider.save" data-primary onClick={save} disabled={(!dirty && err?.kind !== "unapplied") || busy !== "" || testing || picked.length === 0 || extraBad || !idle.ok}>
           {t(saving ? "保存中…" : "保存")}
         </button>
-        <button className="act" data-action="provider.revert" onClick={onRevert} disabled={!dirty || busy !== "" || checkingModel !== ""}>{t("还原")}</button>
+        <button className="act" data-action="provider.revert" onClick={onRevert} disabled={!dirty || busy !== "" || testing}>{t("还原")}</button>
         <span className="acts-state" role="status" data-dirty={dirty || undefined}>
           {t(dirty ? "有未保存的更改" : justSaved && !edited ? "已保存" : "没有更改")}
         </span>
@@ -509,4 +559,8 @@ function compatSummary(think: string, heads: string, extra: string, levels: numb
   const body = parseExtraBody(extra);
   if (body && Object.keys(body).length) parts.push(t("有请求体"));
   return parts.join(" · ");
+}
+
+function stopChecking(facts: Record<string, ModelFact>): Record<string, ModelFact> {
+  return Object.fromEntries(Object.entries(facts).map(([model, fact]) => [model, fact.checking ? { ...fact, checking: false } : fact]));
 }

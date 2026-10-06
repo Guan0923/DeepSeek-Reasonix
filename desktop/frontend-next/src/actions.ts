@@ -343,6 +343,7 @@ export const ACTIONS: UIAction[] = [
   { id: "provider.draft", kind: "interaction", target: "none", proof: "interaction" },
   { id: "provider.discard-edits", kind: "destructive", target: "none", proof: "interaction" },
   { id: "provider.revert", kind: "interaction", target: "none", proof: "interaction" },
+  { id: "provider.model-check-all", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "provider.model-check", kind: "repeatable", target: "entity", proof: "interaction" },
   { id: "provider.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "provider.add-start", kind: "view", target: "none", proof: "interaction" },

@@ -25,6 +25,7 @@ function draw(port: Partial<Port>) {
 const list = () => document.querySelector(".mlist") as HTMLElement;
 const verify = (m: string) => userEvent.click(screen.getByRole("button", { name: `验证模型 ${m}` }));
 const summary = () => document.querySelector(".msummary");
+const said = () => summary()?.textContent ?? "";
 
 it("shows a refresh failure inside the model section, under its button", async () => {
   draw({ checkProvider: vi.fn(async () => ({ ok: false, code: "provider.probe.path_not_found", httpStatus: 404 })) });
@@ -67,7 +68,7 @@ it("sums up the verified rows in one line and leaves unticked rows out", async (
   const checkProviderModel = vi.fn(async (r: { model: string }) =>
     r.model === "alpha" ? { model: r.model, status: "available" as const } : { model: r.model, status: "unavailable" as const, reason: "not_found" as const, httpStatus: 404 });
   draw({ checkProviderModel });
-  expect(summary()).toBeNull();
+  expect(said()).toBe("");
   await userEvent.click(screen.getByRole("checkbox", { name: "选用 gamma" }));
   await verify("alpha");
   await waitFor(() => expect(summary()?.textContent).toContain("1 个可用"));
@@ -90,9 +91,9 @@ it("keeps each row's own failure with status and the endpoint's words under the 
 it("drops the summary when the address changes, as the row results go", async () => {
   draw({ checkProviderModel: vi.fn(async () => ({ model: "alpha", status: "available" as const })) });
   await verify("alpha");
-  await waitFor(() => expect(summary()).not.toBeNull());
+  await waitFor(() => expect(said()).not.toBe(""));
   await userEvent.type(screen.getByLabelText("接口地址"), "x");
-  expect(summary()).toBeNull();
+  expect(said()).toBe("");
 });
 
 it("shows a connection failure in the add form under the button that ran it, a save failure at the bottom", async () => {
