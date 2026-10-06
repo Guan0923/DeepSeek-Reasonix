@@ -35,6 +35,20 @@ describe("what a reader is told a refusal was", () => {
       expect(english).not.toBe("fixture fallback");
     }
   });
+  it("explains a serve left running instead of replaced, in both languages", () => {
+    for (const code of ["remote.serve_provider_mismatch", "remote.serve_not_attachable"]) {
+      const error = coded("fixture fallback", code, { host: "box" });
+      localStorage.setItem(STORAGE, "zh"); boot();
+      const chinese = reason(error);
+      expect(chinese).toContain("box");
+      expect(chinese).not.toBe("fixture fallback");
+      localStorage.setItem(STORAGE, "en"); boot();
+      const english = reason(error);
+      expect(english).toContain("box");
+      expect(english).not.toBe(chinese);
+      expect(english).not.toBe("fixture fallback");
+    }
+  });
   it("says a coded refusal in the window's own language", () => {
     expect(reason(coded("inbox item not found", "inbox.not_found"))).toBe("该条已不在待送达队列中");
   });
