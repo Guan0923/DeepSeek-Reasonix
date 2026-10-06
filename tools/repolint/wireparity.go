@@ -25,6 +25,7 @@ const (
 	tsProviderFile  = "desktop/frontend-next/src/port/provider.ts"
 	tsFeedbackFile  = "desktop/frontend-next/src/port/feedback.ts"
 	tsWorkspaceFile = "desktop/frontend-next/src/port/workspace.ts"
+	tsHubFile       = "desktop/frontend-next/src/port/hub.ts"
 	tsChartFile     = "desktop/frontend-next/src/ui/chart/spec.ts"
 )
 
@@ -107,6 +108,9 @@ var mirroredWireTypes = []wireMirror{
 	{"internal/frontend/serve/hub_remote.go", "RemoteHostView", tsRemoteFile, "RemoteHost"},
 	{"internal/frontend/serve/remote_browse.go", "RemoteListing", tsRemoteFile, "RemoteListing"},
 	{"internal/frontend/serve/remote_browse.go", "RemoteFolder", tsRemoteFile, "RemoteFolder"},
+	// The sidebar row. The unread mark is derived by the kernel from two stored
+	// timestamps; a row the page cannot read it from shows a finished turn as seen.
+	{"internal/frontend/serve/hub_tree.go", "treeSession", tsHubFile, "TreeSession"},
 	// What waits on the user, and which call answers it. The desktop reads this
 	// list as the whole set of open prompts — one it cannot read is a card it
 	// seals as decided while the run stays blocked on it.
