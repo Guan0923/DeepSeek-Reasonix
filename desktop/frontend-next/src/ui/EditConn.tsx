@@ -3,7 +3,8 @@ import { t } from "../i18n";
 import type { ProviderCheck, ProviderEntry } from "../port/port";
 import { checkedFact, clearModelCheckFacts, ModelChoice, type ModelFact } from "./ModelChoice";
 import type { Port } from "./Providers";
-import { SAVED_NOT_APPLIED, reason } from "../i18n/kernel";
+import { SAVED_NOT_APPLIED, reason, say } from "../i18n/kernel";
+import { checkFailure } from "./provider_check";
 import { HttpError } from "../port/port";
 import { IDLE_TIMEOUT_MAX, IDLE_TIMEOUT_MIN, THINKING, headerLines, parseEffortLevels, parseExtraBody, parseHeaders, parseIdleTimeout } from "./provider_compat";
 import { ModelEfforts } from "./ModelEfforts";
@@ -94,11 +95,18 @@ export function EditConn({
       const refreshed = apiKey.trim()
         ? await port.probeProvider(baseUrl.trim(), apiKey.trim())
         : await port.checkProvider(entry.name);
+      if ("ok" in refreshed && !refreshed.ok) {
+        setErr({ text: checkFailure(refreshed), kind: "refresh" });
+        return;
+      }
       const changed = !!refreshed.baseUrl && refreshed.baseUrl !== baseUrl.trim();
       if (changed) setBaseUrl(refreshed.baseUrl!);
       setCompleted(changed ? refreshed.baseUrl! : "");
       const found = refreshed.models ?? [];
-      if (found.length === 0) throw new Error("这个端点没报出任何聊天模型");
+      if (found.length === 0) {
+        setErr({ text: say({ code: "provider.probe.no_chat_models", params: { count: 0 } }), kind: "refresh" });
+        return;
+      }
       const readers = refreshed.vision ?? [];
       setModels((current) => {
         setDiff(catalogDiff(current, found));
