@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { reason } from "../i18n/kernel";
 import { HttpError } from "../port/http_error";
-import type { AccountState, AgentPort, MarketDetail, MarketKind, MarketPackage, MarketPlan } from "../port/port";
+import type { AccountState, AgentPort, MarketCache, MarketDetail, MarketKind, MarketPackage, MarketPlan } from "../port/port";
 import { Outcome } from "./AddPlugin";
+import { CacheNotice } from "./MarketCache";
 import { Group } from "./Group";
 import { PlanConfirm } from "./MarketConfirm";
 import { MyPackages, PublishForm } from "./MarketPublish";
@@ -37,6 +38,7 @@ export function Market({ port, account, onInstalled, onViewInstalled, onSignIn }
   const [rows, setRows] = useState<MarketPackage[] | null>(null);
   const [more, setMore] = useState(false);
   const [error, setError] = useState("");
+  const [cached, setCached] = useState<MarketCache | null>(null);
   const [filterUnsupported, setFilterUnsupported] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [open, setOpen] = useState("");
@@ -49,21 +51,23 @@ export function Market({ port, account, onInstalled, onViewInstalled, onSignIn }
     setRows(null);
     setMore(false);
     setError("");
+    setCached(null);
     setFilterUnsupported(false);
     setLoadingMore(false);
   }
 
-  const load = (offset: number) => {
+  const load = (offset: number, refresh = false) => {
     const n = ++asked.current;
     setError("");
     setFilterUnsupported(false);
     if (offset > 0) setLoadingMore(true);
     else setMore(false);
     port
-      .marketList({ kind, q: q.trim(), sort, offset, pinned })
+      .marketList({ kind, q: q.trim(), sort, offset, pinned, ...(refresh ? { refresh } : {}) })
       .then((page) => {
         if (n !== asked.current || currentConnection.current !== connection) return;
         nextOffset.current = offset + page.packages.length;
+        setCached((prev) => page.cache ?? (offset === 0 ? null : prev));
         setRows((prev) => {
           if (offset === 0 || !prev) return page.packages;
           const seen = new Set(prev.map((p) => p.slug));
@@ -75,6 +79,7 @@ export function Market({ port, account, onInstalled, onViewInstalled, onSignIn }
       .catch((e) => {
         if (n !== asked.current || currentConnection.current !== connection) return;
         setError(reason(e));
+        if (offset === 0) setCached(null);
         setFilterUnsupported(pinned && e instanceof HttpError && e.reason?.code === "market.filter_unsupported");
         setLoadingMore(false);
         if (offset === 0) setRows([]);
@@ -87,6 +92,7 @@ export function Market({ port, account, onInstalled, onViewInstalled, onSignIn }
     setMore(false);
     nextOffset.current = 0;
     setError("");
+    setCached(null);
     setLoadingMore(false);
     const timer = setTimeout(() => load(0), q ? 250 : 0);
     return () => { clearTimeout(timer); ++asked.current; };
@@ -148,10 +154,11 @@ export function Market({ port, account, onInstalled, onViewInstalled, onSignIn }
           <span className="why">{error}</span>
           {(filterUnsupported || rows?.length === 0) && <div className="acts">
             {filterUnsupported && <button className="act" data-action="market.show-all" onClick={() => { panel.current?.focus(); setPinned(false); }}>{t("查看全部包")}</button>}
-            {!filterUnsupported && <button className="act" data-action="market.retry" onClick={() => { panel.current?.focus(); setRows(null); load(0); }}>{t("重试")}</button>}
+            {!filterUnsupported && <button className="act" data-action="market.retry" onClick={() => { panel.current?.focus(); setRows(null); load(0, true); }}>{t("重试")}</button>}
           </div>}
         </div>
       )}
+      {cached && !error && <CacheNotice cache={cached} action="market.retry" onRetry={() => { panel.current?.focus(); load(0, true); }} />}
       {rows === null && !error && <div className="empty" role="status">{t("正在读取…")}</div>}
       {rows?.length === 0 && !error && <div className="empty">{t(pinned ? "没有找到已固定内容的包。可关闭筛选查看全部包。" : "没有找到匹配的包。")}</div>}
       <ul className="mkt-list">
@@ -204,7 +211,7 @@ function Entry({ port, account, slug, onBack, onInstalled, onViewInstalled, onSi
     let live = true;
     setD(null);
     setError("");
-    port.marketDetail(slug)
+    port.marketDetail(slug, ...(attempt > 0 ? [{ refresh: true }] : []))
       .then((detail) => { if (live) setD(detail); })
       .catch((e) => { if (live) setError(reason(e)); });
     return () => { live = false; };
@@ -304,6 +311,7 @@ function Entry({ port, account, slug, onBack, onInstalled, onViewInstalled, onSi
         <span className="mkt-kind">{t(KIND_NAME[p.kind] ?? p.kind)}</span>
         {p.verified && <span className="mkt-badge" data-tone="ok">{t("管理员标记可信")}</span>}
       </div>
+      {d.cache && <CacheNotice cache={d.cache} action="market.detail-retry" onRetry={() => { panel.current?.focus(); setAttempt((n) => n + 1); }} />}
       {p.summary && <p className="mkt-sum">{p.summary}</p>}
       {p.description && <p className="mkt-desc">{p.description}</p>}
       {!d.pinned && !current && (
@@ -338,7 +346,9 @@ function Entry({ port, account, slug, onBack, onInstalled, onViewInstalled, onSi
       {result?.stage === "retry" && <Outcome plan={result.plan} />}
       <div className="acts">
         <span className="note">
-          {current
+          {d.cache
+            ? t("当前显示的是缓存数据，安装需要连接市场")
+            : current
             ? t("已安装 {version}", { version: d.installed!.version })
             : stuck
               ? t("技能不会被原地覆盖：先在「已安装」里移除旧版本，再回来安装")
@@ -346,12 +356,12 @@ function Entry({ port, account, slug, onBack, onInstalled, onViewInstalled, onSi
         </span>
         {back}
         {!current && !stuck && d.pinned && (
-          <button className="act" data-action="market.inspect" data-primary disabled={busy} onClick={() => void look()}>
+          <button className="act" data-action="market.inspect" data-primary disabled={busy || !!d.cache} onClick={() => void look()}>
             {t(busy ? "读取中…" : update ? "查看更新内容" : "查看将安装的内容")}
           </button>
         )}
         {!current && !stuck && !d.pinned && (
-          <button className="act" data-action="market.trust" data-primary disabled={busy} onClick={() => void look(true)}>
+          <button className="act" data-action="market.trust" data-primary disabled={busy || !!d.cache} onClick={() => void look(true)}>
             {t(busy ? "读取中…" : "信任并安装")}
           </button>
         )}
