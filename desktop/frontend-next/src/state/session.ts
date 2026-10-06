@@ -283,14 +283,13 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
       ),
     };
   }
-  // A rebuild re-reads the record, and an open prompt is not in it: it is the
-  // run stopped, waiting on an answer only this window can give. Overwriting it
-  // left the session reading 等你决定 with nothing on screen to decide.
+  // The transcript does not contain live extension publications or pending
+  // prompts. Both belong to this pane until it is rebound to another session.
   if (ev.kind === "__restore") {
     // How the restored turns ended is not in the record; a live turn that
     // vanished mid-flight leaves null, which is a different answer.
     const terminal: TurnTerminal = ev.items.length ? { kind: "unread" } : s.terminal;
-    return { ...s, executions: ev.executions, terminal, items: [...ev.items, ...s.items.filter(promptOpen)], plan: ev.plan ? livePlan(ev.plan) : s.plan };
+    return { ...s, executions: ev.executions, terminal, items: [...ev.items, ...s.items.filter((i) => i.t === "extension" || promptOpen(i))], plan: ev.plan ? livePlan(ev.plan) : s.plan };
   }
   // The kernel's canonical task list, asked for rather than re-derived: the
   // advances are not todo_write calls, and the refused writes are.
