@@ -276,3 +276,8 @@ func (c *Controller) canonicalSkillName(name string) (string, error) {
 	}
 	return "", &skill.NotFoundError{Name: name}
 }
+
+// TouchedPaths lists the workspace files this session's completed tool calls
+// named, sorted: the facts a skill's `paths:` globs are judged against. It is a
+// read-only diagnostic view of the set.
+func (c *Controller) TouchedPaths() []string { return c.skills.pathHits.Seen() }

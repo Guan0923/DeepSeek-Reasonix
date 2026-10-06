@@ -342,3 +342,24 @@ func TestEligibleDoesNotBlockObserve(t *testing.T) {
 		t.Fatalf("seen %d, want 216", got)
 	}
 }
+
+func TestObserveIgnoresDirectoriesAndResetForgets(t *testing.T) {
+	root := testenv.TempDir(t)
+	if err := os.MkdirAll(filepath.Join(root, "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h := NewPathHits(root)
+	for _, p := range []string{"src", filepath.Join(root, "src")} {
+		if err := h.Observe(p); err != nil {
+			t.Fatalf("Observe(%q) = %v", p, err)
+		}
+	}
+	if got := h.Seen(); len(got) != 0 {
+		t.Fatalf("a directory was recorded as a touched file: %q", got)
+	}
+	_ = h.Observe("src/a.go")
+	h.Reset()
+	if got := h.Seen(); len(got) != 0 {
+		t.Fatalf("Reset kept %q", got)
+	}
+}
