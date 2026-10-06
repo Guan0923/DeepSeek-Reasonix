@@ -209,7 +209,7 @@ export function EditConn({
   };
 
   return (
-    <div className="addp" data-edit>
+    <fieldset className="addp" data-edit disabled={saving}>
       <div className="fields">
         <label className="grow full">
           <span>{t("接口地址")}</span>
@@ -413,7 +413,7 @@ export function EditConn({
         </button>
         <button className="act" onClick={onDone} disabled={busy !== "" || checkingModel !== ""}>{t("取消")}</button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
