@@ -41,6 +41,8 @@ export interface TreeSession {
   // pane rather than opening a second writer for one file.
   runtimeId?: string;
   archived?: boolean;
+  // A turn finished since the person last looked. Absent means seen.
+  unread?: boolean;
   // Conflict-recovery copies of this same conversation. A save that keeps
   // conflicting writes one per turn, all under one title.
   copies?: TreeSession[];
