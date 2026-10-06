@@ -185,6 +185,7 @@ type Store struct {
 	stderr           io.Writer
 	requiresReady    func([]string) []string
 	toolBindings     func(Skill) []tool.MCPBinding
+	hits             *PathHits
 }
 
 // New builds a Store. Relative custom paths and a relative project root are made
@@ -228,6 +229,7 @@ func New(opts Options) *Store {
 		stderr = os.Stderr
 	}
 	return &Store{
+		hits:             NewPathHits(base),
 		homeDir:          home,
 		reasonixHomeDir:  reasonixHome,
 		projectRoot:      root,
@@ -1333,4 +1335,13 @@ func dedupePaths(paths []string) []string {
 // lives in internal/base/frontmatter.
 func splitFrontmatter(s string) (map[string]string, string) {
 	return frontmatter.SplitLegacy(s)
+}
+
+// PathHits is the files the session has touched, which decide whether a skill
+// that declared `paths:` may be shown to the model. A nil store has none.
+func (s *Store) PathHits() *PathHits {
+	if s == nil {
+		return nil
+	}
+	return s.hits
 }

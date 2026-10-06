@@ -33,13 +33,21 @@ type skillSet struct {
 }
 
 func newSkillSet(enabled, all []skill.Skill, store, allStore *skill.Store, noImplicit bool, workspaceRoot string) skillSet {
-	return skillSet{enabled: enabled, all: all, store: store, allStore: allStore, noImplicitInvocation: noImplicit, pathHits: skill.NewPathHits(workspaceRoot)}
+	hits := store.PathHits()
+	if hits == nil {
+		hits = skill.NewPathHits(workspaceRoot)
+	}
+	return skillSet{enabled: enabled, all: all, store: store, allStore: allStore, noImplicitInvocation: noImplicit, pathHits: hits}
 }
 
 // skillsAllOffBlock replaces the listing when every skill is switched off: an
 // absence the model must be told about, since the listing it already has would
 // otherwise keep standing as current.
 const skillsAllOffBlock = "# Skills\n\nEvery skill this project had is switched off. The listing you were sent earlier no longer holds, and `run_skill` has nothing to reach."
+
+// skillsNoneEligibleBlock replaces the listing when skills exist but none is
+// eligible for the files this session has touched.
+const skillsNoneEligibleBlock = "# Skills\n\nNone of this project's skills apply to the files this session has touched. The listing you were sent earlier no longer holds."
 
 // owedCatalog returns the listing this turn owes, empty when the model already
 // has the current one. It asks the canonical registry rather than a flag, so a
@@ -49,11 +57,15 @@ func (s *skillSet) owedCatalog() string {
 	if s.noImplicitInvocation {
 		return ""
 	}
-	block := skill.IndexBlock(s.list())
+	listed := s.list()
+	block := skill.IndexBlock(s.pathHits.Visible(listed))
 	if block == "" && s.catalog.sent() {
 		// Silence would leave the listing the model already has standing as
 		// current. Every skill being switched off is a fact, not an absence.
 		block = skillsAllOffBlock
+		if skill.IndexBlock(listed) != "" {
+			block = skillsNoneEligibleBlock
+		}
 	}
 	return s.catalog.owed(block)
 }

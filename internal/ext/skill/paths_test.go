@@ -363,3 +363,100 @@ func TestObserveIgnoresDirectoriesAndResetForgets(t *testing.T) {
 		t.Fatalf("Reset kept %q", got)
 	}
 }
+
+func TestVerdictsAreMemoisedUntilTheSetChanges(t *testing.T) {
+	h := NewPathHits(testenv.TempDir(t))
+	sk := Skill{Name: "s", Paths: []string{"src/*.go"}}
+	if first := h.Eligible(sk); first || h.Eligible(sk) {
+		t.Fatal("eligible before any hit")
+	}
+	if got := len(h.verdicts.byKey); got != 1 {
+		t.Fatalf("two identical questions left %d cached verdicts, want 1", got)
+	}
+	_ = h.Observe("docs/x.md")
+	if got := len(h.verdicts.byKey); got != 0 {
+		t.Fatalf("a new path left %d stale verdicts", got)
+	}
+	if h.Eligible(sk) {
+		t.Fatal("an unrelated path made the skill eligible")
+	}
+	_ = h.Observe("docs/x.md")
+	if got := len(h.verdicts.byKey); got != 1 {
+		t.Fatalf("seeing the same path again dropped the verdict: %d cached", got)
+	}
+	_ = h.Observe("src/a.go")
+	if !h.Eligible(sk) {
+		t.Fatal("a matching path did not make the skill eligible")
+	}
+	h.Reset()
+	if h.Eligible(sk) {
+		t.Fatal("a reset set kept a verdict")
+	}
+}
+
+func TestVisibleKeepsUngatedAndMatchedSkills(t *testing.T) {
+	h := NewPathHits(testenv.TempDir(t))
+	skills := []Skill{
+		{Name: "plain"},
+		{Name: "go", Paths: []string{"**/*.go"}},
+		{Name: "md", Paths: []string{"*.md"}},
+		{Name: "broken", InvalidPaths: []string{"!x"}},
+	}
+	names := func(in []Skill) []string {
+		var out []string
+		for _, s := range in {
+			out = append(out, s.Name)
+		}
+		return out
+	}
+	if got, want := names(h.Visible(skills)), []string{"plain"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("before any hit: %q, want %q", got, want)
+	}
+	_ = h.Observe("src/a.go")
+	if got, want := names(h.Visible(skills)), []string{"plain", "go"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("after a go file: %q, want %q", got, want)
+	}
+	var none *PathHits
+	if got := none.Visible(skills); len(got) != len(skills) {
+		t.Fatal("a nil set must leave every skill listed")
+	}
+}
+
+func TestStoreOwnsOneSetAndAvailableNamesHonoursIt(t *testing.T) {
+	home := testenv.TempDir(t)
+	root := testenv.TempDir(t)
+	writeSkill(t, root, ".reasonix/skills/plain/SKILL.md", "---\nname: plain\ndescription: d\n---\nB")
+	writeSkill(t, root, ".reasonix/skills/gated/SKILL.md", "---\nname: gated\ndescription: d\npaths: \"src/*.go\"\n---\nB")
+	store := New(Options{HomeDir: home, ProjectRoot: root, DisableBuiltins: true})
+	if store.PathHits() == nil {
+		t.Fatal("the store must own one stable set")
+	}
+	if got := availableNames(store); got != "plain" {
+		t.Fatalf("before a hit: %q", got)
+	}
+	_ = store.PathHits().Observe("src/a.go")
+	if got := availableNames(store); got != "gated, plain" {
+		t.Fatalf("after a hit: %q", got)
+	}
+	var none *Store
+	if none.PathHits() != nil {
+		t.Fatal("a nil store has no set")
+	}
+}
+
+func TestAvailableNamesSaysWhyWhenGatingEmptiesTheList(t *testing.T) {
+	root := testenv.TempDir(t)
+	store := New(Options{HomeDir: testenv.TempDir(t), ProjectRoot: root, DisableBuiltins: true})
+	if got := availableNames(store); got != "(none — no skills defined)" {
+		t.Fatalf("no skills at all: %q", got)
+	}
+	writeSkill(t, root, ".reasonix/skills/gated/SKILL.md", "---\nname: gated\ndescription: d\npaths: \"src/*.go\"\n---\nB")
+	got := availableNames(store)
+	if got != "(none apply to the files touched so far)" {
+		t.Fatalf("skills exist but none is eligible: %q", got)
+	}
+	_ = store.PathHits().Observe("src/a.go")
+	if got := availableNames(store); got != "gated" {
+		t.Fatalf("after the hit: %q", got)
+	}
+}
