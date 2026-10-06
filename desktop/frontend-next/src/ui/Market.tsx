@@ -17,6 +17,7 @@ const KIND_NAME: Record<string, string> = { skill: "技能", plugin: "插件", m
 
 interface Props {
   port: AgentPort;
+  account?: AccountState | null;
   onInstalled: () => void;
   onViewInstalled?: (kind: string, name: string) => void;
   onSignIn?: () => void;
@@ -25,7 +26,7 @@ interface Props {
 // The market is one more place a source comes from. It lists what reviewers let
 // through and hands the approved version to the same plan-then-install every
 // pasted address goes through; the kernel holds the pin, this only shows it.
-export function Market({ port, onInstalled, onViewInstalled, onSignIn }: Props) {
+export function Market({ port, account, onInstalled, onViewInstalled, onSignIn }: Props) {
   const [connection, setConnection] = useState({ port, generation: 0 });
   const currentConnection = useRef(connection);
   currentConnection.current = connection;
@@ -96,6 +97,7 @@ export function Market({ port, onInstalled, onViewInstalled, onSignIn }: Props) 
       <Entry
         key={connection.generation}
         port={port}
+        account={account}
         slug={open}
         onSignIn={onSignIn}
         onViewInstalled={onViewInstalled}
@@ -189,7 +191,7 @@ export function Market({ port, onInstalled, onViewInstalled, onSignIn }: Props) 
   );
 }
 
-function Entry({ port, slug, onBack, onInstalled, onViewInstalled, onSignIn }: { port: AgentPort; slug: string; onBack: () => void; onInstalled: () => void; onViewInstalled?: (kind: string, name: string) => void; onSignIn?: () => void }) {
+function Entry({ port, account, slug, onBack, onInstalled, onViewInstalled, onSignIn }: { port: AgentPort; account?: AccountState | null; slug: string; onBack: () => void; onInstalled: () => void; onViewInstalled?: (kind: string, name: string) => void; onSignIn?: () => void }) {
   const [d, setD] = useState<MarketDetail | null>(null);
   const [plan, setPlan] = useState<MarketPlan | null>(null);
   const [result, setResult] = useState<{ plan: MarketPlan; stage: "done" | "retry" } | null>(null);
@@ -332,7 +334,7 @@ function Entry({ port, slug, onBack, onInstalled, onViewInstalled, onSignIn }: {
           </>
         )}
       </dl>
-      <MarketVote port={port} pkg={p} onSignIn={onSignIn} />
+      <MarketVote key={account?.signedIn ? `signed-in:${account.user?.handle ?? ""}` : "signed-out"} port={port} pkg={p} onSignIn={onSignIn} />
       {result?.stage === "retry" && <Outcome plan={result.plan} />}
       <div className="acts">
         <span className="note">
@@ -397,7 +399,7 @@ export function MarketGroup({ port, onInstalled, onViewInstalled, account, onSig
           </div>
         )
       )}
-      {at === "browse" && <Market port={port} onInstalled={onInstalled} onViewInstalled={onViewInstalled} onSignIn={onSignIn} />}
+      {at === "browse" && <Market port={port} account={account} onInstalled={onInstalled} onViewInstalled={onViewInstalled} onSignIn={onSignIn} />}
       {at === "mine" && <MyPackages key={handle} port={port} onInstalled={() => {
         if (connection.current === owner) onInstalled();
       }} onViewInstalled={onViewInstalled} onApplying={applyingChanged} onPublish={(pkg) => {
