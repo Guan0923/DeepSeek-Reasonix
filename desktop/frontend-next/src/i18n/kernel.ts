@@ -146,6 +146,9 @@ const SAID: Record<string, string> = {
   // ── 来源：连接与授权 ─────────────────────────────────────────────
   "provider.editing_disabled": "这台服务器不允许修改模型来源",
   "browser.open_failed": "打不开这个网页：{error}",
+  "browser.engine_missing": "没有找到可用的浏览器。请安装 Chrome、Edge 或 Chromium，或在配置里用 [browser] executable 指定路径，新会话才会读到",
+  "browser.engine_failed": "内置浏览器没能启动，稍后再试一次",
+  "browser.profile_busy": "内置浏览器的资料目录正被另一个浏览器占用。关掉其他 Studio 窗口或用同一资料目录的浏览器后再试",
   "notifications.rejected": "通知设置没能保存：{error}",
   "editor.not_installed": "这台机器上没找到 VS Code、Cursor 这类编辑器。装一个，或在配置里用 [desktop] editor 指定路径。",
   "editor.launch_failed": "编辑器没能启动：{error}",
