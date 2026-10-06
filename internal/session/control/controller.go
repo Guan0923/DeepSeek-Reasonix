@@ -1076,6 +1076,7 @@ func (c *Controller) ReloadCommands(ctx context.Context) error {
 			Description: sk.Description,
 			ArgHint:     sk.ArgumentHint,
 			Skill:       true,
+			Unlisted:    func() bool { return !c.skills.pathHits.Eligible(sk) },
 			Render: func(args []string) string {
 				cur, err := c.skills.forModel(sk)
 				if err != nil {

@@ -137,13 +137,20 @@ func countGroup(p string, i int) (n, next int) {
 }
 
 // PathHits is the set of workspace files the host has seen the session touch,
-// accumulated over the session. A skill's eligibility is read from it on demand,
-// so nothing about a skill is cached against it.
+// accumulated over the session. Eligibility is a function of this set and a
+// skill's globs alone; verdicts are memoised against the set and dropped the
+// moment it changes, so a verdict never outlives the state it answers for.
 type PathHits struct {
 	mu       sync.Mutex
 	root     string
 	realRoot string
 	seen     map[string]struct{}
+	verdicts verdictCache
+}
+
+type verdictCache struct {
+	gen   uint64
+	byKey map[string]bool
 }
 
 // NewPathHits records paths relative to workspaceRoot.
@@ -153,7 +160,7 @@ func NewPathHits(workspaceRoot string) *PathHits {
 	if err != nil {
 		real = root
 	}
-	return &PathHits{root: root, realRoot: real, seen: map[string]struct{}{}}
+	return &PathHits{root: root, realRoot: real, seen: map[string]struct{}{}, verdicts: verdictCache{byKey: map[string]bool{}}}
 }
 
 // Observe records a path the host saw a tool read or write. A relative path is
@@ -186,7 +193,10 @@ func (h *PathHits) Observe(p string) error {
 	}
 	name := slashFrom(rel, os.PathSeparator)
 	h.mu.Lock()
-	h.seen[name] = struct{}{}
+	if _, known := h.seen[name]; !known {
+		h.seen[name] = struct{}{}
+		h.verdicts.invalidate()
+	}
 	h.mu.Unlock()
 	return nil
 }
@@ -195,6 +205,7 @@ func (h *PathHits) Observe(p string) error {
 func (h *PathHits) Reset() {
 	h.mu.Lock()
 	h.seen = map[string]struct{}{}
+	h.verdicts.invalidate()
 	h.mu.Unlock()
 }
 
@@ -202,6 +213,57 @@ func (h *PathHits) Reset() {
 func (h *PathHits) Seen() []string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	return h.sortedSeenLocked()
+}
+
+// Eligible reports whether the skill may be listed: it declared no `paths`, or
+// a recorded path matches one of its globs. A nil set records nothing, so it
+// leaves every skill listed.
+func (h *PathHits) Eligible(sk Skill) bool {
+	if h == nil || !sk.PathGated() {
+		return true
+	}
+	key := strings.Join(sk.Paths, "\x00")
+	h.mu.Lock()
+	if v, ok := h.verdicts.byKey[key]; ok {
+		h.mu.Unlock()
+		return v
+	}
+	gen := h.verdicts.gen
+	seen := h.sortedSeenLocked()
+	h.mu.Unlock()
+
+	v := matchesAny(sk.Paths, seen)
+
+	h.mu.Lock()
+	if h.verdicts.gen == gen {
+		h.verdicts.byKey[key] = v
+	}
+	h.mu.Unlock()
+	return v
+}
+
+// Visible keeps the skills the model may be shown now: those that declared no
+// `paths`, and those whose globs a recorded path matches.
+func (h *PathHits) Visible(skills []Skill) []Skill {
+	if h == nil {
+		return skills
+	}
+	out := make([]Skill, 0, len(skills))
+	for _, sk := range skills {
+		if h.Eligible(sk) {
+			out = append(out, sk)
+		}
+	}
+	return out
+}
+
+func (v *verdictCache) invalidate() {
+	v.gen++
+	v.byKey = map[string]bool{}
+}
+
+func (h *PathHits) sortedSeenLocked() []string {
 	out := make([]string, 0, len(h.seen))
 	for p := range h.seen {
 		out = append(out, p)
@@ -210,19 +272,13 @@ func (h *PathHits) Seen() []string {
 	return out
 }
 
-// Eligible reports whether the skill may be listed: it declared no `paths`, or
-// a recorded path matches one of its globs.
-func (h *PathHits) Eligible(sk Skill) bool {
-	if !sk.PathGated() {
-		return true
-	}
-	seen := h.Seen()
-	for _, glob := range sk.Paths {
+func matchesAny(globs, paths []string) bool {
+	for _, glob := range globs {
 		pattern, ok := effectivePathPattern(glob)
 		if !ok {
 			continue
 		}
-		for _, p := range seen {
+		for _, p := range paths {
 			if fileutil.MatchSlashGlob(p, pattern) {
 				return true
 			}
