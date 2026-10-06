@@ -2355,6 +2355,8 @@ body { font-size: 14px; line-height: 1.75; }
   bottom: calc(100% + 8px);
   width: max-content;
   max-width: 220px;
+  white-space: normal;
+  overflow-wrap: anywhere;
   display: grid;
   gap: 3px;
   padding: 8px 10px;
@@ -4013,7 +4015,7 @@ body { font-size: 14px; line-height: 1.75; }
 .chrome .r { align-self: center; }
 
 .turntools .studio-refine { order: 1; }
-.studio-refine[disabled] { opacity: .35; }
+.studio-refine[disabled] > .studio-icon { opacity: .35; }
 .studio-refine[aria-busy="true"] > .studio-icon { animation: refine-pulse 1s ease-in-out infinite; }
 @keyframes refine-pulse { 50% { opacity: .35; } }
 .refine-card {
