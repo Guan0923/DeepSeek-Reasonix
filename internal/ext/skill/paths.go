@@ -181,11 +181,21 @@ func (h *PathHits) Observe(p string) error {
 	if rel == "." {
 		return nil
 	}
+	if info, err := os.Stat(resolved); err == nil && info.IsDir() {
+		return nil
+	}
 	name := slashFrom(rel, os.PathSeparator)
 	h.mu.Lock()
 	h.seen[name] = struct{}{}
 	h.mu.Unlock()
 	return nil
+}
+
+// Reset forgets every recorded path.
+func (h *PathHits) Reset() {
+	h.mu.Lock()
+	h.seen = map[string]struct{}{}
+	h.mu.Unlock()
 }
 
 // Seen returns the recorded paths, sorted.
