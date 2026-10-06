@@ -4442,6 +4442,7 @@
   .ptab-host { flex: none; font: var(--w-reg) var(--fs-micro) var(--mono); color: var(--net) }
   .ptab-host::before { content: "◦"; margin-right: 2px; opacity: .7 }
   .ptab .pip { flex: none; background: var(--ghost) }
+  .ptab-unread { flex: none; width: 6px; height: 6px; margin-inline-start: -3px; border-radius: 50%; background: var(--accent-ink) }
 
   .ptab[data-run="running"] .pip { background: var(--net) }
   .ptab[data-run="halt"] .pip { background: var(--accent-ink) }

@@ -99,6 +99,7 @@ interface Props {
   // position are exactly what a tab switch must not throw away.
   visible: boolean;
   onSessionChanged: () => void;
+  onTurnDone?: (id: string) => void;
   // Bumped when something outside this pane changed a setting that belongs to
   // its session. /status is polled only while a turn runs, so without this the
   // pane keeps reporting the posture it had when it opened.
@@ -122,7 +123,7 @@ interface Props {
   alert?: ReactNode;
 }
 
-function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, onReport, onSessionChanged, pulse, findPulse, onSettings, needsProject, onOpenProject, onKeepHere, theme, dockW, dockMax, onDockW, manualBrowser = false, onManualBrowser, alert }: Props) {
+function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, onReport, onSessionChanged, onTurnDone, pulse, findPulse, onSettings, needsProject, onOpenProject, onKeepHere, theme, dockW, dockMax, onDockW, manualBrowser = false, onManualBrowser, alert }: Props) {
   const [s, dispatch] = useReducer(reduce, initialState);
   const [traj, trajDispatch] = useReducer(reduceTraj, initialTraj);
   const [status, setStatus] = useState<SessionStatus | null>(null);
@@ -208,7 +209,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
     () =>
       port.subscribe(
         (ev) => {
-          pacer.push(ev);
+          pacer.push(ev); if (ev.kind === "turn_done") onTurnDone?.(rt.id);
           // A server finishing its handshake changes what /mcp answers, and this
           // is the only precise signal for it — the turn boundary below is the
           // fallback for changes that arrive without an event.
@@ -231,7 +232,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
           refreshStatus();
         },
       ),
-    [port, pacer, reloadMcp, rebuild, refreshStatus, revalue],
+    [port, pacer, rt.id, onTurnDone, reloadMcp, rebuild, refreshStatus, revalue],
   );
 
   // What the rows cover is dispatched before the rows themselves, so the table

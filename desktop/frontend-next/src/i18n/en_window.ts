@@ -106,4 +106,7 @@ export const EN_WINDOW: Record<string, string> = {
   "全部关闭（{n}）": "Close all ({n})",
   "从列表移除「{name}」？": "Remove “{name}” from the list?",
   "删除「{name}」？": "Delete “{name}”?",
+  "未读": "Unread",
+  "1 个会话未读": "1 unread session",
+  "{n} 个会话未读": "{n} unread sessions",
 };

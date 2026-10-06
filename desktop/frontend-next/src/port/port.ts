@@ -398,6 +398,9 @@ export interface AgentPort {
   sessions(): Promise<SessionEntry[]>;
   resume(path: string): Promise<void>;
   newSession(): Promise<void>;
+  // Clears the unread mark on the conversation this pane has open. Unmarked
+  // sessions are a no-op on the kernel, and an older kernel answers 404.
+  markSessionViewed(): Promise<void>;
   deleteSession(name: string): Promise<void>;
   status(): Promise<SessionStatus>;
   /** The provider's wallet, or null when this provider has no wallet endpoint —

@@ -407,6 +407,8 @@ export class SsePort extends SseFeedback implements AgentPort {
     return this.post("/resume", { path });
   }
 
+  markSessionViewed() { return this.post("/sessions/viewed"); }
+
   newSession() {
     return this.post("/new");
   }
