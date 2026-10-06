@@ -62,6 +62,7 @@ node perf/reason.mjs     # 内核拒绝的双语落地：同一个码，中英�
 node perf/budget.mjs     # 预算的守卫：输入框上下堆满东西时，转录还剩多少
 node perf/find.mjs       # 对话内查找：快捷键穿过输入框、跳到没挂载的那条、同一行里的第 n 处落在眼前
 node perf/focus.mjs      # 专注的守卫：拿走外围之后，退出时世界是否原样
+node perf/tooltip.mjs    # 控件提示的守卫：文字不溢出提示框、不在半透明祖先之下、对比度达 AA（深浅×中英×宽窄）
 ```
 
 `lang.mjs` 从仓库外跑时用 `PERF_SRC` 指向 `src/`（它要读固件源码来决定
