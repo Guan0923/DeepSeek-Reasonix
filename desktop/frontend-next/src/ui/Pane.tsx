@@ -412,7 +412,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
           // The row is already on screen; the receipt is what gives it a name
           // to be taken back by while it waits at the tool boundary.
           const queued = chips ? await port.queueFollowup(text, chips) : await port.steer(text);
-          if (queued?.itemId) dispatch({ kind: "__queued", id, itemId: queued.itemId, queued: chips ? "followup" : "steer" } as never);
+          if (queued?.itemId) dispatch({ kind: "__queued", id, itemId: queued.itemId, queued: chips || queued.paused ? "followup" : "steer", paused: queued.paused } as never);
         } else {
           await submitOrQueue(text, id, chips);
         }
@@ -442,12 +442,13 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   const submitOrQueue = useCallback(
     async (text: string, id: string, chips?: ChipCall) => {
       try {
-        await port.submit(text, chips);
+        const held = await port.submit(text, chips);
+        if (held?.paused && held.itemId) dispatch({ kind: "__queued", id, itemId: held.itemId, queued: "followup", paused: true } as never);
         refreshStatus();
       } catch (e) {
         if (!(e instanceof HttpError) || e.reason?.code !== "busy.session_running") throw e;
         const queued = await port.queueFollowup(text, chips);
-        if (queued?.itemId) dispatch({ kind: "__queued", id, itemId: queued.itemId, queued: "followup" } as never);
+        if (queued?.itemId) dispatch({ kind: "__queued", id, itemId: queued.itemId, queued: "followup", paused: queued.paused } as never);
       }
     },
     [port, refreshStatus],

@@ -1,6 +1,6 @@
 import type { PlanAction } from "./session";
 import { HttpError } from "./port";
-import type { AccountState, AgentPort, ChangeDiff, Completion, CompletionItem, DeviceGrant, VersionHub, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, SessionEntry, SessionStatus, WalletReading, MemoryCatalog, MemoryEdit, UsageReport, MemoryEntry, WorkspaceInfo, WorkspaceChanges, Attachment, DroppedRef, Queue, QueueItem, Queued, NotifyPrefs, TrayPrefs, UsageQuery } from "./port";
+import type { AccountState, AgentPort, ChangeDiff, Completion, CompletionItem, DeviceGrant, VersionHub, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, SessionEntry, SessionStatus, WalletReading, MemoryCatalog, MemoryEdit, UsageReport, MemoryEntry, WorkspaceInfo, WorkspaceChanges, Attachment, DroppedRef, Queue, QueueItem, Queued, ChipCall, NotifyPrefs, TrayPrefs, UsageQuery } from "./port";
 import type { ExecutionGraphRead, TrajectoryRead, WireEvent } from "./wire";
 import { MockFeedback } from "./mock_feedback";
 import { SCRIPT, mockMsgIndex, mockTurnStart } from "./fixture";
@@ -509,6 +509,7 @@ export class MockPort extends MockFeedback implements AgentPort {
   // that wait is the only window in which taking it back means anything. A
   // fixture that echoed it at once made the state undesignable.
   async steer(text: string): Promise<Queued> {
+    if (this.queuePaused) return this.queueFollowup(text);
     const itemId = `inbox-${this.queued.size + 1}-${Date.now()}`;
     const at = window.setTimeout(() => {
       // Three states, not two. The kernel marks the line consumed when the turn
@@ -584,7 +585,7 @@ export class MockPort extends MockFeedback implements AgentPort {
   async queueFollowup(text: string): Promise<Queued> {
     const itemId = `inbox-followup-${Date.now()}`;
     this.addQueued(itemId, "followup", text);
-    return { itemId, disposition: "queued_followup" };
+    return { itemId, disposition: "queued_followup", paused: this.queuePaused };
   }
 
   async browserTabs(): Promise<BrowserTab[]> {
@@ -664,7 +665,8 @@ export class MockPort extends MockFeedback implements AgentPort {
     this.dropQueued(itemId);
   }
 
-  async submit(text: string) {
+  async submit(text: string, chips?: ChipCall): Promise<Queued | void> {
+    if (chips && this.queuePaused) return this.queueFollowup(text);
     if (this.state.running) {
       this.emit({ kind: "steer", text });
       return;
