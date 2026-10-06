@@ -219,7 +219,7 @@ it("says a refused save failed, as an error alert", async () => {
 
 it("does not call a saved-but-not-applied outcome a failed save", async () => {
   await rejecting(409, "provider.saved_while_running", "saved");
-  const note = (await screen.findByText("已保存，尚未生效")).closest(".find")!;
+  const note = (await screen.findByText(/已保存。当前对话还有未结束的工作/)).closest(".find")!;
   expect(note.getAttribute("data-lvl")).toBe("warn");
   expect(note.getAttribute("role")).toBe("status");
   expect(screen.queryByRole("alert")).toBeNull();
