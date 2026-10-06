@@ -268,7 +268,7 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
     const resumed = decided?.t === "approval" && !halted ? decided.a.tool || RUNNING : s.doing;
     return {
       ...s,
-      doing: decided?.t === "ask" ? "运行中" : resumed,
+      doing: decided?.t === "ask" ? (s.running ? RUNNING : IDLE) : resumed,
       items: s.items.map((i) =>
         i.id !== ev.id
           ? i
