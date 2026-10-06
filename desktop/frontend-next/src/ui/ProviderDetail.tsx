@@ -28,11 +28,11 @@ const CONTINUATION_WHY: Record<string, string> = {
 // than a fact on a row, because both entries are the same key at the same host;
 // 测试连接 is what turns "which protocol did we record" back into a finding.
 export function ProviderDetail({
-  a, port, busy, setBusy, kind, onProtocol, onRemove, onRename, onEdited, onFailed, declare,
+  a, port, busy, setBusy, kind, onProtocol, onRemove, onRename, onEdited, onFailed, onDirty, declare,
 }: {
   a: Account; port: Port; busy: string; setBusy: (b: string) => void;
   kind: string; onProtocol: (kind: string) => void; onRemove: (name: string) => void; onRename: () => void;
-  onEdited: () => void | Promise<void>; onFailed: (why: string) => void; declare?: string;
+  onEdited: () => void | Promise<void>; onFailed: (why: string) => void; onDirty: (dirty: boolean) => void; declare?: string;
 }) {
   const [found, setFound] = useState<ProviderCheck | null>(null);
   // A refusal is not a failed probe. The kernel withholds these routes from a
@@ -215,6 +215,7 @@ export function ProviderDetail({
         setBusy={setBusy}
         declare={!!declare && entry.name === declare}
         justSaved={saved === entry.name}
+        onDirty={onDirty}
         onDone={async () => {
           await onEdited();
           setSaved(entry.name);

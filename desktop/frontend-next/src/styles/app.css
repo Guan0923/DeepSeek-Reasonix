@@ -5144,6 +5144,7 @@
   }
   .wsconfirm-a button:hover { color: var(--text); border-color: var(--faint) }
   .wsconfirm-a button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px }
+  .wsconfirm-a button[data-primary], .wsconfirm-a button[data-primary]:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-fg) }
   .wsconfirm-a button[data-danger] { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, var(--border)) }
   .wsconfirm-a button[data-danger]:hover { background: var(--err); border-color: var(--err); color: var(--err-fg) }
 
