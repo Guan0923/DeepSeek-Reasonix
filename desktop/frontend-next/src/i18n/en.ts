@@ -464,8 +464,8 @@ export const EN: Record<string, string> = {
   "模型": "Models",
   "已启用 {on}/{all}": "{on} of {all} enabled",
   "搜索或输入完整模型 ID…": "Search or enter an exact model ID…",
-  "目录只用于发现，不是白名单。未列出的模型会按原始 ID 保存；验证会发送一次最小请求，可能产生少量 Token 费用。":
-    "The catalog is for discovery, not a whitelist. Unlisted models keep their exact ID; verification sends one minimal request and may use a small number of tokens.",
+  "目录只用于发现，不是白名单。未列出的模型会按原始 ID 保存；「测试已启用模型」会给每个已勾选的模型各发送一次小请求，可能产生少量 Token 费用。":
+    "The catalog is for discovery, not a whitelist. Unlisted models keep their exact ID; Test enabled models sends one small request per ticked model and may use a small number of tokens.",
   "搜索模型名称；列表中没有的，可直接输入名称":
     "Search the list — or type a name that is not on it",
   "搜索或添加模型": "Search or add a model",
@@ -983,6 +983,9 @@ export const EN: Record<string, string> = {
   "离开后这些更改会丢失。": "They will be lost if you leave.",
   "放弃更改并离开": "Discard changes and leave",
   "保留编辑": "Keep editing",
+  "已停止启动新的验证：草稿已改动": "No further checks started: the draft changed",
+  "测试已启用模型（{n}）": "Test enabled models ({n})",
+  "{n} 个验证中": "{n} verifying",
   "没有发现新模型": "No new models found",
   "{n} 个可用": "{n} available",
   "{n} 个不可用": "{n} unavailable",

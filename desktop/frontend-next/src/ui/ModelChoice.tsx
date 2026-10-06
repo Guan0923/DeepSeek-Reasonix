@@ -85,7 +85,7 @@ export function ModelChoice({
   const tally = checkTally(picked, facts);
   return (
     <>
-      {tally && <p className="msummary" role="status">{tally}</p>}
+      {facts && <p className="msummary" role="status">{tally}</p>}
       <div className="msearch">
         <input
           type="search"
@@ -181,7 +181,7 @@ function ModelEvidence({ fact }: { fact: ModelFact }) {
           ? checkReason(fact.reason)
           : "待验证";
   return (
-    <span className="mevidence" role={fact.status === "unavailable" ? "alert" : "status"} aria-live="polite">
+    <span className="mevidence" role={fact.status === "unavailable" && !fact.checking ? "alert" : undefined}>
       <span>{t(origin)}</span>
       {state && <><i aria-hidden="true" data-state={fact.checking ? "checking" : fact.status ?? "unverified"} />{t(state)}</>}
       {!fact.checking && fact.httpStatus ? <code className="mhttp">{`HTTP ${fact.httpStatus}`}</code> : null}
@@ -218,13 +218,14 @@ function cap(hits: string[], on: Set<string>): [string[], number] {
 }
 
 function checkTally(picked: string[], facts?: Record<string, ModelFact>): string {
-  if (!facts || !picked.some((m) => facts[m]?.status)) return "";
-  const count = { available: 0, unavailable: 0, unknown: 0, todo: 0 };
-  for (const m of picked) count[facts[m]?.status ?? "todo"]++;
+  if (!facts || !picked.some((m) => facts[m]?.status || facts[m]?.checking)) return "";
+  const count = { available: 0, unavailable: 0, unknown: 0, checking: 0, todo: 0 };
+  for (const m of picked) count[facts[m]?.checking ? "checking" : facts[m]?.status ?? "todo"]++;
   return [
     count.available && t("{n} 个可用", { n: count.available }),
     count.unavailable && t("{n} 个不可用", { n: count.unavailable }),
     count.unknown && t("{n} 个无法确定", { n: count.unknown }),
+    count.checking && t("{n} 个验证中", { n: count.checking }),
     count.todo && t("{n} 个未验证", { n: count.todo }),
   ].filter(Boolean).join(" · ");
 }
