@@ -976,6 +976,9 @@ export const EN: Record<string, string> = {
   // ── 通用动作 ─────────────────────────────────────────────────────
   "取消": "Cancel",
   "保存": "Save",
+  "已保存": "Saved",
+  "没有更改": "No changes",
+  "有未保存的更改": "Unsaved changes",
   "关闭": "Close",
   "确定": "OK",
   "重试": "Retry",

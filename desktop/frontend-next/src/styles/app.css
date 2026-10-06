@@ -3177,7 +3177,9 @@
     background: var(--raised); color: var(--text); font: var(--w-reg) var(--fs-ui) var(--mono);
   }
   .addp .fields input:focus, .addp .fields select:focus, .addp .ml-row input:focus { outline: 2px solid var(--focus); outline-offset: 1px }
-  .addp .acts { display: flex; gap: 8px; margin-top: 12px }
+  .addp .acts { display: flex; align-items: center; gap: 8px; margin-top: 12px }
+  .addp .acts-state { margin-left: 4px; font: var(--w-reg) var(--fs-meta) var(--ui); color: var(--ghost) }
+  .addp .acts-state[data-dirty] { color: var(--text) }
   .addp .act[data-primary] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg) }
   .addp .act[data-primary]:disabled { border-color: var(--border); background: transparent; color: var(--ghost) }
   .chip {

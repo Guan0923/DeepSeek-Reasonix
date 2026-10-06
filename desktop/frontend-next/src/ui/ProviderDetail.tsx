@@ -40,9 +40,10 @@ export function ProviderDetail({
   // into the credential store of the machine running the kernel.
   const [refused, setRefused] = useState("");
   const [unanswered, setUnanswered] = useState("");
-  // Cancel and save both hand the form a fresh start from what is stored, so
+  // Revert and save both hand the form a fresh start from what is stored, so
   // the form remounts only once the list holds what the kernel has.
   const [revision, setRevision] = useState(0);
+  const [saved, setSaved] = useState("");
   const entry = a.byKind[kind] ?? a.byKind[a.kinds[0]];
   const checking = busy === `check:${entry.name}`;
   const inUse = a.kinds.some((k) => a.byKind[k].inUse);
@@ -213,8 +214,14 @@ export function ProviderDetail({
         busy={busy}
         setBusy={setBusy}
         declare={!!declare && entry.name === declare}
+        justSaved={saved === entry.name}
         onDone={async () => {
           await onEdited();
+          setSaved(entry.name);
+          setRevision((r) => r + 1);
+        }}
+        onRevert={() => {
+          setSaved("");
           setRevision((r) => r + 1);
         }}
         onSaved={onEdited}
