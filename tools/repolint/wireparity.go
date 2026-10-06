@@ -25,6 +25,7 @@ const (
 	tsProviderFile  = "desktop/frontend-next/src/port/provider.ts"
 	tsFeedbackFile  = "desktop/frontend-next/src/port/feedback.ts"
 	tsWorkspaceFile = "desktop/frontend-next/src/port/workspace.ts"
+	tsChartFile     = "desktop/frontend-next/src/ui/chart/spec.ts"
 )
 
 // mirroredWireTypes are the Go types the desktop keeps a second, hand-written
@@ -145,6 +146,13 @@ var mirroredWireTypes = []wireMirror{
 	{"internal/session/control/commit.go", "CommitRequest", tsWorkspaceFile, "CommitRequest"},
 	{"internal/session/control/commit.go", "CommitResult", tsWorkspaceFile, "CommitResult"},
 	{"internal/platform/gitcommit/gitcommit.go", "File", tsWorkspaceFile, "CommitFile"},
+	// The chart spec a stored render_chart call carries. The page re-validates it
+	// on load, so a field it cannot read is one the card silently drops.
+	{"internal/contract/chartspec/spec.go", "Spec", tsChartFile, "ChartSpec"},
+	{"internal/contract/chartspec/spec.go", "Data", tsChartFile, "ChartData"},
+	{"internal/contract/chartspec/spec.go", "Column", tsChartFile, "ChartColumn"},
+	{"internal/contract/chartspec/spec.go", "Mark", tsChartFile, "ChartMark"},
+	{"internal/contract/chartspec/spec.go", "Axis", tsChartFile, "ChartAxis"},
 }
 
 type wireMirror struct {
