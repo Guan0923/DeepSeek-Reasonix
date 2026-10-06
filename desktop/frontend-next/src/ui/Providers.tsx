@@ -110,10 +110,11 @@ export function Providers({ port, onChanged, onFailed, protocol, onProtocol, act
   // is the one just added, and it is what the detail should show.
   const before = useRef<Set<string> | null>(null);
 
-  const reload = useCallback(() => {
-    port.providers().then(setList).catch(() => setList([]));
-  }, [port]);
-  useEffect(reload, [reload]);
+  const reload = useCallback(
+    () => port.providers().then(setList).catch(() => setList([])),
+    [port],
+  );
+  useEffect(() => { void reload(); }, [reload]);
 
   const accounts = list ? orderAccounts(groupAccounts(list), order) : [];
   useEffect(() => {
@@ -280,7 +281,7 @@ export function Providers({ port, onChanged, onFailed, protocol, onProtocol, act
             onDone={() => {
               before.current = new Set(accounts.map((a) => a.key));
               setAdding(false);
-              reload();
+              void reload();
               onChanged();
             }}
             onCancel={() => setAdding(false)}
@@ -292,7 +293,7 @@ export function Providers({ port, onChanged, onFailed, protocol, onProtocol, act
             onRemove={remove}
             onRename={() => startRename(current.key)}
             declare={declare}
-            onEdited={() => { reload(); onChanged(); }}
+            onEdited={() => { const fresh = reload(); onChanged(); return fresh; }}
             onFailed={onFailed} />
         ) : (
           <div className="empty">{t("添加一个模型服务后，在这里查看和修改它。")}</div>

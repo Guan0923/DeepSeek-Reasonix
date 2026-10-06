@@ -31,14 +31,15 @@ export function ProviderDetail({
 }: {
   a: Account; port: Port; busy: string; setBusy: (b: string) => void;
   kind: string; onProtocol: (kind: string) => void; onRemove: (name: string) => void; onRename: () => void;
-  onEdited: () => void; onFailed: (why: string) => void; declare?: string;
+  onEdited: () => void | Promise<void>; onFailed: (why: string) => void; declare?: string;
 }) {
   const [found, setFound] = useState<ProviderCheck | null>(null);
   // A refusal is not a failed probe. The kernel withholds these routes from a
   // server reachable over the network, because adding a source writes a key
   // into the credential store of the machine running the kernel.
   const [refused, setRefused] = useState("");
-  // Cancel and save both hand the form a fresh start from what is stored.
+  // Cancel and save both hand the form a fresh start from what is stored, so
+  // the form remounts only once the list holds what the kernel has.
   const [revision, setRevision] = useState(0);
   const entry = a.byKind[kind] ?? a.byKind[a.kinds[0]];
   const checking = busy === `check:${entry.name}`;
@@ -203,9 +204,9 @@ export function ProviderDetail({
         busy={busy}
         setBusy={setBusy}
         declare={!!declare && entry.name === declare}
-        onDone={() => {
+        onDone={async () => {
+          await onEdited();
           setRevision((r) => r + 1);
-          onEdited();
         }}
         onSaved={onEdited}
       />

@@ -18,7 +18,7 @@ export function EditConn({
   entry, initialCheck, port, busy, setBusy, onDone, onSaved, declare = false,
 }: {
   entry: ProviderEntry; initialCheck?: ProviderCheck; port: Port;
-  busy: string; setBusy: (b: string) => void; onDone: () => void; onSaved?: () => void; declare?: boolean;
+  busy: string; setBusy: (b: string) => void; onDone: () => void | Promise<void>; onSaved?: () => void; declare?: boolean;
 }) {
   const seededModels = [...new Set([...entry.models, ...(initialCheck?.models ?? [])])];
   const seededVision = [...new Set([...(entry.visionModels ?? []), ...(initialCheck?.vision ?? [])])];
@@ -196,7 +196,7 @@ export function EditConn({
         headers: parseHeaders(heads),
         extraBody: parseExtraBody(extra) ?? {},
       });
-      onDone();
+      await onDone();
     } catch (e) {
       const unapplied = e instanceof HttpError && SAVED_NOT_APPLIED.includes(e.reason?.code ?? "");
       setErr({ text: reason(e), kind: unapplied ? "unapplied" : "save" });
