@@ -3024,6 +3024,9 @@
   .mlhead .mrefresh:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px }
   .mlhead .mrefresh:disabled { opacity: .45; cursor: default }
   .mguide, .mdiff { margin: 0 0 8px; font: var(--w-reg) var(--fs-meta)/1.55 var(--ui); color: var(--faint) }
+  .msummary { margin: 0 0 8px; font: var(--w-med) var(--fs-meta)/1.55 var(--ui); color: var(--muted) }
+  .mlist > .find { margin-bottom: 12px }
+  .addp-section > .find { margin: 8px 0 12px }
   .mdiff { padding: 5px 8px; border-left: 2px solid var(--net); background: var(--net-wash); color: var(--muted) }
   .mline {
     display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center;
