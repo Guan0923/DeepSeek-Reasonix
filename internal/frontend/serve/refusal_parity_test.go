@@ -20,7 +20,7 @@ var codeArg = map[string]int{"refuse": 2, "busy": 1, "coded": 0, "busyErr": 0, "
 // Where a coded refusal can be built. The exported constructor put the second
 // one outside this package, and a guard that only watches its own directory
 // would have let the next one through untranslated.
-var refusalDirs = []string{".", filepath.Join("..", "..", "..", "desktop", "next")}
+var refusalDirs = []string{".", filepath.Join("..", "remotehost")}
 
 // serveRefusalCodes reads the codes this package can send, from the syntax
 // rather than from the text: a scan that matched on wording would be the very
