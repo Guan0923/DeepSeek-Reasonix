@@ -665,7 +665,7 @@ export class SsePort extends SseFeedback implements AgentPort {
   }
 
   submit(text: string, chips?: ChipCall) {
-    return this.post("/submit", { input: text, ...chips });
+    return this.postMaybe<Queued>("/submit", { input: text, ...chips });
   }
   steer(text: string) {
     return this.post0<Queued>("/inbox/items", { input: text, intent: "steer" });

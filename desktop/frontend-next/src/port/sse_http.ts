@@ -68,6 +68,20 @@ export class SseHttp {
     return (await res.json()) as T;
   }
 
+  // A POST that answers with a payload only sometimes: a plain turn start has
+  // no body, a line routed through the queue carries its receipt.
+  protected async postMaybe<T>(path: string, body?: unknown): Promise<T | undefined> {
+    const res = await fetch(this.base + path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (!res.ok) await SseHttp.fail(path, res);
+    const raw = await res.text();
+    return raw.trim() === "" ? undefined : (JSON.parse(raw) as T);
+  }
+
   // A partial update of one resource. Distinct from post because the kernel
   // reads the verb: the same path answers a different question under each.
   protected async patch(path: string, body?: unknown): Promise<void> {

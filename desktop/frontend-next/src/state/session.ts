@@ -203,7 +203,7 @@ export type SessionEvent =
   | { kind: "__error"; text: string }
   | { kind: "__user"; text: string; pending: boolean; id?: string }
   | { kind: "__unsent"; id: string }
-  | { kind: "__queued"; id: string; itemId: string; queued: "steer" | "followup" }
+  | { kind: "__queued"; id: string; itemId: string; queued: "steer" | "followup"; paused?: boolean }
   | { kind: "__decided"; id: string; verdict?: string; answers?: string[][] }
   | { kind: "__forgot"; id: string }
   | { kind: "__runtime_seen"; id: string }
@@ -235,7 +235,7 @@ function apply(s: SessionState, ev: SessionEvent): SessionState {
       items: [...s.items, { t: "user", id, text: ev.text, pending: ev.pending }],
     };
   }
-  if (ev.kind === "__queued") return nameQueued(s, ev.id, ev.itemId, ev.queued);
+  if (ev.kind === "__queued") return nameQueued(s, ev.id, ev.itemId, ev.queued, ev.paused);
   // A line the kernel never took is not part of what happened, so it leaves the
   // transcript rather than sitting there looking sent. Either name identifies
   // it: the row the composer minted, or the entry the kernel queued it as —
