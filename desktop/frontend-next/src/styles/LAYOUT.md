@@ -1424,3 +1424,13 @@ what exists.
   explains why it is disabled.
 - `perf/tooltip.mjs` measures both in Chromium; `controltip.test.ts` pins the
   rules statically.
+
+## The feedback veil
+
+- `.fbk-veil` is a flat scrim, not a blurred backdrop.
+- A backdrop filter over the whole window is redone every frame while anything
+  beneath it moves; a running turn's spinners are enough.
+- The scrim is opaque enough that what shows through reads as dimmed, which is
+  the job the blur did.
+- `feedback-veil.test.ts` scans every stylesheet: no rule on `.fbk-veil` may
+  carry a backdrop filter or an endless animation.
