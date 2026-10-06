@@ -265,6 +265,13 @@ export function EditConn({
   const [edited, setEdited] = useState(false);
   if (dirty && !edited) setEdited(true);
 
+  const canSave = (dirty || err?.kind === "unapplied") && busy === "" && !testing && picked.length > 0 && !extraBad && idle.ok;
+  const phase: Phase = saving ? "saving"
+    : err?.kind === "save" && dirty ? "failed"
+      : dirty ? "dirty"
+        : err?.kind === "unapplied" ? "unapplied"
+          : justSaved && !edited ? "saved" : "clean";
+
   const save = async () => {
     setBusy(`edit:${entry.name}`);
     setErr(null);
@@ -287,7 +294,11 @@ export function EditConn({
   };
 
   return (
-    <fieldset className="addp" data-edit disabled={saving}>
+    <fieldset className="addp" data-edit disabled={saving} data-action-keydown="provider.save" onKeyDown={(e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== "s") return;
+      e.preventDefault();
+      if (canSave) void save();
+    }}>
       <div className="fields">
         <label className="grow full">
           <span>{t("接口地址")}</span>
@@ -496,21 +507,23 @@ export function EditConn({
         )}
       </details>
 
-      {err && (
-        <div className="find" data-lvl={err.kind === "unapplied" ? "warn" : "err"} role={err.kind === "unapplied" ? "status" : "alert"}>
-          <span className="t">{t(err.kind === "unapplied" ? "已保存，尚未生效" : "保存失败")}</span>
-          <span className="why">{err.text}</span>
+      <div className="acts-bar">
+        {err && (
+          <div className="find" data-lvl={err.kind === "unapplied" ? "warn" : "err"} role={err.kind === "unapplied" ? "status" : "alert"}>
+            {err.kind === "save" && <span className="t">{t("保存失败")}</span>}
+            <span className="why">{err.text}</span>
+          </div>
+        )}
+        <div className="acts">
+          <button className="act" data-action="provider.save" data-primary onClick={save} disabled={!canSave}>
+            {t(saving ? "保存中…" : "保存")}
+          </button>
+          <button className="act" data-action="provider.revert" onClick={onRevert} disabled={!dirty || busy !== "" || testing}>{t("还原")}</button>
+          <span className="acts-state" role="status" data-state={phase}>
+            <i className="acts-dot" aria-hidden="true" />
+            {t(PHASE_TEXT[phase])}
+          </span>
         </div>
-      )}
-
-      <div className="acts">
-        <button className="act" data-action="provider.save" data-primary onClick={save} disabled={(!dirty && err?.kind !== "unapplied") || busy !== "" || testing || picked.length === 0 || extraBad || !idle.ok}>
-          {t(saving ? "保存中…" : "保存")}
-        </button>
-        <button className="act" data-action="provider.revert" onClick={onRevert} disabled={!dirty || busy !== "" || testing}>{t("还原")}</button>
-        <span className="acts-state" role="status" data-dirty={dirty || undefined}>
-          {t(dirty ? "有未保存的更改" : justSaved && !edited ? "已保存" : "没有更改")}
-        </span>
       </div>
     </fieldset>
   );
@@ -560,6 +573,12 @@ function compatSummary(think: string, heads: string, extra: string, levels: numb
   if (body && Object.keys(body).length) parts.push(t("有请求体"));
   return parts.join(" · ");
 }
+
+type Phase = "clean" | "dirty" | "saving" | "saved" | "unapplied" | "failed";
+const PHASE_TEXT: Record<Phase, string> = {
+  clean: "没有更改", dirty: "有未保存的更改", failed: "有未保存的更改", saving: "正在保存…",
+  saved: "已保存", unapplied: "已保存，尚未生效",
+};
 
 function stopChecking(facts: Record<string, ModelFact>): Record<string, ModelFact> {
   return Object.fromEntries(Object.entries(facts).map(([model, fact]) => [model, fact.checking ? { ...fact, checking: false } : fact]));

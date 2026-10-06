@@ -184,13 +184,13 @@ it("saved-but-not-applied stays a warning, never the Saved message, and is no lo
   await typeWin("64000");
   await userEvent.click(save());
   await screen.findByText("已保存，尚未生效");
-  expect(state()).toBe("没有更改");
+  expect(state()).toBe("已保存，尚未生效");
   expect(save().disabled).toBe(false);
   expect(win().value).toBe("64000");
   await typeWin("65000");
   expect(state()).toBe("有未保存的更改");
   await typeWin("64000");
-  expect(state()).toBe("没有更改");
+  expect(state()).toBe("已保存，尚未生效");
 });
 
 it("leaving a service with unsaved edits drops them, and Saved does not follow to another service", async () => {

@@ -371,20 +371,6 @@ export function AddProvider({
         </div>
       </div>
 
-      <div className="acts addp-footer">
-        <button className="act" data-action="provider.add" data-primary onClick={save} aria-describedby={nameBad ? "addp-name-rule" : undefined} disabled={busy || composing || checkingModel !== "" || picked.length === 0 || name.trim() === "" || nameBad || kind === "" || baseUrl.trim() === "" || extraBad}>
-          {t(busy ? "保存中…" : "添加来源")}
-        </button>
-        <button className="act" onClick={onCancel} disabled={busy || checkingModel !== ""}>{t("取消")}</button>
-      </div>
-
-      {err && errOnSave && (
-        <div className="find" data-lvl="warn">
-          <span className="t">{t("无法保存")}</span>
-          <span className="why">{err}</span>
-        </div>
-      )}
-
       {probe && (probe.ambiguous || probe.noProxy || searchSplit) && (
         <>
           {searchSplit && (
@@ -405,6 +391,20 @@ export function AddProvider({
 
         </>
       )}
+      <div className="acts-bar">
+        {err && errOnSave && (
+          <div className="find" data-lvl="warn">
+            <span className="t">{t("无法保存")}</span>
+            <span className="why">{err}</span>
+          </div>
+        )}
+        <div className="acts addp-footer">
+          <button className="act" data-action="provider.add" data-primary onClick={save} aria-describedby={nameBad ? "addp-name-rule" : undefined} disabled={busy || composing || checkingModel !== "" || picked.length === 0 || name.trim() === "" || nameBad || kind === "" || baseUrl.trim() === "" || extraBad}>
+            {t(busy ? "保存中…" : "添加来源")}
+          </button>
+          <button className="act" onClick={onCancel} disabled={busy || checkingModel !== ""}>{t("取消")}</button>
+        </div>
+      </div>
     </fieldset>
   );
 }

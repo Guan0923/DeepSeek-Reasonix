@@ -2576,7 +2576,7 @@
   }
 
   .prefs-main {
-    overflow: auto; padding: 30px 36px 64px;
+    --main-pad-b: 64px; overflow: auto; padding: 30px 36px var(--main-pad-b);
     background: color-mix(in srgb, var(--page) 54%, var(--float));
   }
 
@@ -2700,7 +2700,7 @@
       transform: translateX(-50%); transition: width var(--t-card) var(--ease-spring);
     }
     .prefs-nav button[aria-selected="true"]::before { width: 18px; height: 2px }
-    .prefs-main { padding: 24px 22px 48px }
+    .prefs-main { --main-pad-b: 48px; padding: 24px 22px var(--main-pad-b) }
   }
 
   @media (max-width: 560px) {
@@ -2709,7 +2709,7 @@
     .prefs-hd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px 14px }
     .prefs-find { grid-column: 1 / -1; grid-row: 2; width: 100%; max-width: none; margin-left: 0 }
     .prefs-found { right: 14px; width: calc(100% - 28px) }
-    .prefs-main { padding: 20px 14px 40px }
+    .prefs-main { --main-pad-b: 40px; padding: 20px 14px var(--main-pad-b) }
     .prefs-intro { grid-template-columns: auto minmax(0, 1fr); gap: 11px; margin-bottom: 16px }
     .prefs-intro-meta {
       grid-column: 2; flex-direction: row; align-items: baseline; justify-content: space-between;
@@ -3183,8 +3183,21 @@
   }
   .addp .fields input:focus, .addp .fields select:focus, .addp .ml-row input:focus { outline: 2px solid var(--focus); outline-offset: 1px }
   .addp .acts { display: flex; align-items: center; gap: 8px; margin-top: 12px }
-  .addp .acts-state { margin-left: 4px; font: var(--w-reg) var(--fs-meta) var(--ui); color: var(--ghost) }
-  .addp .acts-state[data-dirty] { color: var(--text) }
+  .addp .acts-bar {
+    position: sticky; bottom: calc(var(--main-pad-b, 0px) * -1); z-index: 2; display: flex; flex-direction: column; gap: 8px;
+    margin-top: 12px; padding: 10px 0 12px; background: var(--float); border-top: 1px solid var(--border);
+  }
+  .addp .acts-bar .acts { margin-top: 0; flex-wrap: wrap }
+  .addp .acts-state { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; font: var(--w-reg) var(--fs-meta) var(--ui); color: var(--muted) }
+  .addp .acts-state[data-state="dirty"], .addp .acts-state[data-state="failed"], .addp .acts-state[data-state="unapplied"] { color: var(--text); font-weight: var(--w-med) }
+  .acts-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--ghost) }
+  .acts-state[data-state="dirty"] .acts-dot { background: var(--warn) }
+  .acts-state[data-state="failed"] .acts-dot { background: var(--err) }
+  .acts-state[data-state="saved"] .acts-dot { background: var(--ok) }
+  .acts-state[data-state="saving"] .acts-dot { background: var(--accent) }
+  .acts-state[data-state="unapplied"] .acts-dot { background: transparent; box-shadow: inset 0 0 0 2px var(--warn) }
+  .addp .acts .act:disabled { opacity: .55; cursor: default }
+  .addp .act[data-primary]:disabled { border-style: dashed }
   .addp .act[data-primary] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg) }
   .addp .act[data-primary]:disabled { border-color: var(--border); background: transparent; color: var(--ghost) }
   .chip {
