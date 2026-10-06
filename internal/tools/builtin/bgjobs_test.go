@@ -9,6 +9,7 @@ import (
 
 	"reasonix/internal/contract/event"
 	"reasonix/internal/contract/planmode"
+	"reasonix/internal/contract/tool"
 	"reasonix/internal/safety/evidence"
 	"reasonix/internal/tools/jobs"
 )
@@ -256,5 +257,24 @@ func TestBackgroundToolsNoManager(t *testing.T) {
 	}
 	if _, err := (bash{}).Execute(ctx, []byte(`{"command":"echo hi","run_in_background":true}`)); err == nil {
 		t.Error("background bash without a manager should error")
+	}
+}
+
+// A background start is reported as its own state, with no exit status and no
+// error: the command has not finished, so nothing about it has failed.
+func TestBackgroundStartReportsStateWithoutErrorOrExitCode(t *testing.T) {
+	m := jobs.NewManager(event.Discard)
+	defer m.Close()
+	ctx := jobs.WithManager(context.Background(), m)
+
+	res, err := bash{}.ExecuteDetailed(ctx, []byte(`{"command":"sleep 0.2","run_in_background":true}`))
+	if err != nil {
+		t.Fatalf("background start returned an error: %v", err)
+	}
+	if res.Execution == nil || res.Execution.State != tool.ShellStateBackgroundStarted {
+		t.Fatalf("execution = %+v, want state %q", res.Execution, tool.ShellStateBackgroundStarted)
+	}
+	if res.Execution.ExitCode != nil {
+		t.Errorf("exit code = %d, want none before the job finishes", *res.Execution.ExitCode)
 	}
 }
