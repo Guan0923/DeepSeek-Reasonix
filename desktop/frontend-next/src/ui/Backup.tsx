@@ -114,7 +114,7 @@ function BackupInput({ port }: { port: AgentPort }) {
       <div className="bk-cats" role="group" aria-label={t("备份内容")}>
         {catalog.categories.map((c) => (
           <label key={c.id} className="bk-cat" data-warn={c.id === "secrets" && chosen?.has(c.id) ? "" : undefined}>
-            <input type="checkbox" checked={chosen?.has(c.id) ?? false} onChange={() => toggle(c.id)} data-action="backup.category" data-target={c.id} />
+            <input type="checkbox" checked={chosen?.has(c.id) ?? false} disabled={busy} onChange={() => toggle(c.id)} data-action="backup.category" data-target={c.id} />
             <span className="nm">{t(CATEGORY_LABEL[c.id])}</span>
             <span className="why">{t(CATEGORY_NOTE[c.id])}</span>
           </label>
@@ -124,15 +124,15 @@ function BackupInput({ port }: { port: AgentPort }) {
       <div className="bk-fields">
         <label className="grow full">
           <span>{t("备注（可选）")}</span>
-          <input data-action="backup.label" value={label} maxLength={80} placeholder={t("例如：公司笔记本")} onChange={(e) => setLabel(e.target.value)} />
+          <input data-action="backup.label" value={label} disabled={busy} maxLength={80} placeholder={t("例如：公司笔记本")} onChange={(e) => setLabel(e.target.value)} />
         </label>
         <label className="grow">
           <span>{t("加密口令（至少 {n} 个字符）", { n: min })}</span>
-          <input data-action="backup.passphrase" data-target="new" type="password" autoComplete="new-password" value={pass} onChange={(e) => setPass(e.target.value)} />
+          <input data-action="backup.passphrase" data-target="new" type="password" autoComplete="new-password" value={pass} disabled={busy} onChange={(e) => setPass(e.target.value)} />
         </label>
         <label className="grow">
           <span>{t("再输一次")}</span>
-          <input data-action="backup.passphrase" data-target="again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
+          <input data-action="backup.passphrase" data-target="again" type="password" autoComplete="new-password" value={again} disabled={busy} onChange={(e) => setAgain(e.target.value)} />
         </label>
       </div>
       {mismatch && <p className="acct-note" data-err="">{t("两次输入的口令不一致")}</p>}
