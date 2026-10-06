@@ -6,6 +6,7 @@ import type { Account, Port } from "./Providers";
 import { KIND_LABEL } from "./vendors";
 import { PROVIDER_EDIT_DISABLED, reason } from "../i18n/kernel";
 import { HttpError } from "../port/http_error";
+import { checkFailure } from "./provider_check";
 import { StudioIcon } from "./StudioIcon";
 
 // How a turn's context reaches the next one. Auto is vendor detection, which is
@@ -38,6 +39,7 @@ export function ProviderDetail({
   // server reachable over the network, because adding a source writes a key
   // into the credential store of the machine running the kernel.
   const [refused, setRefused] = useState("");
+  const [unanswered, setUnanswered] = useState("");
   // Cancel and save both hand the form a fresh start from what is stored, so
   // the form remounts only once the list holds what the kernel has.
   const [revision, setRevision] = useState(0);
@@ -61,6 +63,7 @@ export function ProviderDetail({
   const check = async () => {
     setBusy(`check:${entry.name}`);
     setFound(null);
+    setUnanswered("");
     setRefused("");
     try {
       setFound(await port.checkProvider(entry.name));
@@ -68,7 +71,7 @@ export function ProviderDetail({
       // Read off the code the kernel sent, never the status: 403 is also what a
       // gateway in front of it answers, and that is a different thing to do next.
       if (e instanceof HttpError && e.reason?.code === PROVIDER_EDIT_DISABLED) setRefused(reason(e));
-      else setFound({ ok: false, error: reason(e) });
+      else setUnanswered(reason(e));
     } finally {
       setBusy("");
     }
@@ -105,6 +108,12 @@ export function ProviderDetail({
           <span className="why">{t("模型来源要在运行内核的那台机器上配置。")}</span>
         </div>
       )}
+      {unanswered && (
+        <div className="find" data-lvl="warn" role="status">
+          <span className="t">{t("无法连接")}</span>
+          <span className="why">{unanswered}</span>
+        </div>
+      )}
       {found && (
         <div className="find" data-lvl={found.ok ? "ok" : "warn"} role="status">
           <span className="t">
@@ -113,7 +122,7 @@ export function ProviderDetail({
               : t("无法连接")}
           </span>
           <span className="why">
-            {!found.ok && found.error}
+            {!found.ok && checkFailure(found)}
             {found.ok && found.matches === false &&
               t("记的是 {had}，但它答的是 {got}。", { had: t(KIND_LABEL[entry.kind] ?? entry.kind), got: t(KIND_LABEL[found.kind ?? ""] ?? found.kind ?? "") })}
             {found.ok && found.matches !== false && t("key 有效，协议也对得上。")}

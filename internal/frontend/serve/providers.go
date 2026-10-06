@@ -507,38 +507,46 @@ const (
 	codeProbePathNotFound    = "provider.probe.path_not_found"
 	codeProbeNoChatModels    = "provider.probe.no_chat_models"
 	codeProbeUpstreamError   = "provider.probe.upstream_error"
+	codeProbeTimeout         = "provider.probe.timeout"
 	codeProbeUnreachable     = "provider.probe.unreachable"
 	codeProbeNotCompatible   = "provider.probe.not_compatible"
+	codeProbeFailed          = "provider.probe.failed"
 )
 
-// writeProbeFailure sends the diagnosis out under its own code. Spelled as a
-// switch rather than by building the code from the reason: the parity guard
-// reads these call sites, and a concatenated code is one it cannot check.
+// probeReasonRefusal is the one place a probe identity becomes a status and a dotted
+// code, shared by the refusal the add flow gets and the finding a check carries.
+func probeReasonRefusal(reason catalog.ProbeReason) (status int, code string) {
+	switch reason {
+	case catalog.ProbeAddressMissing:
+		return http.StatusBadRequest, codeProbeAddressMissing
+	case catalog.ProbeUnauthorized:
+		return http.StatusUnauthorized, codeProbeUnauthorized
+	case catalog.ProbePaymentRequired:
+		return http.StatusPaymentRequired, codeProbePaymentRequired
+	case catalog.ProbeRateLimited:
+		return http.StatusTooManyRequests, codeProbeRateLimited
+	case catalog.ProbePathNotFound:
+		return http.StatusNotFound, codeProbePathNotFound
+	case catalog.ProbeNoChatModels:
+		return http.StatusUnprocessableEntity, codeProbeNoChatModels
+	case catalog.ProbeUpstreamError:
+		return http.StatusBadGateway, codeProbeUpstreamError
+	case catalog.ProbeTimeout:
+		return http.StatusGatewayTimeout, codeProbeTimeout
+	case catalog.ProbeUnreachable:
+		return http.StatusBadGateway, codeProbeUnreachable
+	default:
+		return http.StatusBadGateway, codeProbeNotCompatible
+	}
+}
+
+// writeProbeFailure sends the diagnosis out under its own code.
 func writeProbeFailure(w http.ResponseWriter, err error) {
 	var probe *catalog.ProbeError
 	if !errors.As(err, &probe) {
 		writeErr(w, http.StatusBadGateway, err)
 		return
 	}
-	msg, params := probe.Error(), probe.Params
-	switch probe.Reason {
-	case catalog.ProbeAddressMissing:
-		refuse(w, http.StatusBadRequest, codeProbeAddressMissing, msg, params)
-	case catalog.ProbeUnauthorized:
-		refuse(w, http.StatusUnauthorized, codeProbeUnauthorized, msg, params)
-	case catalog.ProbePaymentRequired:
-		refuse(w, http.StatusPaymentRequired, codeProbePaymentRequired, msg, params)
-	case catalog.ProbeRateLimited:
-		refuse(w, http.StatusTooManyRequests, codeProbeRateLimited, msg, params)
-	case catalog.ProbePathNotFound:
-		refuse(w, http.StatusNotFound, codeProbePathNotFound, msg, params)
-	case catalog.ProbeNoChatModels:
-		refuse(w, http.StatusUnprocessableEntity, codeProbeNoChatModels, msg, params)
-	case catalog.ProbeUpstreamError:
-		refuse(w, http.StatusBadGateway, codeProbeUpstreamError, msg, params)
-	case catalog.ProbeUnreachable:
-		refuse(w, http.StatusBadGateway, codeProbeUnreachable, msg, params)
-	default:
-		refuse(w, http.StatusBadGateway, codeProbeNotCompatible, msg, params)
-	}
+	status, code := probeReasonRefusal(probe.Reason)
+	refuse(w, status, code, probe.Error(), probe.Params)
 }

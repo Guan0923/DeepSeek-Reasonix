@@ -230,6 +230,9 @@ export const EN_KERNEL: Record<string, string> = {
     "This service lists {count} models, none of which can hold a conversation — it may only do embeddings or reranking",
   "服务商返回错误（HTTP {status}），与填写内容无关，请稍后重试":
     "The provider errored (HTTP {status}) — nothing you typed is wrong; try again shortly",
+  "该地址在限定时间内没有响应。请检查网络或代理，或稍后重试":
+    "That address did not answer in time. Check the network or proxy, or try again shortly",
+  "检查失败，没有具体原因": "The check failed and gave no reason",
   "无法连接该地址。请检查网络是否通畅，以及地址是否有误":
     "Cannot reach that address. Check the network, or whether the address has a typo",
   "该地址有响应，但不是 OpenAI 或 Anthropic 类接口。请确认是否误将网页地址复制过来":
