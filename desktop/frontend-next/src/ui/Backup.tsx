@@ -29,7 +29,7 @@ function BackupInput({ port }: { port: AgentPort }) {
   const [again, setAgain] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
-  const [dropping, setDropping] = useState("");
+  const [dropping, setDropping] = useState(() => new Map<string, "confirm" | "pending">());
   const [restoring, setRestoring] = useState<BackupEntry | null>(null);
 
   const load = useCallback(async () => {
@@ -88,16 +88,22 @@ function BackupInput({ port }: { port: AgentPort }) {
   };
 
   const drop = async (id: string) => {
-    if (dropping !== id) {
-      setDropping(id);
+    if (dropping.get(id) !== "confirm") {
+      setDropping((current) => new Map([...current].filter(([, phase]) => phase === "pending")).set(id, "confirm"));
       return;
     }
-    setDropping("");
+    setDropping((current) => new Map(current).set(id, "pending"));
     try {
       await port.deleteBackup(id);
       await load();
     } catch (e) {
       setError(reason(e));
+    } finally {
+      setDropping((current) => {
+        const next = new Map(current);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -169,8 +175,8 @@ function BackupInput({ port }: { port: AgentPort }) {
               <button className="btn sm" data-action="backup.restore" data-target={b.id} onClick={() => setRestoring(b)}>
                 {t("恢复…")}
               </button>
-              <button className="btn sm" data-action="backup.delete" data-target={b.id} onClick={() => void drop(b.id)} onMouseLeave={() => setDropping("")}>
-                {t(dropping === b.id ? "确认删除" : "删除")}
+              <button className="btn sm" data-action="backup.delete" data-target={b.id} disabled={dropping.get(b.id) === "pending"} aria-busy={dropping.get(b.id) === "pending" || undefined} onClick={() => void drop(b.id)} onMouseLeave={() => setDropping((current) => current.get(b.id) === "confirm" ? new Map([...current].filter(([id]) => id !== b.id)) : current)}>
+                {t(dropping.get(b.id) === "confirm" ? "确认删除" : "删除")}
               </button>
             </li>
           ))}
