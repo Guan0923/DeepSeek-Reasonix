@@ -23,7 +23,7 @@ export function Backup({ port }: { port: AgentPort }) {
 function BackupInput({ port }: { port: AgentPort }) {
   const [catalog, setCatalog] = useState<BackupCatalog | null>(null);
   const [error, setError] = useState("");
-  const [chosen, setChosen] = useState<Set<BackupCategory>>(new Set());
+  const [chosen, setChosen] = useState<Set<BackupCategory> | null>(null);
   const [label, setLabel] = useState("");
   const [pass, setPass] = useState("");
   const [again, setAgain] = useState("");
@@ -36,7 +36,7 @@ function BackupInput({ port }: { port: AgentPort }) {
     try {
       const c = await port.backups();
       setCatalog(c);
-      setChosen((prev) => (prev.size ? prev : new Set(c.categories.filter((x) => x.defaultOn).map((x) => x.id))));
+      setChosen((prev) => prev ?? new Set(c.categories.filter((x) => x.defaultOn).map((x) => x.id)));
       setError("");
     } catch (e) {
       setError(reason(e));
@@ -57,9 +57,9 @@ function BackupInput({ port }: { port: AgentPort }) {
 
   const min = catalog?.minPassphrase ?? 10;
   const mismatch = again !== "" && pass !== again;
-  const ready = chosen.size > 0 && pass.length >= min && pass === again && !busy;
+  const ready = (chosen?.size ?? 0) > 0 && pass.length >= min && pass === again && !busy;
   const wait =
-    chosen.size === 0
+    !chosen?.size
       ? t("至少选择一项备份内容")
       : pass.length < min
         ? t("口令还差 {n} 个字符", { n: min - pass.length })
@@ -72,7 +72,7 @@ function BackupInput({ port }: { port: AgentPort }) {
     setNote("");
     setError("");
     try {
-      const order = (catalog?.categories ?? []).map((c) => c.id).filter((id) => chosen.has(id));
+      const order = (catalog?.categories ?? []).map((c) => c.id).filter((id) => chosen?.has(id));
       const out = await port.createBackup({ label: label.trim(), categories: order, passphrase: pass });
       setPass("");
       setAgain("");
@@ -113,8 +113,8 @@ function BackupInput({ port }: { port: AgentPort }) {
 
       <div className="bk-cats" role="group" aria-label={t("备份内容")}>
         {catalog.categories.map((c) => (
-          <label key={c.id} className="bk-cat" data-warn={c.id === "secrets" && chosen.has(c.id) ? "" : undefined}>
-            <input type="checkbox" checked={chosen.has(c.id)} onChange={() => toggle(c.id)} data-action="backup.category" data-target={c.id} />
+          <label key={c.id} className="bk-cat" data-warn={c.id === "secrets" && chosen?.has(c.id) ? "" : undefined}>
+            <input type="checkbox" checked={chosen?.has(c.id) ?? false} onChange={() => toggle(c.id)} data-action="backup.category" data-target={c.id} />
             <span className="nm">{t(CATEGORY_LABEL[c.id])}</span>
             <span className="why">{t(CATEGORY_NOTE[c.id])}</span>
           </label>
