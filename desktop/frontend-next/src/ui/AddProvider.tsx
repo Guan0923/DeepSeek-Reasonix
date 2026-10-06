@@ -173,7 +173,7 @@ export function AddProvider({
   };
 
   return (
-    <div className="addp">
+    <fieldset className="addp" disabled={busy && errOnSave}>
       <div className="addp-head">
         <div>
           <span className="step">{t("自定义来源")}</span>
@@ -399,7 +399,7 @@ export function AddProvider({
 
         </>
       )}
-    </div>
+    </fieldset>
   );
 }
 
