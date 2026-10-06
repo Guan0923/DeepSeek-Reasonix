@@ -248,3 +248,32 @@ func TestSessionViewedWorksWhileAnotherWindowHoldsTheSession(t *testing.T) {
 		t.Fatal("a leased session could not be marked viewed")
 	}
 }
+
+func TestSessionViewedToleratesASidecarCaughtMidReplace(t *testing.T) {
+	dir := t.TempDir()
+	path := saveUnreadFixture(t, dir, "20260101-000001-m.jsonl")
+	if err := RecordSessionFinished(path, time.Now(), true); err != nil {
+		t.Fatal(err)
+	}
+	good, err := os.ReadFile(BranchMetaPath(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(BranchMetaPath(path), good[:len(good)/2], 0o600); err != nil {
+		t.Fatal(err)
+	}
+	healed := make(chan struct{})
+	go func() {
+		defer close(healed)
+		time.Sleep(30 * time.Millisecond)
+		_ = os.WriteFile(BranchMetaPath(path), good, 0o600)
+	}()
+	err = MarkSessionViewed(path, time.Now().Add(time.Second))
+	<-healed
+	if err != nil {
+		t.Fatalf("a view that met a torn sidecar failed instead of waiting it out: %v", err)
+	}
+	if listedUnread(t, dir, path) {
+		t.Fatal("the session is still unread after the view")
+	}
+}

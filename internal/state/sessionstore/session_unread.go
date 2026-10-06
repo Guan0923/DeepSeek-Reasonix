@@ -29,12 +29,13 @@ func RecordSessionFinished(sessionPath string, at time.Time, unread bool) error 
 
 // MarkSessionViewed records that the person has seen the session as it stands.
 // A session that is not unread, or has no sidecar, is left untouched, so opening
-// one costs no write. ViewedAt only moves forward.
+// one costs no write. ViewedAt only moves forward. The unlocked pre-check can
+// meet a sidecar mid-replace, so it reads with the tear-tolerant retry.
 func MarkSessionViewed(sessionPath string, at time.Time) error {
 	if sessionPath == "" {
 		return nil
 	}
-	if m, ok, err := LoadBranchMeta(sessionPath); err != nil || !ok || !m.Unread() {
+	if m, ok, err := loadBranchMetaRetry(sessionPath); err != nil || !ok || !m.Unread() {
 		return err
 	}
 	return UpdateBranchMeta(sessionPath, false, func(m *BranchMeta) error {
