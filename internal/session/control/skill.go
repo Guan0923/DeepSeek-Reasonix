@@ -27,10 +27,13 @@ type skillSet struct {
 	// catalog is what the model has of the listing. It rides the turn, never
 	// the prefix, which a per-project catalog would diverge.
 	catalog projectionDebt
+	// pathHits is the workspace files the host has seen the session touch; a
+	// skill that declares `paths:` is eligible once one of them matches.
+	pathHits *skill.PathHits
 }
 
-func newSkillSet(enabled, all []skill.Skill, store, allStore *skill.Store, noImplicit bool) skillSet {
-	return skillSet{enabled: enabled, all: all, store: store, allStore: allStore, noImplicitInvocation: noImplicit}
+func newSkillSet(enabled, all []skill.Skill, store, allStore *skill.Store, noImplicit bool, workspaceRoot string) skillSet {
+	return skillSet{enabled: enabled, all: all, store: store, allStore: allStore, noImplicitInvocation: noImplicit, pathHits: skill.NewPathHits(workspaceRoot)}
 }
 
 // skillsAllOffBlock replaces the listing when every skill is switched off: an

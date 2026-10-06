@@ -119,6 +119,10 @@ type Skill struct {
 	// InvalidProfiles preserves rejected profiles frontmatter values so doctor
 	// can warn about typos; the parser drops them from Profiles silently.
 	InvalidProfiles []string
+	// Paths are globs from `paths:` frontmatter; empty means always eligible.
+	// InvalidPaths keeps rejected globs for doctor.
+	Paths        []string
+	InvalidPaths []string
 }
 
 // SlashName returns the user-facing slash identifier. Plugin skills use a
@@ -868,6 +872,7 @@ func (s *Store) parseSkill(path, stem string, scope Scope, requireSkillMarker bo
 		sk.Invalid = append(sk.Invalid, "frontmatter is not valid YAML; read line by line (quote values that contain [ ] : or #)")
 	}
 	sk.Profiles, sk.InvalidProfiles = parseProfilesFrontmatter(fm[skillFrontmatterProfiles])
+	sk.Paths, sk.InvalidPaths = parsePathsFrontmatter(fm[skillFrontmatterPaths])
 	return sk, true
 }
 
