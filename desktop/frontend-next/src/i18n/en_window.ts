@@ -36,6 +36,8 @@ export const EN_WINDOW: Record<string, string> = {
   "主导航": "Main navigation",
   "浏览器": "Browser",
   "空白页": "Blank page",
+  "智能体正在查看的页面": "Page the agent is viewing",
+  "只读：页面显示在运行智能体的电脑上": "Read-only: the page itself is shown on the computer running the agent",
   "后退": "Back",
   "前进": "Forward",
   "重新加载": "Reload",
