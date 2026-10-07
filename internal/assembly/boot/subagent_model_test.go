@@ -76,7 +76,7 @@ func TestSubagentEffortRefHonorsPrecedence(t *testing.T) {
 		Name:   "review",
 		RunAs:  skill.RunSubagent,
 		Effort: "low",
-	})
+	}, nil)
 	if got != "max" {
 		t.Fatalf("per-skill effort config should override skill frontmatter and default, got %q", got)
 	}
@@ -85,12 +85,12 @@ func TestSubagentEffortRefHonorsPrecedence(t *testing.T) {
 		Name:   "custom",
 		RunAs:  skill.RunSubagent,
 		Effort: "medium",
-	})
+	}, nil)
 	if got != "medium" {
 		t.Fatalf("skill frontmatter effort should override default config, got %q", got)
 	}
 
-	got = subagentEffortRef(cfg, skill.Skill{Name: "other", RunAs: skill.RunSubagent})
+	got = subagentEffortRef(cfg, skill.Skill{Name: "other", RunAs: skill.RunSubagent}, nil)
 	if got != "high" {
 		t.Fatalf("default subagent effort = %q, want high", got)
 	}
@@ -100,7 +100,7 @@ func TestSubagentEffortRefAcceptsToolNameAliases(t *testing.T) {
 	cfg := config.Default()
 	cfg.Agent.SubagentEfforts = map[string]string{"security_review": "max"}
 
-	got := subagentEffortRef(cfg, skill.Skill{Name: "security-review", RunAs: skill.RunSubagent})
+	got := subagentEffortRef(cfg, skill.Skill{Name: "security-review", RunAs: skill.RunSubagent}, nil)
 	if got != "max" {
 		t.Fatalf("security_review alias should configure security-review effort, got %q", got)
 	}
@@ -263,13 +263,13 @@ func TestInheritedGlobalEffortDoesNotReachUnsupportedExecutionModel(t *testing.T
 	resolver := &effortSelectionResolver{rejectEffort: true}
 	sub := newSubagentConfig(Options{}, cfg, entry, "custom/fallback", resolver, netclient.ProxySpec{}, nil)
 
-	if sub.taskEffort != "" {
-		t.Fatalf("inherited task effort = %q, want it dropped for unsupported model", sub.taskEffort)
+	if sub.inheritedFor("") != "" {
+		t.Fatalf("inherited task effort = %q, want it dropped for unsupported model", sub.inheritedFor(""))
 	}
 	if cfg.Agent.SubagentEffort != "max" {
 		t.Fatalf("persistent subagent effort = %q, want max", cfg.Agent.SubagentEffort)
 	}
-	if _, _, _, err := sub.resolveProvider("", sub.taskEffort); err != nil {
+	if _, _, _, err := sub.resolveProvider("", sub.inheritedFor("")); err != nil {
 		t.Fatalf("inherited effort should not make provider resolution fail: %v", err)
 	}
 	if len(resolver.selections) != 1 {
@@ -278,7 +278,7 @@ func TestInheritedGlobalEffortDoesNotReachUnsupportedExecutionModel(t *testing.T
 	if got := resolver.selections[0].Effort; got != nil && *got != entry.Effort {
 		t.Fatalf("provider effort = %q, want the parent's own effort %q", *got, entry.Effort)
 	}
-	model, effort := sub.identity("", sub.taskEffort)
+	model, effort := sub.identity("", sub.inheritedFor(""))
 	if model != "custom/fallback" || effort != "high" {
 		t.Fatalf("effective identity = %q/%q, want custom/fallback/high", model, effort)
 	}
@@ -355,20 +355,21 @@ func TestInheritedGlobalEffortKeepsSupportedExecutionModel(t *testing.T) {
 	resolver := &effortSelectionResolver{}
 	sub := newSubagentConfig(Options{}, cfg, entry, "custom/supported", resolver, netclient.ProxySpec{}, nil)
 
-	if sub.taskEffort != "max" || sub.inheritedEffort != "max" || sub.inheritedEffortDropped {
-		t.Fatalf("inherited effort state = %q/%q/dropped=%v, want max/max/false", sub.taskEffort, sub.inheritedEffort, sub.inheritedEffortDropped)
+	inherited := sub.inheritedFor("")
+	if inherited != "max" || sub.inheritedEffortDropped {
+		t.Fatalf("inherited effort state = %q/dropped=%v, want max/false", inherited, sub.inheritedEffortDropped)
 	}
-	if _, _, _, err := sub.resolveProvider("", sub.taskEffort); err != nil {
+	if _, _, _, err := sub.resolveProvider("", inherited); err != nil {
 		t.Fatalf("supported inherited effort should resolve: %v", err)
 	}
 	if len(resolver.selections) != 1 || resolver.selections[0].Effort == nil || *resolver.selections[0].Effort != "max" {
 		t.Fatalf("provider selections = %+v, want max override", resolver.selections)
 	}
-	model, effort := sub.identity("", sub.taskEffort)
+	model, effort := sub.identity("", inherited)
 	if model != "custom/supported" || effort != "max" {
 		t.Fatalf("effective identity = %q/%q, want custom/supported/max", model, effort)
 	}
-	profile := skillProfile(cfg, sub.inheritedEffort)(skill.Skill{Name: "review", RunAs: skill.RunSubagent})
+	profile := skillProfile(cfg, sub.inheritedFor)(skill.Skill{Name: "review", RunAs: skill.RunSubagent})
 	if profile == nil || profile.Effort != "max" {
 		t.Fatalf("skill profile = %+v, want inherited max", profile)
 	}
@@ -414,10 +415,11 @@ func TestExplicitSubagentModelAndGlobalEffortRemainStrict(t *testing.T) {
 	resolver := &effortSelectionResolver{rejectEffort: true}
 	sub := newSubagentConfig(Options{}, cfg, entry, "custom/fallback", resolver, netclient.ProxySpec{}, nil)
 
-	if sub.taskModel != "custom/fallback" || sub.taskEffort != "max" || sub.inheritedEffortDropped {
-		t.Fatalf("explicit pair = %q/%q/dropped=%v, want custom/fallback/max/false", sub.taskModel, sub.taskEffort, sub.inheritedEffortDropped)
+	pairEffort := sub.inheritedFor(sub.taskModel)
+	if sub.taskModel != "custom/fallback" || pairEffort != "max" || sub.inheritedEffortDropped {
+		t.Fatalf("explicit pair = %q/%q/dropped=%v, want custom/fallback/max/false", sub.taskModel, pairEffort, sub.inheritedEffortDropped)
 	}
-	if _, _, _, err := sub.resolveProvider(sub.taskModel, sub.taskEffort); err == nil {
+	if _, _, _, err := sub.resolveProvider(sub.taskModel, pairEffort); err == nil {
 		t.Fatal("explicit model/effort pair should remain strict")
 	}
 }
@@ -439,7 +441,7 @@ func TestSkillEffortUsesResolvedInheritedDefault(t *testing.T) {
 		cfg:             cfg,
 		provider:        nil,
 		entry:           entry,
-		inheritedEffort: sub.inheritedEffort,
+		inheritedFor:    sub.inheritedFor,
 		resolveProvider: sub.resolveProvider,
 	}
 
@@ -455,7 +457,7 @@ func TestSkillEffortUsesResolvedInheritedDefault(t *testing.T) {
 	if err == nil {
 		t.Fatal("explicit skill effort should remain strict")
 	}
-	if got := skillProfile(cfg, sub.inheritedEffort)(skill.Skill{Name: "review", RunAs: skill.RunSubagent}); got != nil {
+	if got := skillProfile(cfg, sub.inheritedFor)(skill.Skill{Name: "review", RunAs: skill.RunSubagent}); got != nil {
 		t.Fatalf("fallback skill profile = %+v, want no stale inherited effort", got)
 	}
 }
