@@ -67,3 +67,74 @@ func TestAnUnverifiableDeltaFallsBackToTheFullPackage(t *testing.T) {
 		t.Fatalf("a swap was planned: %v", matches)
 	}
 }
+
+func deltaFixture(t *testing.T, installed map[string]string, files map[string]string) (delta.Index, update.Delta, *int, update.Install, string) {
+	t.Helper()
+	store := map[string][]byte{}
+	x := delta.Index{SchemaVersion: delta.SchemaVersion, Version: "v2.0.0", Platform: update.CurrentPlatform()}
+	for name, body := range files {
+		h := delta.HashOf([]byte(body))
+		store["/"+delta.ObjectName(h)] = delta.Compress([]byte(body))
+		sum := sha256.Sum256([]byte(body))
+		x.Files = append(x.Files, delta.File{Path: name, Size: int64(len(body)), SHA256: hex.EncodeToString(sum[:]), Chunks: []delta.Chunk{{Hash: h, Size: len(body)}}})
+	}
+	hits := new(int)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*hits++
+		b, ok := store[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(b)
+	}))
+	t.Cleanup(srv.Close)
+	root := testenv.TempDir(t)
+	for name, body := range installed {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	install := update.Install{Version: "v1.0.0", Layout: update.Layout{Root: root}}
+	return x, update.Delta{Chunks: srv.URL}, hits, install, testenv.TempDir(t)
+}
+
+func stageFixture(t *testing.T, x delta.Index, d update.Delta, install update.Install, cache string) error {
+	t.Helper()
+	c := New(Options{Owner: stubOwner{}, Running: "v1.0.0", Application: update.Application{PID: 1}}).(*capability)
+	tr, err := c.deltaTransport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.stageFromIndex(t.Context(), tr, install, "v2.0.0", cache, d, x, filepath.Join(cache, "backup"))
+	return err
+}
+
+// A release most of whose bytes this install lacks is the full package's job:
+// no chunk is requested, and the reason is a typed code.
+func TestADeltaLargerThanHalfTheReleaseFetchesNothing(t *testing.T) {
+	x, d, hits, install, cache := deltaFixture(t,
+		map[string]string{"a.bin": "same-bytes-here"},
+		map[string]string{"a.bin": "same-bytes-here", "b.bin": "brand new bytes that outweigh what is kept"})
+	err := stageFixture(t, x, d, install, cache)
+	if deltaCode(err) != DeltaTooLarge {
+		t.Fatalf("abandoned as %q (%v), want %q", deltaCode(err), err, DeltaTooLarge)
+	}
+	if *hits != 0 {
+		t.Fatalf("%d chunks were fetched for a delta bigger than the full package", *hits)
+	}
+}
+
+// A release the install mostly holds still takes the chunked path.
+func TestADeltaUnderHalfTheReleaseStillFetchesItsChunks(t *testing.T) {
+	x, d, hits, install, cache := deltaFixture(t,
+		map[string]string{"a.bin": "kept bytes that make up most of the release tree"},
+		map[string]string{"a.bin": "kept bytes that make up most of the release tree", "b.bin": "new"})
+	err := stageFixture(t, x, d, install, cache)
+	if deltaCode(err) == DeltaTooLarge {
+		t.Fatalf("a small delta was refused: %v", err)
+	}
+	if *hits != 1 {
+		t.Fatalf("%d chunks fetched, want the one missing", *hits)
+	}
+}
