@@ -305,10 +305,6 @@ const unappliedSteerCap = 400
 
 func codedNoticeText(it *Item) string {
 	switch it.Code {
-	case event.NoticeCodeContextBudget:
-		if f, ok := event.DecodeContextBudgetFigures(it.Detail); ok {
-			return fmt.Sprintf(i18n.M.NoticeContextBudgetFmt, f.Percent, f.Remaining)
-		}
 	case event.NoticeCodeCompacted:
 		return i18n.M.NoticeCompacted
 	case event.NoticeCodeCompactDeclined:
