@@ -1441,3 +1441,214 @@ test("the PE check reads each image's own machine and refuses a tree of another 
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+const { createPowerGuard, keepsAwake, IDLE_PASSES, SILENT_PASSES } = require("../src/powerguard.js");
+
+function fakeBlocker() {
+  const live = new Set();
+  let next = 1;
+  const calls = { start: 0, stop: 0 };
+  return {
+    calls,
+    live,
+    start(kind) {
+      assert.equal(kind, "prevent-app-suspension");
+      calls.start++;
+      live.add(next);
+      return next++;
+    },
+    stop(id) {
+      calls.stop++;
+      live.delete(id);
+    },
+    isStarted: (id) => live.has(id),
+  };
+}
+
+// answer is what the kernel says next: { panes, unknown }, null for a kernel
+// that cannot answer, or an Error to throw.
+function guardOver(state) {
+  const blocker = fakeBlocker();
+  const guard = createPowerGuard({
+    blocker,
+    running: async () => {
+      if (state.answer instanceof Error) throw state.answer;
+      return state.answer;
+    },
+    enabled: () => state.enabled !== false,
+  });
+  return { blocker, guard };
+}
+const busy = (panes) => ({ panes, unknown: 0 });
+const idle = { panes: 0, unknown: 0 };
+async function times(n, guard) {
+  for (let i = 0; i < n; i++) await guard.refresh();
+}
+
+test("a running turn holds the computer awake at once, once, however many panes run", async () => {
+  const state = { answer: busy(1) };
+  const { blocker, guard } = guardOver(state);
+  await guard.refresh();
+  assert.equal(blocker.live.size, 1);
+  await guard.refresh();
+  state.answer = busy(4);
+  await guard.refresh();
+  assert.equal(blocker.calls.start, 1);
+});
+
+test("the hold is let go only after the third idle answer in a row", async () => {
+  const state = { answer: busy(2) };
+  const { blocker, guard } = guardOver(state);
+  await guard.refresh();
+  state.answer = idle;
+  await times(IDLE_PASSES - 1, guard);
+  assert.equal(blocker.live.size, 1, "two idle answers are not enough");
+  await guard.refresh();
+  assert.equal(blocker.live.size, 0);
+  assert.equal(blocker.calls.stop, 1);
+  await guard.refresh();
+  assert.equal(blocker.calls.stop, 1);
+});
+
+test("a turn showing up between idle answers starts the count again", async () => {
+  const state = { answer: busy(1) };
+  const { blocker, guard } = guardOver(state);
+  await guard.refresh();
+  state.answer = idle;
+  await times(IDLE_PASSES - 1, guard);
+  state.answer = busy(1);
+  await guard.refresh();
+  state.answer = idle;
+  await times(IDLE_PASSES - 1, guard);
+  assert.equal(blocker.live.size, 1);
+  await guard.refresh();
+  assert.equal(blocker.live.size, 0);
+});
+
+test("an idle kernel never takes the hold", async () => {
+  const { blocker, guard } = guardOver({ answer: idle });
+  await times(5, guard);
+  assert.equal(blocker.calls.start, 0);
+});
+
+test("a kernel that cannot answer, or a pane that cannot be asked, changes nothing", async () => {
+  for (const unsure of [null, new Error("kernel gone"), { panes: 0, unknown: 1 }, {}]) {
+    const state = { answer: busy(1) };
+    const { blocker, guard } = guardOver(state);
+    await guard.refresh();
+    state.answer = idle;
+    await times(IDLE_PASSES - 1, guard);
+    state.answer = unsure;
+    await times(SILENT_PASSES - 1, guard);
+    assert.equal(blocker.live.size, 1, `held through ${String(unsure)}`);
+    assert.equal(blocker.calls.stop, 0, "silence did not count as the idle answer that was missing");
+  }
+});
+
+test("silence does not take the hold either", async () => {
+  const { blocker, guard } = guardOver({ answer: null });
+  await times(3, guard);
+  assert.equal(blocker.calls.start, 0);
+});
+
+test("a hold nobody can confirm is let go after SILENT_PASSES, so it cannot leak", async () => {
+  const state = { answer: busy(1) };
+  const { blocker, guard } = guardOver(state);
+  await guard.refresh();
+  state.answer = null;
+  await times(SILENT_PASSES, guard);
+  assert.equal(blocker.live.size, 0);
+});
+
+test("turning the setting off lets go at once and keeps it off while turns run", async () => {
+  const state = { answer: busy(1) };
+  const { blocker, guard } = guardOver(state);
+  await guard.refresh();
+  state.enabled = false;
+  await guard.refresh();
+  assert.equal(blocker.live.size, 0);
+  await guard.refresh();
+  assert.equal(blocker.calls.start, 1);
+  state.enabled = true;
+  await guard.refresh();
+  assert.equal(blocker.live.size, 1);
+});
+
+test("a block the system dropped is taken again while work continues", async () => {
+  const { blocker, guard } = guardOver({ answer: busy(1) });
+  await guard.refresh();
+  blocker.live.clear();
+  await guard.refresh();
+  assert.equal(blocker.live.size, 1);
+  assert.equal(blocker.calls.start, 2);
+});
+
+test("an answer that arrives after a newer one does not overturn it", async () => {
+  const blocker = fakeBlocker();
+  const pending = [];
+  const guard = createPowerGuard({
+    blocker,
+    running: () => new Promise((resolve) => pending.push(resolve)),
+    enabled: () => true,
+  });
+  const slow = guard.refresh();
+  const fresh = guard.refresh();
+  pending[1](busy(2));
+  await fresh;
+  pending[0](idle);
+  await slow;
+  assert.equal(blocker.live.size, 1);
+});
+
+test("a refresh asked for the moment a turn is submitted takes the hold without waiting for the poll", async () => {
+  const state = { answer: idle };
+  const { blocker, guard } = guardOver(state);
+  await guard.refresh();
+  assert.equal(blocker.live.size, 0);
+  state.answer = busy(1);
+  await guard.refresh();
+  assert.equal(blocker.live.size, 1);
+});
+
+test("closing the guard releases the hold and stops the poll", async () => {
+  const timers = [];
+  const blocker = fakeBlocker();
+  const guard = createPowerGuard({
+    blocker,
+    running: async () => busy(1),
+    enabled: () => true,
+    setInterval: (fn, ms) => {
+      timers.push({ fn, ms, cleared: false });
+      return timers.at(-1);
+    },
+    clearInterval: (t) => (t.cleared = true),
+  });
+  guard.begin();
+  await guard.refresh();
+  assert.equal(blocker.live.size, 1);
+  guard.close();
+  assert.equal(blocker.live.size, 0);
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].cleared, true);
+  await guard.refresh();
+  assert.equal(blocker.live.size, 0, "a closed guard takes nothing back");
+});
+
+test("keeping awake is on unless this machine said off", () => {
+  assert.equal(keepsAwake({}), true);
+  assert.equal(keepsAwake(undefined), true);
+  assert.equal(keepsAwake({ "rx-keep-awake": "on" }), true);
+  assert.equal(keepsAwake({ "rx-keep-awake": "off" }), false);
+});
+
+test("the host client asks the kernel how many panes run", async () => {
+  const server = http.createServer((req, res) => {
+    res.writeHead(req.url === "/tray/running" ? 200 : 404, { "content-type": "application/json" });
+    res.end(JSON.stringify({ panes: 3 }));
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const client = new StudioHost(`http://127.0.0.1:${server.address().port}`, "t");
+  assert.deepEqual(await client.trayRunning(), { panes: 3 });
+  server.close();
+  assert.equal(await client.trayRunning(), null);
+});
