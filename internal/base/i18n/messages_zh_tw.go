@@ -86,7 +86,6 @@ var ChineseTraditional = Messages{
 	ResumePickSearch:              "搜尋：",
 	ResumePickNoMatch:             "沒有符合的會話",
 	TUIDeclinedFmt:                "已拒絕 %s %s",
-	NoticeContextBudgetFmt:        "上下文已用到壓縮閾值的 %d%%，已告知模型約剩 %d 個詞元的空間。",
 	NoticeUnappliedSteerFmt:       "引導沒有生效：這一輪在處理它之前就結束了。如果仍然需要，請再發送一次：\n%s",
 	TUIQuestion:                   "提問",
 	TUISubagentCallsFmt:           "%d 次子代理呼叫",

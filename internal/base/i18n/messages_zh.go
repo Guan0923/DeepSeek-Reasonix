@@ -90,7 +90,6 @@ var Chinese = Messages{
 	ResumePickSearch:        "搜索：",
 	ResumePickNoMatch:       "没有匹配的会话",
 	TUIDeclinedFmt:          "已拒绝 %s %s",
-	NoticeContextBudgetFmt:  "上下文已用到压缩阈值的 %d%%，已告知模型约剩 %d 个词元的空间。",
 	NoticeUnappliedSteerFmt: "引导没有生效：这一轮在处理它之前就结束了。如果仍然需要，请再发送一次：\n%s",
 	TUIQuestion:             "提问",
 	TUISubagentCallsFmt:     "%d 次子代理调用",

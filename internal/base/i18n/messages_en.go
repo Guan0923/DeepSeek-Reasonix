@@ -89,7 +89,6 @@ var English = Messages{
 	ResumePickSearch:        "Search: ",
 	ResumePickNoMatch:       "No matches",
 	TUIDeclinedFmt:          "declined %s %s",
-	NoticeContextBudgetFmt:  "Context at %d%% of the compaction threshold — the model was told it has about %d tokens of room left.",
 	NoticeUnappliedSteerFmt: "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:\n%s",
 	TUIQuestion:             "question",
 	TUISubagentCallsFmt:     "%d sub-agent call(s)",
