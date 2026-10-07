@@ -11,10 +11,16 @@ import (
 
 // checkURL decides whether a page may be loaded. http and https go anywhere
 // the network does; about:blank is the empty page; a file must lie inside one
-// of roots once symlinks resolve. Every other scheme — the browser's own
-// pages, script and data URLs — is refused.
+// of roots once symlinks resolve, and a path on disk is that file's URL. Every
+// other scheme — the browser's own pages, script and data URLs — is refused.
 func checkURL(raw string, roots []string) (string, error) {
-	raw = strings.TrimSpace(raw)
+	raw, kind := asAddress(raw)
+	switch kind {
+	case NetworkPath:
+		return "", fail(CodeURLRefused, "%q is on another machine; a page may only be a local file inside the workspace", raw)
+	case InvalidPath:
+		return "", fail(CodeURLRefused, "%q is not a valid file address", raw)
+	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme == "" {
 		return "", fail(CodeURLRefused, "%q is not an absolute URL; include the scheme, e.g. https://", raw)
@@ -90,7 +96,11 @@ func fileWithin(path string, roots []string) bool {
 // OriginOf reduces a URL to what a site grant names. It answers "" for the
 // empty page and anything that is not a page an agent may open.
 func OriginOf(raw string) string {
-	u, err := url.Parse(strings.TrimSpace(raw))
+	raw, kind := asAddress(raw)
+	if kind == NetworkPath || kind == InvalidPath {
+		return ""
+	}
+	u, err := url.Parse(raw)
 	if err != nil {
 		return ""
 	}
@@ -111,7 +121,11 @@ func OriginOf(raw string) string {
 // server for the code being edited runs. A page anywhere else exercises code
 // nobody here wrote.
 func (s *Session) ServesWorkspace(raw string) bool {
-	u, err := url.Parse(strings.TrimSpace(raw))
+	raw, kind := asAddress(raw)
+	if kind == NetworkPath || kind == InvalidPath {
+		return false
+	}
+	u, err := url.Parse(raw)
 	if err != nil {
 		return false
 	}
@@ -124,4 +138,14 @@ func (s *Session) ServesWorkspace(raw string) bool {
 		return host == "127.0.0.1" || host == "::1" || strings.EqualFold(host, "localhost")
 	}
 	return false
+}
+
+// asAddress is raw as the page it names: a path or file: URL on disk becomes
+// its normalised file: URL, anything else is only trimmed.
+func asAddress(raw string) (string, PathKind) {
+	asURL, kind := LocalPathURL(raw)
+	if kind == LocalPath {
+		return asURL, kind
+	}
+	return strings.TrimSpace(raw), kind
 }

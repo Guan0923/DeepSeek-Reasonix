@@ -362,7 +362,7 @@ ipcMain.handle("browser:control", (event, targetId, action) => {
   if (fromWindow(event)) browserViews?.control(String(targetId), String(action));
 });
 ipcMain.handle("browser:navigate", (event, targetId, address) =>
-  fromWindow(event) ? (browserViews?.navigate(String(targetId), String(address)) ?? false) : false,
+  fromWindow(event) ? (browserViews?.navigate(String(targetId), String(address)) ?? "scheme") : "scheme",
 );
 ipcMain.handle("browser:trust-certificate", (event, targetId) =>
   fromWindow(event) ? (browserViews?.trustCertificate(String(targetId)) ?? false) : false,
