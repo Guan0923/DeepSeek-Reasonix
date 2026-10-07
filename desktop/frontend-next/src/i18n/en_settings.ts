@@ -19,6 +19,9 @@ export const EN_SETTINGS: Record<string, string> = {
   "默认模型": "Default model",
   "当前对话和大多数任务": "This conversation and most tasks",
   "随主模型": "Follows the default",
+  "「{key}」已被配置固定为 {model}，这里的选择对它不起作用。": "“{key}” is pinned to {model} by configuration, so the choice here does not apply to it.",
+  "改回跟随这里": "Follow this choice",
+  "来自项目配置，需在项目里修改": "Set by the project config; change it there",
   "在「模型服务」添加决策来源": "Add a decision source under Model services",
   "按用途选择模型": "Models by use",
   "默认模型用于当前对话和大多数任务，其他用途默认跟随它；只有要为某件事换一个模型时才改。切换会保留对话并重建运行时，任务执行期间无法修改。":
