@@ -965,6 +965,8 @@ export const EN: Record<string, string> = {
   "关闭查找": "Close find",
   "回合结束时给出回执": "End a turn with a receipt",
   "列出这一轮改了什么、验了什么、哪些没有验；无话可说时不出现。下一轮起生效": "Lists what this turn changed, what it verified and what went unverified; absent when there is nothing to say. Takes effect from the next turn",
+  "任务运行时阻止系统休眠": "Keep the computer awake while tasks run",
+  "有会话正在运行时，电脑不会自动进入睡眠（电池供电时也一样）；屏幕仍按系统设置熄灭，全部空闲后恢复。合上笔记本盖子不受此项控制": "While a session is running the computer will not go to sleep on its own, on battery power too; the screen still turns off as the system says, and normal sleep resumes once everything is idle. Closing a laptop lid is not controlled by this",
   "改写这条消息": "Rewrite this message",
   "改写这条消息并重新发送": "Rewrite this message and send it again",
   "✎ 改写": "✎ Edit",
