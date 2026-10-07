@@ -693,6 +693,9 @@ func (a *contextWindow) partitionFoldWith(region []provider.Message, policy Keep
 // runCompactionSummary uses the single local summarizer path for every provider.
 func (a *contextWindow) runCompactionSummary(ctx context.Context, fold []provider.Message, instructions string) (summary, mode string, usage *provider.Usage, providerReqID string, err error) {
 	summary, usage, err = a.summarizeOnce(ctx, fold, instructions)
+	if err == nil && !hasDigestHeading(summary) {
+		err = errSummaryNotDigest
+	}
 	if err != nil {
 		return "", CompactionModeSummarized, usage, "", err
 	}

@@ -628,10 +628,11 @@ func (a *contextWindow) summarize(ctx context.Context, region []provider.Message
 	req := provider.Request{
 		Messages: []provider.Message{
 			{Role: provider.RoleSystem, Content: sys},
-			{Role: provider.RoleUser, Content: renderTranscript(region)},
+			{Role: provider.RoleUser, Content: renderTranscript(region) + summaryClosingInstruction},
 		},
 		MaxTokens:      maxOut,
 		EffortOverride: summaryEffort,
+		Summary:        true,
 		Temperature:    provider.OptionalTemperature(a.temperature),
 	}
 	if budget, clipped, budgetErr := a.effectiveOutputBudget(req); budgetErr != nil {

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"reasonix/internal/runtime/agent/testutil"
 	"reasonix/internal/state/sessionstore"
 	"slices"
 	"strings"
@@ -34,9 +35,19 @@ type fakeProvider struct {
 	got          []provider.Message
 	streamErr    error // when set, Stream emits a ChunkError instead of the reply
 	hang         bool  // when true, Stream returns a channel that never sends or closes
+	verbatim     bool  // when true, a summary request is answered with reply exactly as written
 }
 
 func (f *fakeProvider) Name() string { return "fake" }
+
+// answer speaks the summary contract unless the test asks for the reply as
+// written.
+func (f *fakeProvider) answer(req provider.Request) string {
+	if f.verbatim {
+		return f.reply
+	}
+	return testutil.SummaryReply(req, f.reply)
+}
 
 func (f *fakeProvider) Stream(_ context.Context, req provider.Request) (<-chan provider.Chunk, error) {
 	f.got = req.Messages
@@ -49,7 +60,7 @@ func (f *fakeProvider) Stream(_ context.Context, req provider.Request) (<-chan p
 		close(ch)
 		return ch, nil
 	}
-	ch <- provider.Chunk{Type: provider.ChunkText, Text: f.reply}
+	ch <- provider.Chunk{Type: provider.ChunkText, Text: f.answer(req)}
 	if f.promptTokens > 0 {
 		ch <- provider.Chunk{Type: provider.ChunkUsage, Usage: &provider.Usage{PromptTokens: f.promptTokens, TotalTokens: f.promptTokens}}
 	}
