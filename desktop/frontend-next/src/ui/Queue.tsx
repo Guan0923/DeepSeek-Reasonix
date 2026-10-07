@@ -34,6 +34,12 @@ const taken = (s: QueueItem["state"]) => s === "steer_consumed" || s === "runnin
 // it needs a decision, which is the one case nobody else can make for them.
 const theirs = (it: QueueItem) => it.origin !== "host" || it.state === "blocked" || it.state === "uncertain";
 
+// Codes whose entry the kernel knows never reached the model, so sending it
+// again cannot repeat an effect. Every other uncertain code may have run.
+const RETRY_SAFE = new Set(["steer_unapplied"]);
+const retryable = (it: QueueItem) =>
+  it.state === "blocked" || (it.state === "uncertain" && !!it.blockCode && RETRY_SAFE.has(it.blockCode));
+
 /** What the panel draws: the lines nobody has acted on yet. The header's count
  *  of guidance in flight reads this too, so it can never name a line the panel
  *  is not showing. */
@@ -253,7 +259,7 @@ export function Queue({ queue, running, onRead, onEdit, onMove, onCancel, onSend
                       {t("立即发送")}
                     </button>
                   )}
-                  {it.state === "blocked" && (
+                  {retryable(it) && (
                     <button data-action="queue.retry" data-target={it.id} onClick={() => onRetry(it.id)} title={t("重试")}>
                       {t("重试")}
                     </button>
