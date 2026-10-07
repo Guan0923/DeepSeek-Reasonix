@@ -700,16 +700,16 @@ export class SsePort extends SseFeedback implements AgentPort {
     return this.post(paused ? "/inbox/pause" : "/inbox/resume");
   }
   cancel() {
-    return this.post("/cancel");
+    return this.postAcked("/cancel");
   }
   // Approve(id, allow, session, persist) — "always" is a session grant, not a
   // persisted config change.
   planDecision(id: string, action: PlanAction) {
-    return this.postDecision("/plan-decision", { id, action: PLAN_ACTIONS[action] });
+    return this.postAcked("/plan-decision", { id, action: PLAN_ACTIONS[action] });
   }
 
   approve(id: string, verdict: ApprovalVerdict) {
-    return this.postDecision("/approve", {
+    return this.postAcked("/approve", {
       id,
       allow: verdict !== "deny",
       // A rule written down also covers the rest of this session, so the answer
@@ -719,7 +719,7 @@ export class SsePort extends SseFeedback implements AgentPort {
     });
   }
   answer(id: string, answers: { questionId: string; selected: string[] }[]) {
-    return this.postDecision("/answer", {
+    return this.postAcked("/answer", {
       id,
       answers: answers.map((a) => ({ QuestionID: a.questionId, Selected: a.selected })),
     });

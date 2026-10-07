@@ -1,4 +1,5 @@
-import { HttpError, KernelBusyError } from "../port/port";
+import { DeliveryError, HttpError } from "../port/port";
+import type { DeliveryFault } from "../port/port";
 import { t } from "./index";
 
 // What the kernel says when it refuses, in the language the reader uses.
@@ -453,13 +454,19 @@ export function say(reason: Reason | null | undefined, fallback = ""): string {
  *  window's language, anything else prints as itself. One call so no display
  *  site has to know which kind it caught. */
 export function reason(e: unknown): string {
-  if (e instanceof KernelBusyError) return t("内核繁忙或无法连接，这次回答可能没有被收到，重试前请先确认");
+  if (e instanceof DeliveryError) return t(UNCONFIRMED[e.fault]);
   if (e instanceof HttpError && e.reason) return say(e.reason, e.message);
   // Nothing came back but a status: printing message here would put a path and
   // a number in front of the user. The status is the only identity there is.
   if (e instanceof HttpError && !e.detailed) return t("请求未能送达内核（HTTP {status}）", { status: e.status });
   return e instanceof Error ? e.message : String(e);
 }
+
+const UNCONFIRMED: Record<DeliveryFault, string> = {
+  kernel_busy: "内核繁忙，这次操作可能没有被收到，重试前请先确认",
+  unreachable: "无法连接内核，这次操作可能没有送达，重试前请先确认",
+  ui_stalled: "本界面无响应，这次操作可能没有送达内核，重试前请先确认",
+};
 
 /** codes is what the parity check reads. */
 export const codes = SAID;

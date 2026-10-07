@@ -1,6 +1,8 @@
-import { HttpError, KernelBusyError } from "./http_error";
+import { DeliveryError, HttpError } from "./http_error";
+import type { DeliveryFault } from "./http_error";
 import type { Attachment, DroppedRef } from "./attachment";
-export { HttpError, KernelBusyError };
+export { DeliveryError, HttpError };
+export type { DeliveryFault };
 export type { Attachment, DroppedRef };
 
 import type { AccountState, AccountUser, DeviceGrant } from "./account";
