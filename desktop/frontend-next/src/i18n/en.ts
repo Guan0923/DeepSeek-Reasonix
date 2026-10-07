@@ -920,6 +920,7 @@ export const EN: Record<string, string> = {
   "增量数据下载失败，本次改为下载完整安装包。": "The changed parts could not be downloaded, so this update downloads the full package.",
   "增量数据下载太慢，本次改为下载完整安装包。": "The changed parts were downloading too slowly, so this update downloads the full package.",
   "增量数据未通过校验，本次改为下载完整安装包。": "The changed parts failed verification, so this update downloads the full package.",
+  "这次版本跨度较大，增量数据比完整安装包还多，本次改为下载完整安装包。": "This jump spans many versions and the changed parts add up to more than the full package, so this update downloads the full package.",
   "无法写入增量更新文件，本次改为下载完整安装包。": "The changed parts could not be written to disk, so this update downloads the full package.",
   "增量更新不可用，本次改为下载完整安装包。": "Updating only the changed parts is unavailable, so this update downloads the full package.",
   "校验签名…": "Verifying the signature…",
