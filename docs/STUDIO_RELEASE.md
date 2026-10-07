@@ -272,3 +272,10 @@ Studio and 1.x signing jobs and smoke tests share the concurrency group `certum-
 | `cli/stable/latest.json`, `cli/preview/latest.json` | `cli-pointer` | what `reasonix upgrade` reads through `crash.reasonix.io/v1/cli/releases/<channel>/latest.json`; only ever moves to a newer version |
 | `cli/releases/vX.Y.Z/latest.json` | `cli-pointer` | immutable record of one CLI release; a rerun with different content fails |
 | `versions.json` | desktop line | never written by this workflow |
+
+### Platform keys
+
+`latest.json` keys `platforms` (and `deltas`) as `<GOOS>-<GOARCH>`, derived from the artifact name by `studio-manifest` and asked for by the running kernel through `runtime.GOOS` and `runtime.GOARCH`.
+
+- The key is the binary's own architecture, not the machine's. An x64 build running under ARM64 emulation asks for `windows-amd64` and keeps updating to the amd64 installer; it is not moved to a native build.
+- When a client tries to install a release whose manifest lacks its key (and, on Linux, a matching `native_packages` key), staging fails with `update.no_package` naming the release page; no other architecture's package is substituted. A missing `deltas` entry means the full package is downloaded.
