@@ -745,6 +745,9 @@ type Messages struct {
 	// usage / help
 	UsageBody             string // full multi-line help text
 	StandaloneConsoleHint string
+
+	// Feedback is the /feedback list standing and refusal wording.
+	Feedback FeedbackText
 }
 
 // M is the active catalogue. DetectLanguage replaces it; English is the
