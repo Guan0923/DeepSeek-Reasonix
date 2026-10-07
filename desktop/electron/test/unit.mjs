@@ -1396,3 +1396,48 @@ test("the tray has a file for every Windows scale, at exactly 16 * scale pixels"
   assert.equal(trayAsset(5).pixels, 48);
   assert.equal(trayAsset(NaN).pixels, 16);
 });
+
+function pe(machine) {
+  const b = Buffer.alloc(0x100);
+  b.writeUInt16LE(0x5a4d, 0);
+  b.writeUInt32LE(0x80, 0x3c);
+  b.writeUInt32LE(0x00004550, 0x80);
+  b.writeUInt16LE(machine, 0x84);
+  return b;
+}
+
+test("the PE check reads each image's own machine and refuses a tree of another architecture", () => {
+  const { peMachine, machines, foreign } = require("../packaging/pe.js");
+  assert.equal(peMachine(pe(0xaa64)), 0xaa64);
+  assert.throws(() => peMachine(Buffer.from("#!/bin/sh\n".repeat(10))), /not a PE/);
+  assert.throws(() => peMachine(pe(0x8664).subarray(0, 0x70)), /no PE signature/);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reasonix-pe-"));
+  try {
+    assert.throws(() => foreign(dir, "arm64"), /no PE images/);
+    fs.mkdirSync(path.join(dir, "resources", "bin"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "app.exe"), pe(0xaa64));
+    fs.writeFileSync(path.join(dir, "resources", "bin", "host.exe"), pe(0xaa64));
+    fs.writeFileSync(path.join(dir, "locales.pak"), "not an image");
+    fs.writeFileSync(path.join(dir, "noext"), pe(0xaa64));
+    assert.equal(machines(dir).length, 3);
+    assert.deepEqual(foreign(dir, "arm64"), []);
+    assert.deepEqual(foreign(dir, "amd64").map((f) => f.file), ["app.exe", "noext", "resources/bin/host.exe"]);
+    fs.writeFileSync(path.join(dir, "ffmpeg.dll"), pe(0x8664));
+    assert.deepEqual(foreign(dir, "arm64").map((f) => f.file), ["ffmpeg.dll"]);
+    assert.throws(() => foreign(dir, "x64"), /unknown architecture/);
+    fs.writeFileSync(path.join(dir, "broken.dll"), "text, not an image");
+    const broken = foreign(dir, "arm64").find((f) => f.file === "broken.dll");
+    assert.match(broken.error, /not a PE/);
+    fs.rmSync(path.join(dir, "broken.dll"));
+    fs.writeFileSync(path.join(dir, "ffmpeg.dll"), pe(0xaa64));
+    fs.writeFileSync(path.join(dir, "resources", "elevate.exe"), pe(0x14c));
+    assert.deepEqual(foreign(dir, "arm64"), []);
+    fs.writeFileSync(path.join(dir, "Uninstall Reasonix Studio.exe"), pe(0x14c));
+    assert.deepEqual(foreign(dir, "arm64"), []);
+    fs.writeFileSync(path.join(dir, "resources", "elevate.exe"), pe(0xaa64));
+    assert.deepEqual(foreign(dir, "arm64").map((f) => f.file), ["resources/elevate.exe"]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
