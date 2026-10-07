@@ -6,6 +6,7 @@ import { BLOCK_WHY } from "../i18n/queue_why";
 
 import { Overflow } from "./Overflow";
 import { StudioIcon } from "./StudioIcon";
+import { touchKeyboard } from "./touchKeyboard";
 
 interface Props {
   queue: QueueSnapshot | null;
@@ -214,7 +215,7 @@ export function Queue({ queue, running, onRead, onEdit, onMove, onCancel, onSend
                     if (e.key === "Escape") setEditing("");
                     // Enter commits; the line is one instruction, and a queue
                     // row is not where a paragraph gets composed.
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter" && !e.shiftKey && !touchKeyboard() && !e.nativeEvent.isComposing) {
                       e.preventDefault();
                       commit();
                     }
