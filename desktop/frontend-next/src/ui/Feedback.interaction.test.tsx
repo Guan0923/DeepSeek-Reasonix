@@ -256,6 +256,30 @@ describe("refusals", () => {
     expect(send().disabled).toBe(false);
   });
 
+  it("says which window a typed 429 ran out of and when it resets, and keeps the form", async () => {
+    const { port } = setup();
+    const resetsAt = new Date(Date.now() + 5 * 3_600_000).toISOString();
+    port.sendFeedback = vi.fn(async () => {
+      throw new HttpError(429, "x", { code: FEEDBACK_CODE.rateLimited, error: "hourly limit reached", params: { limit: "install_daily", resetsAt, retryAfterSeconds: 18000 } });
+    });
+    await fill();
+    await userEvent.click(send());
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("今天的反馈次数已用完。将在");
+    expect(alert.textContent).not.toMatch(/小时的反馈|18000|太频繁/);
+    expect(alert.getAttribute("data-code")).toBe(FEEDBACK_CODE.rateLimited);
+    expect(body().value).toBe("侧栏在缩放窗口后丢失选中项");
+    expect(send().disabled).toBe(false);
+  });
+
+  it("shows the mock's typed refusal end to end through the port", async () => {
+    sessionStorage.setItem("rx-mock-feedback-fault", "feedback.rate_limited@install_hourly");
+    setup();
+    await fill();
+    await userEvent.click(send());
+    expect((await screen.findByRole("alert")).textContent).toContain("这一小时的反馈次数已用完。将在");
+  });
+
   it("gives every code a message no other code shares", async () => {
     const seen = new Map<string, string>();
     for (const [code, status, params] of CODES) {

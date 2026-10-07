@@ -774,4 +774,6 @@ var Chinese = Messages{
   密钥通过 api_key_env 从环境变量注入（如 DEEPSEEK_API_KEY）。
   运行 'reasonix setup' 生成配置；详见 docs/SPEC.md。
 `,
+
+	Feedback: feedbackChinese,
 }
