@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"reasonix/internal/base/i18n"
+	"reasonix/internal/contract/event"
 	"reasonix/internal/contract/eventwire"
 )
 
@@ -99,5 +100,25 @@ func TestCompactionNoticesAndCardNameTheirReasonInTheUILanguage(t *testing.T) {
 	card := &Item{Done: true, Compaction: &eventwire.Compaction{Trigger: "auto", Code: "cancelled"}}
 	if got := renderCompaction(card, 80); !strings.Contains(got, "压缩被取消") {
 		t.Fatalf("cancelled card = %q", got)
+	}
+}
+
+// A skipped extension is worded from its typed payload: named, located, and
+// with the way out, in the UI language; a payload this build cannot read keeps
+// the kernel's English.
+func TestSkippedExtensionNoticeFollowsTheUILanguage(t *testing.T) {
+	inChinese(t)
+	detail := event.ExtensionSkipped{Extension: "aipush-ask-bridge", Point: "tool.before", Reason: event.ExtensionSkipReasonNoLiveSidecar}.Encode()
+	got := renderNotice(&Item{Code: event.NoticeCodeExtensionSkipped, Text: "english", Detail: detail})
+	for _, want := range []string{"aipush-ask-bridge", "tool.before", "配套后台程序没有运行", "/plugins"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("notice %q lacks %q", got, want)
+		}
+	}
+	if strings.Contains(got, "{") || strings.Contains(got, "english") {
+		t.Fatalf("payload or fallback leaked into %q", got)
+	}
+	if got := renderNotice(&Item{Code: event.NoticeCodeExtensionSkipped, Text: "kernel english", Detail: "not json"}); !strings.Contains(got, "kernel english") {
+		t.Fatalf("unreadable payload must keep the kernel's text, got %q", got)
 	}
 }
