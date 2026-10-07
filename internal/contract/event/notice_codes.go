@@ -23,6 +23,7 @@ const (
 	NoticeCodeHookBlocked                                       = "hook_blocked"
 	NoticeCodeHookWarned                                        = "hook_warned"
 	NoticeCodeHookFailed                                        = "hook_failed"
+	NoticeCodeHookUnevaluable                                   = "hook_unevaluable"
 	NoticeCodeCancelledTurn                                     = "cancelled_turn_display"
 	NoticeCodeUnappliedSteer                                    = "unapplied_steer"
 	NoticeCodeSessionRecoveryForked                             = "session_recovery_forked"
