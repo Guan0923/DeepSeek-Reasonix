@@ -35,8 +35,8 @@ export const EN_SETTINGS: Record<string, string> = {
   "添加一个模型服务后，在这里查看和修改它。": "Add a model service to see and change it here.",
   "选择一个服务查看和修改；地址、密钥与模型列表保存后生效。自定义中转站的协议与模型会在连接后自动探测。":
     "Pick a service to see and change it; the address, key and model list take effect when saved. A custom gateway's protocol and models are detected once it connects.",
-  "这个端点还有 {n} 个模型不在列表里：{names}。点「刷新模型目录」把它们加进来。":
-    "This endpoint has {n} more models not in the list: {names}. Use Refresh model catalog to add them.",
+  "这个端点还有 {n} 个模型不在列表里：{names}。点「从服务商读取可用模型」把它们加进来。":
+    "This endpoint has {n} more models not in the list: {names}. Use Read available models from provider to add them.",
   "添加来源": "Add source",
   "完成标准": "Completion standard",
   "系统根据任务风险自动决定需要的验证程度，不再要求手动选择均衡或交付。": "Reasonix chooses the needed verification level from task risk; there is no longer a Balanced or Delivery choice.",
@@ -699,7 +699,7 @@ export const EN_SETTINGS: Record<string, string> = {
   "验证连接并读取": "Check connection and read models",
   "连接可用 · 找到 {n} 个模型": "Connection works · {n} models found",
   "接口地址已补全为 {url}": "Address completed to {url}",
-  "刷新模型目录时，模型列表只在 {url} 下响应。聊天若能正常使用就不用改；可选：把接口地址改成它。": "The model list only answers at {url}. If chat already works, no change is needed; optionally set the address to it.",
+  "读取可用模型时，模型列表只在 {url} 下响应。聊天若能正常使用就不用改；可选：把接口地址改成它。": "The model list only answers at {url}. If chat already works, no change is needed; optionally set the address to it.",
   "启用的模型": "Enabled models",
   "目录只用于发现，不是白名单。直接输入服务商给出的原始模型 ID 即可。": "The catalogue is for discovery, not a whitelist. You can enter any exact model ID supplied by the service.",
   "阈值需至少为 1,000，并小于模型上下文窗口。": "The threshold must be at least 1,000 and below the model context window.",
