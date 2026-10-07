@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"reasonix/internal/state/sessionstore"
+	"slices"
 	"strings"
 	"testing"
 
@@ -160,7 +161,7 @@ func TestPinnedPrefixLen(t *testing.T) {
 	}
 }
 
-func TestKeepIndexesKeepsSiblingToolResultsForKeptError(t *testing.T) {
+func TestKeepIndexesKeepsOnlyTheFailedCallsResult(t *testing.T) {
 	region := []provider.Message{
 		{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{
 			{ID: "err", Name: "bash", Arguments: `{"cmd":"bad"}`},
@@ -170,11 +171,9 @@ func TestKeepIndexesKeepsSiblingToolResultsForKeptError(t *testing.T) {
 		{Role: provider.RoleTool, ToolCallID: "ok", Name: "read_file", Content: "package main"},
 	}
 
-	keep, _ := (&Agent{keepPolicy: KeepErrors}).window().keepIndexes(region)
-	for i, kept := range keep {
-		if !kept {
-			t.Fatalf("keep[%d] = false, want all sibling tool-call messages kept: %v", i, keep)
-		}
+	keep, _ := (&Agent{keepPolicy: KeepErrors}).window().keepIndexes(region, KeepErrors)
+	if want := []bool{true, true, false}; !slices.Equal(keep, want) {
+		t.Fatalf("keep = %v, want %v: the failed pair stays, its sibling folds", keep, want)
 	}
 }
 
@@ -188,7 +187,7 @@ func TestKeepIndexesScopesPolicyAfterLatestSummary(t *testing.T) {
 		{Role: provider.RoleTool, ToolCallID: "new", Name: "bash", Content: "error: new failure"},
 	}
 
-	keep, _ := (&Agent{keepPolicy: KeepErrors}).window().keepIndexes(region)
+	keep, _ := (&Agent{keepPolicy: KeepErrors}).window().keepIndexes(region, KeepErrors)
 	want := []bool{false, false, false, true, true}
 	for i := range want {
 		if keep[i] != want[i] {
