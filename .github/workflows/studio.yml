@@ -143,7 +143,7 @@ jobs:
           if [ "$EVENT" = pull_request ]; then
             arm64=false
             if git diff --name-only "$BASE_SHA" HEAD |
-              grep -qE '^(desktop/electron/|desktop/cmd/studio-manifest/|desktop/go\.(mod|sum)$|cmd/reasonix-studio-host/|internal/platform/(update|appupdate)/|go\.(mod|sum)$|\.github/workflows/studio\.yml$)'; then
+              grep -qE '^(desktop/electron/|desktop/cmd/studio-manifest/|desktop/go\.(mod|sum)$|cmd/reasonix-studio-host/|internal/platform/(update|appupdate)/|go\.(mod|sum)$|scripts/(windows-signing-lib|verify-windows-package|verify-windows-authenticode|install-smoke)\.ps1$|\.github/workflows/(studio|release-studio)\.yml$)'; then
               arm64=true
             fi
           fi
@@ -254,58 +254,58 @@ jobs:
           test -n "$dir"
           node desktop/electron/packaging/pe.js "$dir" "${{ matrix.arch }}"
 
-      # Run on the machine the package is for: the shell's own binary as a
-      # node, the kernel's identity flag, then the installer end to end, per-user
-      # and silent, into a folder of its own.
-      - name: The package starts, installs and uninstalls
+      # The release packages a signed copy of the bundle and then reads both
+      # packages back against it. The same recipe on an unsigned copy, so the
+      # packaging contract (the installer's one application archive, the pinned
+      # elevate.exe, every PE image's architecture) is exercised on pull
+      # requests and not first by a release.
+      - name: The packages read back against the bundle they were made from
+        if: matrix.platform == 'windows'
+        shell: bash
+        env:
+          ELECTRON_BUILDER_7Z_FILTER: ${{ matrix.arch == 'arm64' && 'BCJ' || '' }}
+        run: |
+          rm -rf payload nsis-src packed zip-src
+          cp -r "$(find dist -maxdepth 1 -type d -name 'win*-unpacked' | head -1)" payload
+          rm -f payload/resources/elevate.exe
+          # The NSIS run writes elevate.exe into the tree it packs, so each
+          # packager gets a copy and payload stays what was signed.
+          cp -r payload zip-src
+          cp -r payload nsis-src
+          cd desktop/electron
+          pnpm exec electron-builder --prepackaged ../../zip-src --win zip --${{ matrix.ebarch }} \
+            -c.extraMetadata.version=0.0.0-ci -c.directories.output=../../packed-zip
+          pnpm exec electron-builder --prepackaged ../../nsis-src --win nsis --${{ matrix.ebarch }} \
+            -c.extraMetadata.version=0.0.0-ci -c.directories.output=../../packed
+          mv ../../packed-zip/ReasonixStudio-windows-${{ matrix.arch }}.zip ../../packed/
+          ls -la ../../packed
+
+      - name: verify-windows-package.ps1 accepts them
         if: matrix.platform == 'windows'
         shell: pwsh
-        env:
-          ARCH: ${{ matrix.arch }}
-          REASONIX_HOME: ${{ runner.temp }}/reasonix-home
         run: |
           $ErrorActionPreference = 'Stop'
-          $unpacked = Get-ChildItem dist -Directory -Filter 'win*-unpacked' | Select-Object -First 1
-          # A windowed executable returns to the shell at once with no stdout, so
-          # it is started and waited for with its output redirected to a file.
-          $env:ELECTRON_RUN_AS_NODE = '1'
-          $out = Join-Path $env:RUNNER_TEMP 'shell-arch.txt'
-          $node = Start-Process -FilePath "$($unpacked.FullName)/Reasonix Studio.exe" -ArgumentList '-p', 'process.arch' -RedirectStandardOutput $out -Wait -PassThru
-          Remove-Item Env:ELECTRON_RUN_AS_NODE
-          $arch = (Get-Content -Raw $out).Trim()
-          $want = if ($env:ARCH -eq 'amd64') { 'x64' } else { $env:ARCH }
-          if ($node.ExitCode -ne 0 -or $arch -ne $want) { throw "the shell reports arch '$arch' (exit $($node.ExitCode)), want $want" }
-          & "$($unpacked.FullName)/resources/bin/reasonix-studio-host.exe" -instance-id
-          if ($LASTEXITCODE -ne 0) { throw "the kernel exited $LASTEXITCODE" }
+          . ./scripts/windows-signing-lib.ps1
+          $digest = Get-ManifestDigest -Manifest @(Get-TreeManifest -Root payload)
+          ./scripts/verify-windows-package.ps1 `
+            -PayloadDirectory payload `
+            -ExpectedPayloadDigest $digest `
+            -InstallerPath "packed/ReasonixStudio-windows-${{ matrix.arch }}-installer.exe" `
+            -PortableArchivePath "packed/ReasonixStudio-windows-${{ matrix.arch }}.zip" `
+            -OutputPath "$env:RUNNER_TEMP/verify-output.txt" `
+            -Architecture ${{ matrix.arch }}
+          Get-Content "$env:RUNNER_TEMP/verify-output.txt"
 
-          $installer = (Get-ChildItem dist -Filter "ReasonixStudio-windows-$env:ARCH-installer.exe").FullName
-          $target = Join-Path $env:RUNNER_TEMP 'rx-install'
-          $run = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$target" -Wait -PassThru
-          if ($run.ExitCode -ne 0) { throw "the installer exited $($run.ExitCode)" }
-          $clock = [Diagnostics.Stopwatch]::StartNew()
-          $name = [IO.Path]::GetFileNameWithoutExtension($installer)
-          while (-not (Test-Path "$target/Reasonix Studio.exe") -and $clock.Elapsed.TotalSeconds -lt 120) { Start-Sleep -Seconds 2 }
-          Write-Host "application appeared after $([int]$clock.Elapsed.TotalSeconds)s past the installer's exit; installer processes still alive: $(@(Get-Process -Name $name -ErrorAction SilentlyContinue).Count)"
-          if (-not (Test-Path "$target/Reasonix Studio.exe")) {
-            Write-Host "target holds: $((Get-ChildItem -Force $target -ErrorAction SilentlyContinue | ForEach-Object Name) -join ', ')"
-            Write-Host "files under the target: $((Get-ChildItem -Recurse -File $target -ErrorAction SilentlyContinue).Count); resources holds: $((Get-ChildItem -Force "$target/resources" -ErrorAction SilentlyContinue | ForEach-Object Name) -join ', ')"
-            Write-Host "Defender detections: $((Get-MpThreatDetection -ErrorAction SilentlyContinue | ForEach-Object { $_.Resources }) -join '; ')"
-            Write-Host "real-time protection: $((Get-MpComputerStatus -ErrorAction SilentlyContinue).RealTimeProtectionEnabled)"
-            Write-Host "PE files present: $((Get-ChildItem -Recurse -File $target -Include *.exe,*.dll,*.node | ForEach-Object { $_.FullName.Substring($target.Length) }) -join ', ')"
-            Write-Host "Defender events: $((Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational'; Id=1116,1117,1121,1122} -MaxEvents 5 -ErrorAction SilentlyContinue | ForEach-Object { $_.Message -replace '\s+',' ' }) -join ' || ')"
-            Set-MpPreference -DisableRealtimeMonitoring $true
-            $again = Join-Path $env:RUNNER_TEMP 'rx-install-nodefender'
-            Start-Process -FilePath $installer -ArgumentList '/S', "/D=$again" -Wait | Out-Null
-            Start-Sleep -Seconds 20
-            Write-Host "without real-time scanning the application is present: $(Test-Path "$again/Reasonix Studio.exe")"
-            throw 'the installer reported success and installed nothing'
-          }
-          node desktop/electron/packaging/pe.js $target $env:ARCH
-          if ($LASTEXITCODE -ne 0) { throw 'the installed tree is not the package architecture' }
-
-          $run = Start-Process -FilePath "$target/Uninstall Reasonix Studio.exe" -ArgumentList '/S', "_?=$target" -Wait -PassThru
-          if ($run.ExitCode -ne 0) { throw "the uninstaller exited $($run.ExitCode)" }
-          if (Test-Path "$target/Reasonix Studio.exe") { throw 'the uninstaller left the application behind' }
+      # The release's own install smoke, against the unsigned installer: the
+      # package is installed where it is meant to run, its tree checked, and
+      # removed.
+      - name: The package installs, runs and uninstalls
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          ./scripts/install-smoke.ps1 `
+            -Installer "dist/ReasonixStudio-windows-${{ matrix.arch }}-installer.exe" `
+            -Architecture ${{ matrix.arch }}
 
       - name: Keep the arm64 installer for the x64 refusal check
         if: matrix.platform == 'windows' && matrix.arch == 'arm64'
