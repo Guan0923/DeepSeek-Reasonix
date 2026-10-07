@@ -197,6 +197,7 @@ export const ACTIONS: UIAction[] = [
   { id: "feedback.retry-mine", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "feedback.link", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "feedback.focus", kind: "view", target: "none", proof: "interaction" },
+  { id: "feedback.expand", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.close", kind: "view", target: "none", proof: "interaction" },
   { id: "backup.category", kind: "view", target: "entity", proof: "interaction" },
   { id: "backup.label", kind: "view", target: "none", proof: "interaction" },
