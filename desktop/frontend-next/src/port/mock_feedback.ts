@@ -13,7 +13,7 @@ const DAY = 86_400_000;
 const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString();
 
 const item = (over: Partial<FeedbackItem> & Pick<FeedbackItem, "receipt" | "category" | "titleSnippet" | "status" | "createdAt" | "updatedAt">): FeedbackItem => ({
-  needsInput: false, replies: [], unreadReplies: 0, ...over,
+  needsInput: false, underReview: false, replies: [], unreadReplies: 0, ...over,
 });
 
 const msg = (id: number, author: FeedbackReply["author"], body: string, days: number): FeedbackReply => ({ id, author, body, createdAt: ago(days) });
@@ -28,6 +28,7 @@ const SEEDED: FeedbackItem[] = [
   item({ receipt: "FB-3F6G-2KV9", category: "idea", titleSnippet: "Fixed in the next build: quieter update banner", status: "fixed", issueNumber: 11390, issueUrl: "https://github.com/esengine/DeepSeek-Reasonix/issues/11390", resolvedVersion: "next", createdAt: ago(8), updatedAt: ago(0.5) }),
   item({ receipt: "FB-8Q2J-6PW4", category: "other", titleSnippet: "Please support a monorepo layout", status: "wontfix", issueNumber: 11288, issueUrl: "https://github.com/esengine/DeepSeek-Reasonix/issues/11288", createdAt: ago(12), updatedAt: ago(5) }),
   item({ receipt: "FB-4T7V-3ZH1", category: "bug", titleSnippet: "Crash when opening settings on a small window", status: "duplicate", issueNumber: 11301, issueUrl: "https://github.com/esengine/DeepSeek-Reasonix/issues/11301", duplicateOf: 11299, createdAt: ago(15), updatedAt: ago(9) }),
+  item({ receipt: "FB-5R2T-6VB3", category: "bug", titleSnippet: "Settings sheet flickers when the window is dragged", status: "received", underReview: true, createdAt: ago(0.3), updatedAt: ago(0.3) }),
   item({ receipt: "FB-6M9R-5CE8", category: "question", titleSnippet: "How do I move my sessions to another disk?", status: "received", statusUnavailable: true, createdAt: ago(40), updatedAt: ago(40) }),
   item({ receipt: "FB-1C5W-7NB2", category: "bug", titleSnippet: "Terminal output is cut off after a resize", status: "needs_info", needsInput: true, createdAt: ago(2), updatedAt: ago(0.2),
     replies: [msg(31, "maintainer", "Thanks for the report. Which operating system and which shell are you using?\nAnd can you say what the window size was before you resized it?", 0.2)] }),
@@ -79,7 +80,7 @@ export class MockFeedback extends MockCommit {
     const receipt = "FB-" + (1000 + this.filed.length * 7).toString(36).toUpperCase().padStart(4, "K") + "-9QX2";
     const now = new Date().toISOString();
     this.filed = [item({ receipt, category: req.category, titleSnippet: req.body.trim().slice(0, 80), status: "received", createdAt: now, updatedAt: now }), ...this.filed];
-    return { receipt, status: "received", createdAt: now, redacted: /sk-[A-Za-z0-9]{8,}/.test(req.body) };
+    return { receipt, status: "received", createdAt: now, underReview: false, redacted: /sk-[A-Za-z0-9]{8,}/.test(req.body) };
   }
 
   async myFeedback(): Promise<FeedbackMine> {

@@ -117,6 +117,9 @@ type Receipt struct {
 	Status    Status    `json:"status"`
 	CreatedAt time.Time `json:"createdAt"`
 	Redacted  bool      `json:"redacted"`
+	// UnderReview is a maintainer reading the report before it is listed;
+	// Status stays received.
+	UnderReview bool `json:"underReview"`
 }
 
 // ReplyAuthor says who wrote one message of a thread.
@@ -171,8 +174,11 @@ type Item struct {
 	// machine no longer holds: its status can no longer be read.
 	StatusUnavailable bool `json:"statusUnavailable,omitempty"`
 	// NeedsInput is the maintainers waiting on the reporter.
-	NeedsInput bool    `json:"needsInput"`
-	Replies    []Reply `json:"replies"`
+	NeedsInput bool `json:"needsInput"`
+	// UnderReview is a received report a maintainer is reading; a service that
+	// does not send it reads as false.
+	UnderReview bool    `json:"underReview"`
+	Replies     []Reply `json:"replies"`
 	// UnreadReplies counts maintainer replies newer than the last one this
 	// machine marked seen; it is computed on read, never stored.
 	UnreadReplies int `json:"unreadReplies"`

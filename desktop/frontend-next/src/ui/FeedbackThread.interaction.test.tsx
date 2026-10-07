@@ -13,7 +13,7 @@ afterEach(cleanup);
 const reply = (id: number, author: FeedbackReply["author"], body: string): FeedbackReply => ({ id, author, body, createdAt: "2026-10-01T08:00:00Z" });
 
 const item = (over: Partial<FeedbackItem>): FeedbackItem => ({
-  receipt: "FB-AAAA-0001", category: "bug", titleSnippet: "snippet", status: "received", needsInput: false, replies: [], unreadReplies: 0,
+  receipt: "FB-AAAA-0001", category: "bug", titleSnippet: "snippet", status: "received", needsInput: false, underReview: false, replies: [], unreadReplies: 0,
   createdAt: "2026-09-20T00:00:00Z", updatedAt: "2026-09-21T00:00:00Z", ...over,
 });
 
@@ -333,5 +333,47 @@ describe("review fixes", () => {
     await userEvent.click(sendButton());
     await waitFor(() => expect(port.myFeedback).toHaveBeenCalledTimes(2));
     expect(box().value).toBe("draft");
+  });
+
+  it("says a received report is under review, without a reply box", async () => {
+    const items = [
+      item({ receipt: "FB-AAAA-0001", status: "received", underReview: true }),
+      item({ receipt: "FB-AAAA-0002", status: "received" }),
+    ];
+    render(<FeedbackMine port={portWith(() => mine(items))} onFile={() => {}} />);
+    await screen.findByText("FB-AAAA-0001");
+    const held = row("FB-AAAA-0001");
+    expect(within(held).getByText("审核中", { selector: ".fbk-chip" })).toBeTruthy();
+    expect(within(held).getByText(/维护者正在查看这份反馈/)).toBeTruthy();
+    expect(within(held).queryByText("已收到")).toBeNull();
+    expect(within(held).queryByRole("textbox")).toBeNull();
+    expect(within(held).queryByRole("button", { name: "回复" })).toBeNull();
+    const plain = row("FB-AAAA-0002");
+    expect(within(plain).getByText("已收到", { selector: ".fbk-chip" })).toBeTruthy();
+    expect(within(plain).queryByText(/维护者正在查看这份反馈/)).toBeNull();
+  });
+
+  it("reads a response without the field as not under review", async () => {
+    const legacy = item({ status: "received" }) as Partial<FeedbackItem>;
+    delete legacy.underReview;
+    render(<FeedbackMine port={portWith(() => mine([legacy as FeedbackItem]))} onFile={() => {}} />);
+    await screen.findByText("FB-AAAA-0001");
+    expect(within(row("FB-AAAA-0001")).getByText("已收到", { selector: ".fbk-chip" })).toBeTruthy();
+    expect(screen.queryByText(/维护者正在查看这份反馈/)).toBeNull();
+  });
+
+  it("leaves the review mark on once the report asks a question", async () => {
+    const asked = item({ status: "needs_info", needsInput: true, underReview: true, replies: [reply(5, "maintainer", "Which OS?")] });
+    render(<FeedbackMine port={portWith(() => mine([asked]))} onFile={() => {}} />);
+    await screen.findByText("FB-AAAA-0001");
+    expect(screen.queryByText(/维护者正在查看这份反馈/)).toBeNull();
+    expect(screen.queryByText("审核中")).toBeNull();
+    expect(within(row("FB-AAAA-0001")).getByRole("textbox")).toBeTruthy();
+  });
+
+  it("does not claim a review on a report whose status can no longer be read", async () => {
+    render(<FeedbackMine port={portWith(() => mine([item({ status: "received", underReview: true, statusUnavailable: true })]))} onFile={() => {}} />);
+    await screen.findByText("FB-AAAA-0001");
+    expect(screen.queryByText("审核中")).toBeNull();
   });
 });

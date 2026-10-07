@@ -158,6 +158,15 @@ describe("screenshots", () => {
 });
 
 describe("sending", () => {
+  it("tells the sender the report is under review when the receipt says so", async () => {
+    const { port } = setup();
+    port.sendFeedback = vi.fn(async () => ({ receipt: "FB-AAAA-0001", status: "received", createdAt: "2026-10-01T00:00:00Z", redacted: false, underReview: true })) as AgentPort["sendFeedback"];
+    await fill();
+    await userEvent.click(send());
+    expect(await screen.findByText("已收到你的反馈")).toBeTruthy();
+    expect(screen.getByText(/正在审核中/)).toBeTruthy();
+  });
+
   it("sends the whole report once and shows the receipt", async () => {
     const { port } = setup();
     const spy = vi.spyOn(port, "sendFeedback");
