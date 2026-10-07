@@ -1094,6 +1094,7 @@ export const EN: Record<string, string> = {
   "查看上下文与压缩": "View context and compaction",
   "查看本轮费用": "View turn cost",
   "查看钱包余额": "View wallet balance",
+  "余额不足": "Balance is low",
   "隐藏金额": "Hide amounts",
   "显示金额": "Show amounts",
   "收起运行统计": "Collapse run statistics",
