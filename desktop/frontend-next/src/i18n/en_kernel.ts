@@ -3,6 +3,8 @@
 // code adds one here. i18n.test.ts is what stops one from being forgotten.
 
 export const EN_KERNEL: Record<string, string> = {
+  "该路径指向网络上的另一台机器，不在当前工作区内。文件工具只按路径写法拒绝它，不会去访问；工作区本身在网络共享上时，其下的路径可用": "That path names another machine on the network and is outside this workspace. File tools refuse it by its spelling and never look it up; paths below a workspace that is itself on a network share are allowed",
+  "内置浏览器不会打开指向网络上另一台机器的路径，只按路径写法拒绝，不会去访问": "The built-in browser does not open a path that names another machine on the network; it is refused by its spelling and never looked up",
   "内核繁忙，这次操作可能没有被收到，重试前请先确认": "The kernel is busy; the action may not have been received - check before retrying",
   "无法连接内核，这次操作可能没有送达，重试前请先确认": "The kernel cannot be reached; the action may not have been delivered - check before retrying",
   "本界面无响应，这次操作可能没有送达内核，重试前请先确认": "This window is unresponsive; the action may not have reached the kernel - check before retrying",

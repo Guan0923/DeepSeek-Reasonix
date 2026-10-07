@@ -138,6 +138,9 @@ func (a *Agent) executeOne(ctx context.Context, turn *turnRuntime, call provider
 	// Read after tool.before: an extension may have substituted the call, and the
 	// batch scan judged the one the model wrote.
 	defer func() { out.endsRound = out.endsRound || tool.IsDecisionBarrier(plan.tool) }()
+	if blocked, early := a.refuseNetworkToolPaths(plan); early {
+		return blocked
+	}
 	if blocked, early := a.resolveToolPolicy(ctx, turn, plan); early {
 		return blocked
 	}

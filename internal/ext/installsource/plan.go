@@ -27,6 +27,9 @@ func (t *Tool) plan(ctx context.Context, req request) ([]action, []string, error
 	if isURL(req.Source) {
 		return t.planURL(ctx, req)
 	}
+	if err := t.refuseNetworkSource(req.Source); err != nil {
+		return nil, nil, err
+	}
 	path := t.resolvePath(req.Source)
 	if info, err := os.Stat(path); err == nil {
 		return t.planLocal(req, path, info)
