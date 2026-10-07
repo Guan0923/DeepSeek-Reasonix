@@ -119,6 +119,8 @@ const SAID: Record<string, string> = {
   "workspace.limit_reached": "项目列表已满（32 个），请先移除一个项目再添加",
   "workspace.changing_disabled": "这台服务器不支持切换工作区",
   "settings.unknown_preset": "不存在该预设",
+  "settings.unknown_model": "没有找到这个模型，默认模型没有改动",
+  "settings.default_model_brokered": "这个窗格的默认模型由模型所在的那台机器决定，请在本机的窗格里设置",
   "drop.too_many_paths": "本次拖入 {count} 个，最多允许 {limit} 个",
   "attachment.unsupported_image": "这个文件的格式暂不支持（{format}）。支持的图片格式：{supported}。可以先转换格式再添加。",
   "attachment.too_large": "这个文件超过 {limit_mb} MB 的上限，请压缩或拆分后再添加。",

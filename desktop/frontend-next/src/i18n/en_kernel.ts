@@ -288,6 +288,8 @@ export const EN_KERNEL: Record<string, string> = {
   "项目列表已满（32 个），请先移除一个项目再添加": "The project list is full (32 projects); remove one before adding another",
   "这台服务器不支持切换工作区": "This server cannot switch workspaces",
   "不存在该预设": "There is no such preset",
+  "没有找到这个模型，默认模型没有改动": "That model was not found, so the default model is unchanged",
+  "这个窗格的默认模型由模型所在的那台机器决定，请在本机的窗格里设置": "This pane's default model is decided by the machine its models come from; set it from a pane on this machine",
   "本次拖入 {count} 个，最多允许 {limit} 个": "{count} dropped at once — the limit is {limit}",
   "这个文件的格式暂不支持（{format}）。支持的图片格式：{supported}。可以先转换格式再添加。": "This file's format is not supported ({format}). Supported image formats: {supported}. Convert it first, then add it again.",
   "这个文件超过 {limit_mb} MB 的上限，请压缩或拆分后再添加。": "This file is over the {limit_mb} MB limit. Compress or split it, then add it again.",
