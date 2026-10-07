@@ -168,7 +168,7 @@ export const EN: Record<string, string> = {
   "界面大小": "Interface size",
   "正文字号": "Body text size",
   "尚未派出": "None dispatched",
-  "{n} 并行": "{n} in parallel",
+  "运行中 {live} / 共 {total}": "{live} running / {total} total",
   "已交付": "Handed back",
   "待审改动": "Pending changes",
   "改动 · 已放行": "Changes · auto-approved",
