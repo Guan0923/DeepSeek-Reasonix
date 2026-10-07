@@ -817,6 +817,8 @@ export const EN: Record<string, string> = {
   "无法建立安全连接。这个网站可能只支持 http，或者要求客户端证书。": "A secure connection could not be made. The site may serve only http, or require a client certificate.",
   "连不上系统代理。内置浏览器使用系统的代理设置，而不是 Reasonix 设置里的网络代理。": "The system proxy could not be reached. The built-in browser uses the operating system's proxy settings, not the network proxy in Reasonix settings.",
   "找不到这个地址。内网域名需要连上公司网络或 VPN 才能解析。": "This address could not be found. Intranet names resolve only on the company network or VPN.",
+  "找不到这个文件。请确认路径正确，文件没有被移动或删除。": "This file could not be found. Check the path, and that the file has not been moved or deleted.",
+  "没有权限读取这个文件。": "You do not have permission to read this file.",
   "对方拒绝了连接。请确认端口正确、服务已经启动。": "The connection was refused. Check the port and that the service is running.",
   "连接超时或地址不可达。请确认已连上公司网络或 VPN。": "The connection timed out or the address is unreachable. Check that you are on the company network or VPN.",
   "登录没有通过，请重试并检查用户名和密码。": "Sign-in failed. Check the username and password and try again.",
