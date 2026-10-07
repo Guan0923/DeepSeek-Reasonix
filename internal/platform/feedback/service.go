@@ -142,7 +142,7 @@ func (s *Service) Submit(ctx context.Context, d Draft) (Receipt, error) {
 	}
 	item := Item{
 		Receipt: got.Receipt, Category: d.Category, Status: got.Status,
-		TitleSnippet: snippet(wire.Body), CreatedAt: created, UpdatedAt: created,
+		TitleSnippet: snippet(wire.Body), CreatedAt: created, UpdatedAt: created, UnderReview: got.UnderReview,
 	}
 	if err := s.store.update(func(st *state) error {
 		if got.InstallToken != "" {
@@ -155,7 +155,7 @@ func (s *Service) Submit(ctx context.Context, d Draft) (Receipt, error) {
 	}); err != nil {
 		return Receipt{}, err
 	}
-	return Receipt{Receipt: got.Receipt, Status: got.Status, CreatedAt: created, Redacted: redacted}, nil
+	return Receipt{Receipt: got.Receipt, Status: got.Status, CreatedAt: created, Redacted: redacted, UnderReview: got.UnderReview}, nil
 }
 
 func (s *Service) prepare(d Draft) (wireSubmit, bool, error) {

@@ -11,6 +11,9 @@ export const EN_FEEDBACK: Record<string, string> = {
   "疑问": "Question",
   "其他": "Other",
   "已收到": "Received",
+  "维护者正在查看这份反馈，可能会回复你。现在还不能回复；维护者回复后，这里会出现回复框。":
+    "A maintainer is reading this report and may reply. You cannot reply yet; once a maintainer replies, a reply box appears here.",
+  "这份反馈正在审核中：维护者正在查看，可能会回复。": "This report is under review: a maintainer is reading it and may reply.",
   "已登记": "Recorded",
   "处理中": "In progress",
   "已修复": "Fixed",

@@ -15,6 +15,9 @@ export const FEEDBACK_STATUSES: readonly FeedbackStatus[] = [
   "received", "needs_info", "answered", "recorded", "in_progress", "fixed", "wontfix", "duplicate", "closed",
 ];
 
+export const isUnderReview = (item: Pick<FeedbackItem, "status" | "underReview" | "statusUnavailable">): boolean =>
+  item.status === "received" && item.underReview === true && !item.statusUnavailable;
+
 // Only these take a reply from the reporter; the service has the last word.
 export const FEEDBACK_REPLYABLE: readonly FeedbackStatus[] = ["needs_info", "answered", "recorded", "in_progress"];
 
@@ -76,6 +79,8 @@ export interface FeedbackReceipt {
   status: FeedbackStatus;
   createdAt: string;
   redacted: boolean;
+  // A maintainer is reading the report before it is listed; status stays received.
+  underReview: boolean;
 }
 
 export type FeedbackAuthor = "maintainer" | "user";
@@ -102,6 +107,8 @@ export interface FeedbackItem {
   statusUnavailable?: boolean;
   // The maintainers are waiting for the reporter's answer.
   needsInput: boolean;
+  // A received report a maintainer is reading; a service that omits it reads as false.
+  underReview: boolean;
   // Oldest first.
   replies: FeedbackReply[];
   // Maintainer replies newer than the last one the kernel was told was seen.

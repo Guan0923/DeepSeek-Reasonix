@@ -47,6 +47,7 @@ type wireReceipt struct {
 	Status       Status    `json:"status"`
 	InstallToken string    `json:"installToken"`
 	CreatedAt    time.Time `json:"createdAt"`
+	UnderReview  bool      `json:"underReview"`
 }
 
 type wireError struct {
