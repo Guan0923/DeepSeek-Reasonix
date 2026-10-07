@@ -460,6 +460,7 @@ export const EN_SETTINGS: Record<string, string> = {
   "生成摘要的请求运行满 30 分钟仍未完成，已停止":
     "The request that writes the summary was still running after 30 minutes and was stopped",
   "摘要在输出上限处被截断，没有采用": "The summary hit the output limit and was discarded",
+  "摘要模型没有按要求的标题给出摘要，没有采用": "The summarizer did not return a briefing under the required headings, so it was not used",
   "待折叠的内容缩减后仍超过单次摘要请求的容量": "The content to fold still exceeds one summary request after shortening",
   "摘要生成期间对话发生了变化，已放弃这次折叠": "The conversation changed while the summary was written, so this fold was dropped",
   "摘要没有记下这段内容里的任何一处改动，已放弃这次折叠": "The summary recorded none of this span's changes, so this fold was dropped",

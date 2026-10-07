@@ -32,6 +32,7 @@ var ChineseTraditional = Messages{
 		"summary_timeout":                  "生成摘要的請求停滯了：連續 6 分鐘沒有任何輸出",
 		"summary_ceiling":                  "生成摘要的請求執行滿 30 分鐘仍未完成，已停止",
 		"summary_truncated":                "摘要在輸出上限處被截斷，沒有採用",
+		"summary_not_digest":               "摘要模型沒有按要求的標題給出摘要，沒有採用",
 		"summary_input_too_large":          "待折疊的內容縮減後仍超過單次摘要請求的容量",
 		"hook_refused":                     "擴充功能拒絕了這次折疊",
 		"persist_failed":                   "折疊結果沒能儲存",
