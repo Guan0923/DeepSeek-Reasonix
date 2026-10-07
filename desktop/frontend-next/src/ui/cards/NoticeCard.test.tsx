@@ -150,4 +150,16 @@ describe("a /compact notice", () => {
     const box = draw({ code: "compact_failed", text: "compaction failed: kernel english", detail: "future_code" });
     expect(box.querySelector(".find .t")?.textContent).toBe("compaction failed: kernel english");
   });
+
+  it("words a skipped extension from its payload and hides the raw payload", () => {
+    const box = draw({ code: "extension_skipped", text: "kernel english", detail: JSON.stringify({ extension: "aipush-ask-bridge", point: "tool.before", reason: "no_live_sidecar" }) });
+    expect(box.textContent).toContain("扩展 aipush-ask-bridge 的配套后台程序没有运行");
+    expect(box.textContent).not.toContain("no_live_sidecar");
+  });
+
+  it("keeps the kernel's text for a skipped extension whose payload is unreadable", () => {
+    const box = draw({ code: "extension_skipped", text: "kernel english", detail: "not json" });
+    expect(box.textContent).toContain("kernel english");
+    expect(box.textContent).not.toContain("{ext}");
+  });
 });

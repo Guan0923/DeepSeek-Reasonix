@@ -87,6 +87,7 @@ var ChineseTraditional = Messages{
 	ResumePickNoMatch:             "沒有符合的會話",
 	TUIDeclinedFmt:                "已拒絕 %s %s",
 	NoticeUnappliedSteerFmt:       "引導沒有生效：這一輪在處理它之前就結束了。如果仍然需要，請再發送一次：\n%s",
+	NoticeExtSkippedFmt:           "擴充 %s 的配套背景程式沒有執行，本次在 %s 已被跳過。用 /plugins 查看並啟動它，或停用該擴充。",
 	TUIQuestion:                   "提問",
 	TUISubagentCallsFmt:           "%d 次子代理呼叫",
 	TUIChartMoreRowsFmt:           "… 還有 %d 行",

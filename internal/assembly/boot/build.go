@@ -579,6 +579,7 @@ func (b *builder) freeze(ctrl *control.Controller) (*BuildResult, error) {
 		session:            ext.session(),
 		ui:                 ext.hub,
 		onWarning:          ext.warn,
+		onSidecarDown:      ext.sidecarDown,
 		skipPromptStrategy: shouldSkipPromptStrategy(b.opts.PreviousPlan),
 		previousDispatcher: b.opts.PreviousDispatcher,
 	}, ext.mgr)

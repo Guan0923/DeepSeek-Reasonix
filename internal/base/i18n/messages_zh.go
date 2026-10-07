@@ -91,6 +91,7 @@ var Chinese = Messages{
 	ResumePickNoMatch:       "没有匹配的会话",
 	TUIDeclinedFmt:          "已拒绝 %s %s",
 	NoticeUnappliedSteerFmt: "引导没有生效：这一轮在处理它之前就结束了。如果仍然需要，请再发送一次：\n%s",
+	NoticeExtSkippedFmt:     "扩展 %s 的配套后台程序没有运行，本次在 %s 已被跳过。用 /plugins 查看并启动它，或停用该扩展。",
 	TUIQuestion:             "提问",
 	TUISubagentCallsFmt:     "%d 次子代理调用",
 	TUIChartMoreRowsFmt:     "… 还有 %d 行",

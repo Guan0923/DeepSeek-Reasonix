@@ -1336,6 +1336,8 @@ export const EN: Record<string, string> = {
   "引导没有生效：这一轮在处理它之前就结束了。如果仍然需要，请再发送一次：": "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:",
   "费用显示币种已设为 {mode}": "Cost display currency set to {mode}",
   "模型卡在重复输出同一段文字，这一轮已停止；可以重试、补充引导，或换一个供应商/模型": "The model is stuck repeating the same text; this turn was stopped. Try again, add guidance, or switch provider/model.",
+  "扩展 {ext} 的配套后台程序没有运行，该扩展本次（在 {point}）已被跳过；到「工具与集成」里查看并启动它，或停用该扩展": "The companion background program of extension {ext} is not running, so the extension was skipped this time (at {point}). Open Tools and integrations to check and start it, or disable the extension.",
+  "打开「工具与集成」": "Open Tools and integrations",
   "图表": "Chart",
   "图表：{title}（可横向滚动）": "Chart: {title} (scrolls sideways)",
   "没有可画的数据": "Nothing to draw",

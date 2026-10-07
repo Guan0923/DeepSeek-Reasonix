@@ -68,4 +68,6 @@ const (
 	NoticeCodeCompactDeclined = "compact_declined"
 	// /compact failed; Detail is the failure code, its text the English fallback.
 	NoticeCodeCompactFailed = "compact_failed"
+	// An optional extension was left out of an operation; Detail is the ExtensionSkipped payload.
+	NoticeCodeExtensionSkipped = "extension_skipped"
 )
