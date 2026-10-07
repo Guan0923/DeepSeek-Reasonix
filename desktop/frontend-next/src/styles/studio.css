@@ -3266,6 +3266,7 @@ body { font-size: 14px; line-height: 1.75; }
 .studio-meterrail > .studio-meter-cost { color: var(--muted); }
 .studio-meterrail b,
 .studio-meterrail .studio-meter-cost { color: var(--text); }
+.studio-meterrail .studio-meter-wallet[data-short] b { color: var(--warn-ink); }
 .studio-meterrail > button:hover,
 .studio-meterrail .studio-context-anchor > button:hover {
   background: var(--overlay);
