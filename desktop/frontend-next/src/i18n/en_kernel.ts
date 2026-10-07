@@ -267,6 +267,7 @@ export const EN_KERNEL: Record<string, string> = {
   "HTTP 上不提供 shell 命令": "Shell commands are not served over HTTP",
   "不存在「{role}」这个角色": "There is no “{role}” role",
   "没有已配置的模型匹配「{model}」": "No configured model matches “{model}”",
+  "「{key}」不在用户配置里，可能已被清除，或来自项目配置": "“{key}” is not in the user config; it may already be cleared, or come from the project config",
   "这台服务器未开放 shell 设置": "This server does not open shell settings",
   "这台服务器未开放账号登录": "This server does not open account sign-in",
   "登录账号后才能使用云备份": "Sign in to use cloud backups",

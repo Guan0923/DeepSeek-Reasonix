@@ -3951,6 +3951,26 @@ body { font-size: 14px; line-height: 1.75; }
 }
 .usage-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .usage-pick:disabled { color: var(--faint); }
+.usage-override {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 6px;
+  font: var(--w-reg) var(--fs-micro) var(--ui);
+  color: var(--muted);
+}
+.usage-override button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--text);
+  font: var(--w-reg) var(--fs-micro) var(--ui);
+  cursor: pointer;
+}
+.usage-override button:disabled { color: var(--faint); cursor: default; }
+.usage-override button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 @media (max-width: 860px) {
   .usage-hd { display: none; }
   .usage-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }

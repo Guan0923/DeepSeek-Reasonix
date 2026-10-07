@@ -35,8 +35,11 @@ import { Backup } from "./Backup";
 import { Providers } from "./Providers";
 import { activeKind, groupVendors } from "./Models";
 import { ModelUsage } from "./ModelUsage";
+<<<<<<< HEAD
 import { useModelCatalog } from "./useModelCatalog";
+=======
 import { useRoles } from "./useRoles";
+>>>>>>> 1c1231892 (fix(settings): say when a subagent_models entry outranks the subagent model)
 import { KIND_LABEL } from "./vendors";
 import { planProtocolSwitch } from "./protocolswitch";
 import { Boundary } from "./Boundary";
