@@ -35,6 +35,7 @@ import { Backup } from "./Backup";
 import { Providers } from "./Providers";
 import { activeKind, groupVendors } from "./Models";
 import { ModelUsage } from "./ModelUsage";
+import { useModelCatalog } from "./useModelCatalog";
 import { KIND_LABEL } from "./vendors";
 import { planProtocolSwitch } from "./protocolswitch";
 import { Boundary } from "./Boundary";
@@ -171,9 +172,8 @@ export function Settings({ hub, onError, port, networkPort, networkHost, status,
 
   // Adding or removing a source changes what the picker above can offer, so
   // the list is reloadable rather than read once at mount.
-  const loadModels = useCallback(() => {
-    port.models().then(setModels).catch(() => setModels([]));
-  }, [port]);
+  const homePort = networkPort ?? port;
+  const loadModels = useModelCatalog(port, homePort, setModels);
 
   const loadRoles = useCallback(() => {
     port.roles().then(setRoles).catch(() => setRoles(null));
@@ -541,7 +541,8 @@ export function Settings({ hub, onError, port, networkPort, networkHost, status,
                 hint={t("默认模型用于当前对话和大多数任务，其他用途默认跟随它；只有要为某件事换一个模型时才改。切换会保留对话并重建运行时，任务执行期间无法修改。")}>
                 <ModelUsage models={models} roles={roles} main={status?.modelRef} busy={busy} protocol={protocol}
                   onMain={(ref) => run(ref, async () => {
-                    await port.setModel(ref, true);
+                    await port.setModel(ref);
+                    await homePort.setDefaultModel(ref);
                     // The row reads the catalogue's default, so the list has to
                     // be re-read or the controlled select snaps back.
                     loadModels();

@@ -560,8 +560,12 @@ export interface AgentPort {
   // The person's answer to "trust this folder?" for the session's workspace.
   decideWorkspaceTrust(trust: "trusted" | "declined"): Promise<void>;
   setPreset(preset: Preset): Promise<void>;
-  // Switches this session only; asDefault also records it as the model new sessions start on.
-  setModel(ref: string, asDefault?: boolean): Promise<void>;
+  // Switches this session only.
+  setModel(ref: string): Promise<void>;
+  // Records the model new sessions start on in the config of the machine this
+  // port answers for. A brokered pane's default lives on the machine its models
+  // come from, so its refusal is typed: settings.default_model_brokered.
+  setDefaultModel(ref: string): Promise<void>;
   setEffort(effort: string): Promise<void>;
   // "" turns the session's model mode off.
   setModelMode(mode: string): Promise<void>;

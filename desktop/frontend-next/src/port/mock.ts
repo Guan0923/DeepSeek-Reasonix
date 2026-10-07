@@ -750,10 +750,12 @@ export class MockPort extends MockFeedback implements AgentPort {
     return mockStoragePlan(root, dir);
   }
 
-  async setModel(ref: string, asDefault = false) {
+  async setModel(ref: string) {
     this.state.modelRef = ref;
     this.state.label = ref.split("/").pop() ?? ref;
-    if (asDefault) this.defaultRef = ref;
+  }
+  async setDefaultModel(ref: string) {
+    this.defaultRef = ref;
   }
   async setEffort(effort: string) {
     this.state.effort = effort;
