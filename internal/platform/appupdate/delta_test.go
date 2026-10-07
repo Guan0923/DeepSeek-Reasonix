@@ -3,10 +3,12 @@ package appupdate
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"reasonix/internal/base/testenv"
@@ -136,5 +138,47 @@ func TestADeltaUnderHalfTheReleaseStillFetchesItsChunks(t *testing.T) {
 	}
 	if *hits != 1 {
 		t.Fatalf("%d chunks fetched, want the one missing", *hits)
+	}
+}
+
+// The delta is looked up by this install's own platform key. A release that
+// offers one only for another architecture fetches nothing and falls back to the
+// full package; the same offer under this key is where the fetch starts.
+func TestTheDeltaIsLookedUpByThisInstallsPlatformKey(t *testing.T) {
+	other := "arm64"
+	if runtime.GOARCH == "arm64" {
+		other = "amd64"
+	}
+	root, cache := testenv.TempDir(t), testenv.TempDir(t)
+	if err := os.WriteFile(filepath.Join(root, "app.exe"), []byte("installed"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	install := update.Install{Version: "v1.0.0", Layout: update.Layout{Root: root, Executable: filepath.Join(root, "app.exe")}}
+	try := func(key string) (indexFetches int, err error) {
+		t.Setenv("REASONIX_HOME", testenv.TempDir(t))
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/index.json.zst" {
+				indexFetches++
+			}
+			http.NotFound(w, r)
+		}))
+		defer srv.Close()
+		m := &update.Manifest{Deltas: map[string]update.Delta{key: {
+			Index:  update.Asset{URL: srv.URL + "/index.json.zst", Sig: srv.URL + "/index.json.zst.minisig"},
+			Chunks: srv.URL,
+		}}}
+		c := New(Options{Owner: stubOwner{}, Running: "v1.0.0", Application: update.Application{PID: 1}}).(*capability)
+		_, err = c.tryDelta(t.Context(), install, "v2.0.0", cache, m)
+		return indexFetches, err
+	}
+
+	if fetches, err := try(update.PlatformKey(runtime.GOOS, other)); !errors.Is(err, errNoDelta) || fetches != 0 {
+		t.Fatalf("a %s-only delta: err %v, %d index fetches; want errNoDelta and none", other, err, fetches)
+	}
+	if !update.TreeHandoffSupported() {
+		return
+	}
+	if fetches, err := try(update.CurrentPlatform()); errors.Is(err, errNoDelta) || fetches == 0 {
+		t.Fatalf("this platform's delta: err %v, %d index fetches; want an attempt", err, fetches)
 	}
 }
