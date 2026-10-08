@@ -45,6 +45,7 @@ import { speedOf } from "./speed";
 import { RuntimeBar } from "./RuntimeBar";
 import { PostureNote } from "./PostureNote";
 import { useStatusPoll } from "./useStatusPoll";
+import { useCheckpointRefresh } from "./useCheckpointRefresh";
 import { LiveWork, useLiveWork } from "../state/foldpref";
 
 export type { PaneReport };
@@ -183,7 +184,6 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   useEffect(() => {
     let alive = true;
     port.trajectory().then((r) => alive && replayTrajectory(r)).catch(() => {});
-    port.checkpoints().then((cps) => alive && setCheckpoints(cps)).catch(() => {});
     // The record and the numbers over it are two reads, not one. /status can go
     // to the network — the provider's wallet endpoint rides it — and pairing the
     // two made the conversation wait on a round trip that has nothing to do with
@@ -268,9 +268,8 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
   // also when its status can have changed — no timer of its own needed.
   useEffect(() => {
     reloadMcp();
-    // A finished turn is exactly when the kernel has one more checkpoint.
-    port.checkpoints().then(setCheckpoints).catch(() => {});
-  }, [reloadMcp, port, status?.sessionPath, running]);
+  }, [reloadMcp, status?.sessionPath, running]);
+  useCheckpointRefresh(port, status?.sessionPath, running, setCheckpoints);
   // A call that may write can have moved the tree before the turn ends.
   const refreshTree = useCallback(() => void port.changes().then(setTree).catch(() => setTree(null)), [port]);
   useEffect(refreshTree, [refreshTree, status?.sessionPath, running, counts.wrote]);
