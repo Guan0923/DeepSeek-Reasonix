@@ -89,6 +89,7 @@ it("shows the account-gated Internet QR before the optional LAN pairing code", a
 });
 
 it.each([
+  [undefined, "登录 Reasonix 账号后，可生成在外网也能使用的连接二维码。"],
   ["signed_out", "登录 Reasonix 账号后，可生成在外网也能使用的连接二维码。"],
   ["relay_unreachable", "中转服务暂时无法连接，请检查网络或代理设置后重试。"],
   ["relay_refused", "中转服务拒绝了这台设备的连接，请稍后重试。"],
@@ -98,7 +99,7 @@ it.each([
   render(<PhonePop hub={hub} />);
   await userEvent.click(await screen.findByRole("button", { name: "设备访问" }));
   expect(await screen.findByText(note)).toBeTruthy();
-  if (reason !== "signed_out") {
+  if (reason === "relay_unreachable" || reason === "relay_refused") {
     expect(screen.queryByText("登录 Reasonix 账号后，可生成在外网也能使用的连接二维码。")).toBeNull();
   }
 });
