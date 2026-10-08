@@ -389,20 +389,24 @@ func (h *Hub) removeSession(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusForbidden, "session.outside_workspace", "path outside a known workspace", nil)
 		return
 	}
-	// A folded row stands for its whole recovery lineage: removing only the lead
-	// lets the next copy take its place, and the delete reads as having done
-	// nothing. A sibling a pane has open is left alone.
+	// Removing only the lead lets a covered recovery copy take its place and the
+	// delete reads as having done nothing. Copies holding content their parent
+	// lacks, and any a pane has open, are left alone.
 	open := h.openSessions()
 	excluded := make([]string, 0, len(open))
 	for openPath := range open {
 		excluded = append(excluded, openPath)
 	}
 	paths := []string{path}
-	if sibs, err := sessionstore.RecoveryLineagePaths(path, excluded...); err != nil {
+	sibs, err := sessionstore.RecoveryLineagePaths(path, excluded...)
+	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
-	} else if len(sibs) > 0 {
-		paths = sibs
+	}
+	for _, p := range sibs {
+		if p != path && sessionstore.RecoveryBranchCoveredByParent(p, dir) {
+			paths = append(paths, p)
+		}
 	}
 	for _, p := range paths {
 		if !h.removeOneSession(w, dir, p) {
