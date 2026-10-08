@@ -33,6 +33,8 @@ type MCPServer struct {
 	ToolList    []MCPTool `json:"toolList"`
 	Error       string    `json:"error"`
 	Launch      string    `json:"launch"`
+	// PendingReason is the kernel's code for why a pending server waits.
+	PendingReason string `json:"pendingReason"`
 }
 
 func (c *Client) MCPServers(ctx context.Context) ([]MCPServer, error) {
@@ -211,7 +213,12 @@ func (m *model) mcpPanelLines() []string {
 	for i := start; i < end; i++ {
 		s := p.servers[i]
 		state := s.State
-		if !s.Enabled {
+		switch {
+		case s.State == "pending" && s.PendingReason == "changed_since_enabled":
+			state = i18n.M.McpPanelChanged
+		case s.State == "pending":
+			state = i18n.M.McpPanelPending
+		case !s.Enabled:
 			state = i18n.M.McpPanelOff
 		}
 		meta := []string{state}
@@ -224,14 +231,17 @@ func (m *model) mcpPanelLines() []string {
 		if s.Source != "" {
 			meta = append(meta, s.Source)
 		}
-		lines = append(lines, rowLine(i == p.sel, i+1, "", clipVisible(s.Name+" · "+strings.Join(meta, " · "), width), s.Enabled))
+		lines = append(lines, rowLine(i == p.sel, i+1, "", clipVisible(textutil.SanitizeLaunch(s.Name)+" · "+strings.Join(meta, " · "), width), s.Enabled))
 	}
 	if end < len(p.servers) {
 		lines = append(lines, termrender.Dim("  "+i18n.M.ListMoreBelow))
 	}
 	if p.confirm != "" {
-		lines = append(lines, termrender.Yellow("  "+fmt.Sprintf(i18n.M.McpPanelConfirmFmt, p.confirm, clipVisible(textutil.SanitizeLaunch(cur.Launch), width-8))))
+		lines = append(lines, termrender.Yellow("  "+fmt.Sprintf(i18n.M.McpPanelConfirmFmt, textutil.SanitizeLaunch(p.confirm), clipVisible(textutil.SanitizeLaunch(cur.Launch), width-8))))
 	} else {
+		if cur.State == "pending" && cur.Launch != "" {
+			lines = append(lines, termrender.Yellow("  "+fmt.Sprintf(i18n.M.McpPanelLaunchFmt, clipVisible(textutil.SanitizeLaunch(cur.Launch), width-8))))
+		}
 		lines = append(lines, termrender.Dim(i18n.M.McpPanelHint))
 	}
 	return panel(lines, m.width, accentEdge)
@@ -239,7 +249,7 @@ func (m *model) mcpPanelLines() []string {
 
 func (m *model) mcpDetail(s MCPServer) []string {
 	width := max(m.width-8, 12)
-	lines := []string{termrender.Accent(s.Name), termrender.Dim("  " + s.State + " · " + s.Transport + " · " + s.Source)}
+	lines := []string{termrender.Accent(textutil.SanitizeLaunch(s.Name)), termrender.Dim("  " + textutil.SanitizeLaunch(s.State+" · "+s.Transport+" · "+s.Source))}
 	if s.Description != "" {
 		lines = append(lines, "  "+clipVisible(strings.Join(strings.Fields(s.Description), " "), width))
 	}

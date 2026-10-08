@@ -838,6 +838,8 @@ export const EN_SETTINGS: Record<string, string> = {
   "1 个提示词": "1 prompt",
   "1 套配色": "1 palette",
   "将启动": "Will start",
+  "启用之后它要启动的内容变了，或是由旧版本启用的。确认下面的命令后重新启用。":
+    "What it launches changed since you enabled it, or an earlier version enabled it. Review the command below and enable it again.",
   "将连接至": "Will connect to",
   "一个常驻进程": "a long-running process",
   "工具 {names}": "tools {names}",
