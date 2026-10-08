@@ -92,6 +92,7 @@ var English = Messages{
 	TUIDeclinedFmt:          "declined %s %s",
 	NoticeUnappliedSteerFmt: "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:\n%s",
 	NoticeExtSkippedFmt:     "Extension %s's sidecar is not running, so it was skipped at %s. Check it with /plugins and start it, or disable the extension.",
+	NoticeInboxRecoveredFmt: "Recovered %d unfinished instruction(s). The inbox is paused: review them with /queue, then resume.",
 	TUIQuestion:             "question",
 	TUISubagentCallsFmt:     "%d sub-agent call(s)",
 	TUIChartMoreRowsFmt:     "… %d more rows",
