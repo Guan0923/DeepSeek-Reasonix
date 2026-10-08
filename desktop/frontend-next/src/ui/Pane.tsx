@@ -242,8 +242,6 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
     return history;
   }, [port, applyStatus, refreshWallet, onSessionChanged, replayTrajectory]);
 
-  const { onPrepareRewind, onCommitRewind, onUndoRewind, onPrepareFileRevert, onCommitFileRevert } = useRewindActions(port, reloadSession);
-
   // Both of these read only the user and tool cards, so they key off the
   // revision rather than the items array: a streamed answer leaves every card
   // they look at untouched, and recomputing them per chunk is the whole reason
@@ -305,13 +303,14 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
 
   const submit = useSubmit({ port, running, dispatch, trajDispatch, refreshStatus, fail });
 
-  const { queue, restored, onQueueEdit, onQueueMove, onQueueRetry, onQueueRefresh, onQueuePause, onQueueRead, onQueueSendNow, onQueueCancel } = useQueueActions({
+  const { queue, restored, onRestoreText, onQueueEdit, onQueueMove, onQueueRetry, onQueueRefresh, onQueuePause, onQueueRead, onQueueSendNow, onQueueCancel } = useQueueActions({
     port,
     dispatch,
     fail,
     moved: s.queueMoved,
     sessionPath: status?.sessionPath,
   });
+  const { onPrepareRewind, onCommitRewind, onUndoRewind, onPrepareFileRevert, onCommitFileRevert } = useRewindActions(port, reloadSession, onRestoreText);
 
   const { onApprove, onFullAccess, onPlan, onForget, onExtInvoke, onExtSubmit, onAnswer } = useGateActions({
     port,
