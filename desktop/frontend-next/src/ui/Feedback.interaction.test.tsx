@@ -458,6 +458,16 @@ describe("dialog", () => {
     opener.remove();
   });
 
+  it("moves focus into the body once the environment has loaded, even if a frame fires before the commit", async () => {
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+    setup();
+    await ready();
+    await waitFor(() => expect(document.activeElement).toBe(body()));
+  });
+
   it("moves between the two tabs with the arrow keys", async () => {
     setup();
     await ready();

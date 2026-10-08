@@ -69,14 +69,15 @@ export function FeedbackForm({ port, onMine, onClose, onFile }: Props) {
       .then((e) => {
         setEnv(e);
         setName((prev) => prev || e.displayName);
-        requestAnimationFrame(() => {
-          if (document.activeElement?.closest('[role="tablist"]')) field.current?.focus();
-        });
       })
       .catch((e) => setEnvFailure(feedbackFailure(e)));
   }, [port]);
 
   useEffect(load, [load]);
+
+  useEffect(() => {
+    if (env && document.activeElement?.closest('[role="tablist"]')) field.current?.focus();
+  }, [env]);
 
   useEffect(() => {
     if (phase !== "sent") holdDraft({ category, body, contact, shots });
