@@ -55,7 +55,42 @@ test("the release uploads the notes object before it writes the catalog that nam
   const merge = at("scripts/update-versions-index.sh");
   const catalog = at('"s3://${R2_BUCKET}/studio/versions.json" \\\n            --endpoint-url "$endpoint" \\\n            --content-type');
   assert.ok(candidate < upload && upload < verify && verify < merge && merge < catalog);
-  assert.match(step.slice(merge, catalog), /\$\{notes_key\}/);
+  assert.match(step.slice(merge, catalog), /\$\{notes_arg\[@\]\}/);
+});
+
+// Runs the workflow's own notes block with aws stubbed, so what is tested is
+// the text that ships rather than a copy of it.
+function notesBlock(awsBody) {
+  const step = workflow.slice(workflow.indexOf("Mirror to R2 and update the Studio catalog"));
+  const from = step.indexOf('notes_key="studio/notes/');
+  const to = step.indexOf("# Studio's own catalog.");
+  const block = step.slice(from, to).replace(/^ {10}/gm, "");
+  const root = mkdtempSync(path.join(tmpdir(), "nb-"));
+  writeFileSync(path.join(root, "aws"), `#!/bin/sh\n${awsBody}\n`);
+  chmodSync(path.join(root, "aws"), 0o755);
+  const script = `set -e\nVERSION=v2.32.0 R2_BUCKET=b RUNNER_TEMP=/tmp endpoint=e\n${block}\necho "ARGS=\${notes_arg[*]}"`;
+  return spawnSync("bash", ["-c", script], { encoding: "utf8", env: { ...process.env, PATH: `${root}:${process.env.PATH}` } });
+}
+
+test("a failed notes upload warns and leaves the catalog entry without a pointer, and the step goes on", () => {
+  const run = notesBlock("exit 1");
+  assert.equal(run.status, 0, run.stderr);
+  assert.match(run.stdout, /::warning::release notes for v2\.32\.0 were not uploaded/);
+  assert.match(run.stdout, /ARGS=$/m);
+});
+
+test("a notes object the mirror cannot confirm gets no pointer either", () => {
+  const run = notesBlock('[ "$1" = s3api ] && exit 1; exit 0');
+  assert.equal(run.status, 0, run.stderr);
+  assert.match(run.stdout, /::warning::/);
+  assert.match(run.stdout, /ARGS=$/m);
+});
+
+test("only a confirmed upload produces the notes pointer", () => {
+  const run = notesBlock("exit 0");
+  assert.equal(run.status, 0, run.stderr);
+  assert.doesNotMatch(run.stdout, /::warning::/);
+  assert.match(run.stdout, /ARGS=20 https:\/\/dl\.reasonix\.io\/studio\/notes\/2\.32\.0\.md$/m);
 });
 
 function sandbox({ catalog, bucket = {}, busy = "0", tags }) {

@@ -288,6 +288,8 @@ Studio and 1.x signing jobs and smoke tests share the concurrency group `certum-
 - The key is the binary's own architecture, not the machine's. An x64 build running under ARM64 emulation asks for `windows-amd64` and keeps updating to the amd64 installer; it is not moved to a native build.
 - When a client tries to install a release whose manifest lacks its key (and, on Linux, a matching `native_packages` key), staging fails with `update.no_package` naming the release page; no other architecture's package is substituted. A missing `deltas` entry means the full package is downloaded.
 
+A notes upload that fails does not fail `publish`: the step warns, `::warning::release notes for vX.Y.Z were not uploaded`, and the catalog entry is written without a `notes` field. Run the backfill (section 9) afterwards to attach them.
+
 ## 9. Backfilling notes
 
 Releases from the one that introduced `studio/notes/` publish their notes with the catalog entry. Older catalog entries get theirs once, by hand:
