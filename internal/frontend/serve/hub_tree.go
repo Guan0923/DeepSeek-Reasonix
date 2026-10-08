@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reasonix/internal/state/sessionstore"
+	"slices"
 	"strings"
 
 	"reasonix/internal/base/fileutil"
@@ -421,7 +422,7 @@ func (h *Hub) removeSession(w http.ResponseWriter, r *http.Request) {
 		}
 		guards = append(guards, guard)
 	}
-	for i := len(paths) - 1; i >= 0; i-- {
+	for i := range slices.Backward(paths) {
 		if !eraseGuardedSession(w, dir, paths[i], guards[i]) {
 			for _, g := range guards[:i] {
 				g.Release()
