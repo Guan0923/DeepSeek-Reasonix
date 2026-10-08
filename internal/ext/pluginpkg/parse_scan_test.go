@@ -235,3 +235,41 @@ func TestLoadInstalledPersistsStatusAndSurvivesConcurrentInstalls(t *testing.T) 
 		}
 	}
 }
+
+func TestLoadInstalledDoesNotApplyStatusToReinstallOnSameRoot(t *testing.T) {
+	home := testenv.TempDir(t)
+	if err := Upsert(home, brokenPlugin(t, home, "a-bad")); err != nil {
+		t.Fatal(err)
+	}
+	if err := Upsert(home, validNativePlugin(t, home, "z-slow")); err != nil {
+		t.Fatal(err)
+	}
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	prev := readSkillFile
+	readSkillFile = func(path string) ([]byte, error) {
+		once.Do(func() { close(entered); <-release })
+		return fileencoding.ReadFileUTF8(path)
+	}
+	t.Cleanup(func() { readSkillFile = prev })
+
+	done := make(chan struct{})
+	go func() { LoadInstalled(home); close(done) }()
+	<-entered
+	fixed := validNativePlugin(t, home, "a-bad")
+	if err := Upsert(home, fixed); err != nil {
+		close(release)
+		t.Fatal(err)
+	}
+	close(release)
+	<-done
+	st, err := LoadState(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range st.Plugins {
+		if p.Name == "a-bad" && (p.Status != "" || p.StatusReason != "") {
+			t.Fatalf("verdict about the old install reached the reinstall: %+v", p)
+		}
+	}
+}

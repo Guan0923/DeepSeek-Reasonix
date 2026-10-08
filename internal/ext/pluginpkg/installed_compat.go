@@ -93,8 +93,8 @@ type statusVerdict struct {
 }
 
 // persistStatusVerdicts applies verdicts to the current state, skipping any
-// entry that was removed, replaced or disabled since the snapshot: a verdict
-// about a root that is no longer the entry's root says nothing about it.
+// entry that was removed, reinstalled or disabled since the snapshot: a verdict
+// about an install that is no longer the entry says nothing about it.
 func persistStatusVerdicts(reasonixHome string, verdicts []statusVerdict) error {
 	if len(verdicts) == 0 {
 		return nil
@@ -109,7 +109,7 @@ func persistStatusVerdicts(reasonixHome string, verdicts []statusVerdict) error 
 	for _, v := range verdicts {
 		for i := range st.Plugins {
 			cur := &st.Plugins[i]
-			if cur.Name != v.installed.Name || !cur.Enabled || cur.Root != v.installed.Root {
+			if cur.Name != v.installed.Name || !cur.Enabled || cur.Root != v.installed.Root || cur.Generation != v.installed.Generation {
 				continue
 			}
 			if cur.Status != v.status || cur.StatusReason != v.reason {

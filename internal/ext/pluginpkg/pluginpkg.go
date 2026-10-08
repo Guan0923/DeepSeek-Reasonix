@@ -264,6 +264,9 @@ type InstalledPlugin struct {
 	Commit       string `json:"commit,omitempty"`
 	Status       string `json:"status,omitempty"`
 	StatusReason string `json:"statusReason,omitempty"`
+	// Generation counts Upserts of this name, so a reinstall that lands on the
+	// same Root is still told apart from the entry a parse started from.
+	Generation int `json:"generation,omitempty"`
 }
 
 type InstalledPackage struct {
@@ -337,10 +340,12 @@ func Upsert(reasonixHome string, p InstalledPlugin) error {
 	}
 	for i := range st.Plugins {
 		if st.Plugins[i].Name == p.Name {
+			p.Generation = st.Plugins[i].Generation + 1
 			st.Plugins[i] = p
 			return SaveState(reasonixHome, st)
 		}
 	}
+	p.Generation = 1
 	st.Plugins = append(st.Plugins, p)
 	return SaveState(reasonixHome, st)
 }
