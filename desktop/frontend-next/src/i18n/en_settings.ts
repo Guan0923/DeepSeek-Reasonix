@@ -707,6 +707,7 @@ export const EN_SETTINGS: Record<string, string> = {
   "启用的模型": "Enabled models",
   "目录只用于发现，不是白名单。直接输入服务商给出的原始模型 ID 即可。": "The catalogue is for discovery, not a whitelist. You can enter any exact model ID supplied by the service.",
   "阈值需至少为 1,000，并小于模型上下文窗口。": "The threshold must be at least 1,000 and below the model context window.",
+  "被容量保护（{p}%）限制，实际 {n} tokens": "Capped by the capacity guard ({p}%): runs at {n} tokens",
   "达到这个用量时开始整理": "Start maintenance when usage reaches this value",
   "常用阈值": "Common thresholds",
   "不要依赖接口猜测，请按模型文档填写": "Use the model documentation instead of endpoint guesses",
