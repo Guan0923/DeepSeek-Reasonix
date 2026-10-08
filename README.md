@@ -43,9 +43,9 @@
 
 <br/>
 
-<p align="center"><strong>Open source · MIT · runs on your computer, with your own model account</strong></p>
-<h3 align="center">Say what you want done. It gets to work in your project.</h3>
-<p align="center">It reads your code, edits files and runs commands, and shows you each step. You decide how often it checks with you first. If it gets a file wrong, you can put it back.</p>
+<p align="center"><strong>Open source · MIT · runs on your computer, model of your choice</strong></p>
+<h3 align="center">An open-source coding agent for your terminal, desktop, browser and editor.</h3>
+<p align="center">It reads your project, edits files and runs commands and tests. Have it ask before each step, or work on its own within limits you set. Files its edit tools changed can be rewound. New here? Start with the Studio desktop app.</p>
 <p align="center">Maintained by <strong>Huahui Yu</strong>.</p>
 
 > [!IMPORTANT]
@@ -65,13 +65,13 @@ You pick the model: a DeepSeek preset is built in, any OpenAI-compatible service
 
 ## What you get
 
-- **Hand it the work.** It reads code, edits files and runs tests and commands, all inside your project folder.
-- **You call the shots.** Have it ask every time, or let everyday actions run on their own; the rules you set to forbid something always hold. To see the approach first, use plan mode: it starts work only once you approve.
-- **Wrong edit? Go back.** It saves a file before changing it, so you can rewind by conversation turn without touching your git history. That covers files its edit tools changed, not what a shell command did.
+- **Read, edit, run.** It reads code, edits files and runs tests and commands, all inside your project folder.
+- **Permission levels.** Have it ask every time, or let everyday actions run on their own; your forbid rules always hold. To see the approach first, use plan mode: it starts work only once you approve.
+- **Rewind.** A file is saved before it changes, so you can rewind by conversation turn without touching your git history. Only files its edit tools changed are covered, not what a shell command did.
 
 ## 30-second start
 
-Install it, add your model key, open a project, and you are going.
+Download, add a model key, open a project. New here? Start with the Studio desktop app.
 
 1. Download and install the desktop app, Reasonix Studio, from the [releases page](https://github.com/esengine/DeepSeek-Reasonix/releases?q=studio-v&expanded=true).
 2. Open it and enter your model provider and key when asked.
