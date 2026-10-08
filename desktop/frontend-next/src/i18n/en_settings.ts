@@ -929,7 +929,9 @@ export const EN_SETTINGS: Record<string, string> = {
   "请输入 1 到 {n} 之间的整数。": "Enter a whole number from 1 to {n}.",
   "无法读取无进展设置。": "Could not read the progress settings.",
   "图标栏": "Icon rail",
-  "工作区栏旁的一列图标，直达用量、工具、扩展、记忆、远程、账号和设置。窗口窄到手机宽度时不显示。": "A column of icons beside the workspace rail that opens usage, tools, extensions, memory, remote, account and settings. It is not drawn when the window is as narrow as a phone.",
-  "显示图标栏": "Show the icon rail",
-  "关闭后这些页面仍可从设置打开": "With it off these pages still open from settings",
+  "会话侧栏左边的一列图标，直达用量、工具、扩展、记忆、远程、反馈、账号和设置。窗口窄到手机宽度时不显示。": "A column of icons left of the session sidebar that opens usage, tools, extensions, memory, remote, feedback, account and settings. It is not drawn when the window is as narrow as a phone.",
+  "始终显示": "Always",
+  "仅侧栏收起时显示": "Only when the sidebar is collapsed",
+  "不显示": "Never",
+  "关闭或收起时，这些页面仍可从设置和侧栏打开": "With it off or hidden, these pages still open from settings and the sidebar",
 };
