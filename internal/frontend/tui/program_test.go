@@ -703,6 +703,42 @@ func TestAskWithoutAutoSubmitWaitsOnSubmit(t *testing.T) {
 	}
 }
 
+// 1.x's question card took j/k as Down/Up and h/l as Left/Right, and
+// docs/GUIDE.md lists them for it; a typed answer still takes them as text.
+func TestAskCardMovesWithJKAndHL(t *testing.T) {
+	m, k := testModel(t)
+	apply(m, askEvent())
+	key := func(r rune) { m.Update(tea.KeyPressMsg{Code: r, Text: string(r)}) }
+	for _, step := range []struct {
+		key         rune
+		tab, cursor int
+	}{
+		{'j', 0, 1},
+		{'k', 0, 0},
+		{'l', 1, 0},
+		{'j', 1, 1},
+	} {
+		key(step.key)
+		if m.ask == nil || m.ask.tab != step.tab || m.ask.cursor != step.cursor {
+			t.Fatalf("after %q the card is at %+v, want tab %d cursor %d", step.key, m.ask, step.tab, step.cursor)
+		}
+	}
+	pressSpace(m)
+	key('h')
+	if m.ask.tab != 0 {
+		t.Fatalf("h left the card on tab %d, want 0", m.ask.tab)
+	}
+	key('3')
+	typeText(m, "hjkl")
+	run(m, press(m, "enter"))
+	key('l')
+	run(m, press(m, "enter"))
+	want := `POST /answer {"answers":[{"QuestionID":"q1","Selected":["hjkl"]},{"QuestionID":"q2","Selected":["search"]}],"id":"ask1"}`
+	if calls := strings.Join(k.seen(), "\n"); !strings.Contains(calls, want) {
+		t.Fatalf("answer call missing:\n%s", calls)
+	}
+}
+
 // An @-token opens the menu as it is typed, and the chosen item replaces the
 // token the kernel named — counted in UTF-16, so a CJK line splices where the
 // kernel meant.
