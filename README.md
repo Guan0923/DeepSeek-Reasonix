@@ -43,7 +43,7 @@
 
 <br/>
 
-<p align="center"><strong>Open source · MIT · runs on your own computer</strong></p>
+<p align="center"><strong>Open source · MIT · the program runs on your computer, with your own model account</strong></p>
 <h3 align="center">An AI coding assistant where you decide how much it does alone, and can rewind.</h3>
 <p align="center">Tell it what you want. It reads your project, edits files and runs commands. You can have it ask before every step, or let it act on its own within set limits; files it changed can be rewound to how they were.</p>
 <p align="center">Maintained by <strong>Huahui Yu</strong>.</p>
@@ -59,7 +59,7 @@
 
 ## What it is
 
-Reasonix is an open-source AI coding assistant that runs on your own computer. You describe a task in plain language; it reads code, edits files and runs commands and tests inside the project folder you choose, and shows you each step.
+Reasonix is an open-source AI coding assistant. The program runs on your computer; the AI model is a service you configure, which receives what it reads. You describe a task in plain language; it reads code, edits files and runs commands and tests inside the project folder you choose, and shows you each step.
 
 You pick the model: a DeepSeek preset is built in, any OpenAI-compatible service is one config entry, and you pay the model provider directly.
 
@@ -85,7 +85,7 @@ Prefer a terminal? Download the `reasonix` command-line tool, run `reasonix setu
 - **Browser.** `reasonix web` opens a web interface on your own machine.
 - **Editor.** Install the extension in VS Code; other editors that support ACP (Agent Client Protocol, a common way for an editor to connect to an AI assistant) can connect to `reasonix acp`.
 
-All four run the same local program. What follows is for advanced users and contributors.
+All four run the same program. What follows is for advanced users and contributors.
 
 ## Versions
 
