@@ -114,12 +114,12 @@ function cloudRemoteNote(status: CloudRemoteStatus | undefined): string {
     return t("互联网连接需要登录同一账号，内容端到端加密；局域网直连只在可信网络中开启。");
   }
   switch (status?.reason) {
-    case "signed_out":
-      return t("登录 Reasonix 账号后，可生成在外网也能使用的连接二维码。");
+    case "relay_unreachable":
+      return t("中转服务暂时无法连接，请检查网络或代理设置后重试。");
     case "relay_refused":
       return t("中转服务拒绝了这台设备的连接，请稍后重试。");
     default:
-      return t("中转服务暂时无法连接，请检查网络或代理设置后重试。");
+      return t("登录 Reasonix 账号后，可生成在外网也能使用的连接二维码。");
   }
 }
 
