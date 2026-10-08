@@ -31,6 +31,7 @@ const SAID: Record<string, string> = {
   "shell.parser_unavailable": "主机命令解析器不可用；请在主机恢复后重试",
   "shell.parser_timeout": "主机命令解析超时或被取消；请重试",
   "shell.command_line_too_long": "命令超过主机长度限制；请拆分命令或从文件读取长文本",
+  "tool.arguments_invalid": "参数不符合该工具的约定，本次调用没有执行；请按工具说明补全或更正参数后重试",
   "workspace.write_conflict": "另一个会话持有所需的写入范围。本次操作未执行；请结束当前轮次，待该范围释放后再重试",
   // ── 忙：不是出错，是「现在不行」 ─────────────────────────────────
   "plan.decision_stale": "该决定已不符合当前状态：计划在你回答前已发生变更",
