@@ -4,7 +4,8 @@
 .vnotes .md-noimg { color: var(--muted) }
 @container versions (max-width: 600px) {
   .vrow .vn { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 4px }
-}
-@container versions (max-width: 600px) {
-  .vrow[data-open]:has(> .vn):not(:hover) :is(.ds, .sc) { visibility: visible }
+  @media (hover: hover) {
+    .vrow[data-open] .sa:not([data-keep]) { position: static; translate: none; grid-column: 1 / -1; grid-row: auto; margin-top: 4px; max-width: 100% }
+    .vrow[data-open]:has(> .sa:not([data-keep])):is(:hover, :focus-within) :is(.ds, .sc) { visibility: visible }
+  }
 }

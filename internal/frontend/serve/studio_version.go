@@ -45,7 +45,11 @@ func (h *Hub) readStudioNotes(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusNotFound, codeNoInstall, "no Studio install was declared for this kernel", nil)
 		return
 	}
-	notes, err := notesReader(r.Context(), *h.opts.Install, r.PathValue("version"), r.URL.Query().Get("retry") == "1")
+	read := h.notes
+	if read == nil {
+		read = notesReader
+	}
+	notes, err := read(r.Context(), *h.opts.Install, r.PathValue("version"), r.URL.Query().Get("retry") == "1")
 	switch {
 	case err == nil:
 		writeJSON(w, notes)

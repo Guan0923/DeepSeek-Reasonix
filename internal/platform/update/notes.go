@@ -2,9 +2,12 @@ package update
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,6 +35,10 @@ var (
 // NotesMaxBytes bounds one notes document. The largest shipped is 40 KB.
 const NotesMaxBytes = 256 << 10
 
+// notesMaxVersion bounds the version string so a cache file name can never
+// exceed what a file system accepts.
+const notesMaxVersion = 64
+
 const (
 	notesTimeout = 15 * time.Second
 	notesFailTTL = 60 * time.Second
@@ -46,15 +53,29 @@ type VersionNotes struct {
 
 var releaseVersion = regexp.MustCompile(`^v?([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z][0-9A-Za-z.]*)?)$`)
 
-// NotesURL is where a release's notes live. It is built from a validated
+// notesURL is where a release's notes live. It is built from a validated
 // version and the mirror constant, never from the catalog: the catalog only
 // says whether notes exist, so it cannot aim this fetch anywhere.
-func NotesURL(version string) (string, error) {
+func notesURL(v string) string { return StudioMirror + "/studio/notes/" + v + ".md" }
+
+func notesVersion(version string) (string, error) {
 	m := releaseVersion.FindStringSubmatch(strings.TrimSpace(version))
-	if m == nil {
+	if m == nil || len(m[1]) > notesMaxVersion {
 		return "", ErrNotesBadVersion
 	}
-	return StudioMirror + "/studio/notes/" + m[1] + ".md", nil
+	return m[1], nil
+}
+
+// notesFileName is the cache name of a version. Prerelease identifiers are
+// case-sensitive and a file system may not be, so a name that has capitals
+// carries a digest of the exact spelling and two spellings never share a file.
+func notesFileName(v string) string {
+	lower := strings.ToLower(v)
+	if lower == v {
+		return v + ".md"
+	}
+	sum := sha256.Sum256([]byte(v))
+	return lower + "-" + hex.EncodeToString(sum[:4]) + ".md"
 }
 
 type notesFlight struct {
@@ -84,13 +105,23 @@ var sharedNotes = &notesState{}
 func ReadNotes(ctx context.Context, in Install, version string, retry bool) (VersionNotes, error) {
 	client, err := netclient.NewHTTPClient(ProxySpec(), netclient.TransportOptions{})
 	if err != nil {
-		return VersionNotes{}, fmt.Errorf("%w: %v", ErrNotesUnreachable, err)
+		return VersionNotes{}, fmt.Errorf("%w: %w", ErrNotesUnreachable, err)
 	}
 	dir := ""
 	if root := config.CacheDir(); root != "" {
 		dir = filepath.Join(root, "release-notes")
 	}
 	return sharedNotes.read(ctx, notesRequest{dir: dir, client: client, userAgent: UserAgent(in.Version), retry: retry}, version)
+}
+
+// NotesReaderOver is ReadNotes with the route and the cache directory already
+// decided, so a test drives the whole read without reaching the network. The
+// address stays the constant; only how the request travels is chosen.
+func NotesReaderOver(client *http.Client, dir string) func(context.Context, Install, string, bool) (VersionNotes, error) {
+	st := &notesState{}
+	return func(ctx context.Context, in Install, version string, retry bool) (VersionNotes, error) {
+		return st.read(ctx, notesRequest{dir: dir, client: client, userAgent: UserAgent(in.Version), retry: retry}, version)
+	}
 }
 
 type notesRequest struct {
@@ -101,11 +132,11 @@ type notesRequest struct {
 }
 
 func (s *notesState) read(ctx context.Context, rq notesRequest, version string) (VersionNotes, error) {
-	url, err := NotesURL(version)
+	key, err := notesVersion(version)
 	if err != nil {
 		return VersionNotes{}, err
 	}
-	key := releaseVersion.FindStringSubmatch(strings.TrimSpace(version))[1]
+	url := notesURL(key)
 	if md, ok := readNotesFile(rq.dir, key); ok {
 		return VersionNotes{Version: key, Markdown: md, Cached: true}, nil
 	}
@@ -159,13 +190,13 @@ func (s *notesState) fetch(rq notesRequest, key, url string, fl *notesFlight) {
 func fetchNotes(ctx context.Context, c *http.Client, url, userAgent string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrNotesUnreachable, err)
+		return "", fmt.Errorf("%w: %w", ErrNotesUnreachable, err)
 	}
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", "text/markdown, text/plain")
 	resp, err := c.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrNotesUnreachable, err)
+		return "", fmt.Errorf("%w: %w", ErrNotesUnreachable, err)
 	}
 	defer resp.Body.Close()
 	switch {
@@ -173,12 +204,14 @@ func fetchNotes(ctx context.Context, c *http.Client, url, userAgent string) (str
 		return "", ErrNotesAbsent
 	case resp.StatusCode != http.StatusOK:
 		return "", fmt.Errorf("%w: %s", ErrNotesUnreachable, resp.Status)
+	case !documentType(resp.Header.Get("Content-Type")):
+		return "", fmt.Errorf("%w: the mirror answered with content type %q", ErrNotesUnreachable, resp.Header.Get("Content-Type"))
 	case resp.ContentLength > NotesMaxBytes:
 		return "", ErrNotesTooLarge
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, NotesMaxBytes+1))
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrNotesUnreachable, err)
+		return "", fmt.Errorf("%w: %w", ErrNotesUnreachable, err)
 	}
 	if len(body) > NotesMaxBytes {
 		return "", ErrNotesTooLarge
@@ -187,6 +220,13 @@ func fetchNotes(ctx context.Context, c *http.Client, url, userAgent string) (str
 		return "", fmt.Errorf("%w: the mirror answered something that is not a document", ErrNotesUnreachable)
 	}
 	return string(body), nil
+}
+
+// documentType judges the declared type, never the body: an error page served
+// with a 200 must not be kept as a release's notes.
+func documentType(header string) bool {
+	typ, _, err := mime.ParseMediaType(header)
+	return err == nil && (typ == "text/markdown" || typ == "text/plain")
 }
 
 func usableNotes(b []byte) bool {
@@ -199,7 +239,7 @@ func readNotesFile(dir, key string) (string, bool) {
 	if dir == "" {
 		return "", false
 	}
-	f, err := os.Open(filepath.Join(dir, key+".md"))
+	f, err := os.Open(filepath.Join(dir, notesFileName(key)))
 	if err != nil {
 		return "", false
 	}
@@ -215,5 +255,5 @@ func writeNotesFile(dir, key, md string) {
 	if dir == "" || os.MkdirAll(dir, 0o700) != nil {
 		return
 	}
-	_ = fileutil.AtomicWriteFile(filepath.Join(dir, key+".md"), []byte(md), 0o600)
+	_ = fileutil.AtomicWriteFile(filepath.Join(dir, notesFileName(key)), []byte(md), 0o600)
 }

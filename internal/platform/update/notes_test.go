@@ -42,12 +42,12 @@ func notesReq(t *testing.T, c *http.Client) notesRequest {
 }
 
 func TestNotesURLIsBuiltFromAReleaseVersionOnly(t *testing.T) {
-	got, err := NotesURL("v2.31.0")
-	if err != nil || got != "https://dl.reasonix.io/studio/notes/2.31.0.md" {
-		t.Fatalf("NotesURL(v2.31.0) = %q, %v", got, err)
+	v, err := notesVersion("v2.31.0")
+	if got := notesURL(v); err != nil || got != "https://dl.reasonix.io/studio/notes/2.31.0.md" {
+		t.Fatalf("notesURL(v2.31.0) = %q, %v", got, err)
 	}
 	for _, bad := range []string{"", "latest", "../../x", "2.31", "2.31.0/../../x", "2.31.0?x=1", "https://evil.test/a"} {
-		if _, err := NotesURL(bad); !errors.Is(err, ErrNotesBadVersion) {
+		if _, err := notesVersion(bad); !errors.Is(err, ErrNotesBadVersion) {
 			t.Errorf("NotesURL(%q) err = %v, want ErrNotesBadVersion", bad, err)
 		}
 	}
@@ -86,13 +86,11 @@ func TestConcurrentReadsShareOneRequest(t *testing.T) {
 	rq, st := notesReq(t, c), &notesState{}
 	var wg sync.WaitGroup
 	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if got, err := st.read(context.Background(), rq, "2.31.0"); err != nil || got.Markdown != "notes" {
 				t.Errorf("read = %+v, %v", got, err)
 			}
-		}()
+		})
 	}
 	time.Sleep(100 * time.Millisecond)
 	close(release)
@@ -166,7 +164,10 @@ func TestRefusalsKeepTheirIdentity(t *testing.T) {
 		{"not text", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte{0xff, 0xfe, 0x00}) }, ErrNotesUnreachable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			c, _ := mirror(t, tc.handler)
+			c, _ := mirror(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/markdown")
+				tc.handler(w, r)
+			})
 			rq := notesReq(t, c)
 			if _, err := (&notesState{}).read(context.Background(), rq, "2.31.0"); !errors.Is(err, tc.want) {
 				t.Fatalf("err = %v, want %v", err, tc.want)
@@ -234,5 +235,59 @@ func TestVersionRowsMarkOnlyEntriesWithNotes(t *testing.T) {
 	rows := versionRows([]IndexEntry{{Version: "v2.2.0", Notes: "https://dl.reasonix.io/studio/notes/2.2.0.md"}, {Version: "v2.1.0"}}, "2.2.0")
 	if !rows[0].HasNotes || rows[1].HasNotes {
 		t.Fatalf("hasNotes = %v, %v; want true, false", rows[0].HasNotes, rows[1].HasNotes)
+	}
+}
+
+func TestAResponseOfTheWrongTypeIsRefusedAndNeverWritten(t *testing.T) {
+	for _, ct := range []string{"text/html; charset=utf-8", "application/json", "application/octet-stream", ""} {
+		c, _ := mirror(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header()["Content-Type"] = []string{ct}
+			if ct == "" {
+				w.Header()["Content-Type"] = nil
+			}
+			_, _ = w.Write([]byte("<html>oops</html>"))
+		})
+		rq := notesReq(t, c)
+		_, err := (&notesState{}).read(context.Background(), rq, "2.31.0")
+		if !errors.Is(err, ErrNotesUnreachable) {
+			t.Errorf("type %q: err = %v, want ErrNotesUnreachable", ct, err)
+		}
+		if entries, _ := os.ReadDir(rq.dir); len(entries) > 0 {
+			t.Errorf("type %q left %d cache files", ct, len(entries))
+		}
+	}
+}
+
+func TestDeclaredMarkdownAndPlainTextAreAccepted(t *testing.T) {
+	for _, ct := range []string{"text/markdown; charset=utf-8", "text/plain", "TEXT/Markdown"} {
+		c, _ := mirror(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", ct)
+			_, _ = w.Write([]byte("# ok"))
+		})
+		if got, err := (&notesState{}).read(context.Background(), notesReq(t, c), "2.31.0"); err != nil || got.Markdown != "# ok" {
+			t.Errorf("type %q: %+v, %v", ct, got, err)
+		}
+	}
+}
+
+func TestVersionsThatCannotBeANameAreRefused(t *testing.T) {
+	long := "2.0.0-" + strings.Repeat("a", notesMaxVersion)
+	if _, err := notesVersion(long); !errors.Is(err, ErrNotesBadVersion) {
+		t.Fatalf("over-long version err = %v", err)
+	}
+	if _, err := notesVersion("2.0.0-" + strings.Repeat("a", notesMaxVersion-6)); err != nil {
+		t.Fatalf("a version at the limit was refused: %v", err)
+	}
+}
+
+func TestCaseDifferentPrereleasesNeverShareACacheFile(t *testing.T) {
+	if notesFileName("2.0.0-RC.1") == notesFileName("2.0.0-rc.1") {
+		t.Fatal("two spellings of a prerelease map to one file name")
+	}
+	if got := notesFileName("2.0.0-RC.1"); got != strings.ToLower(got) {
+		t.Fatalf("file name %q has capitals", got)
+	}
+	if got := notesFileName("2.31.0"); got != "2.31.0.md" {
+		t.Fatalf("plain version file name = %q", got)
 	}
 }

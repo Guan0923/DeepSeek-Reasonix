@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 
 	"reasonix/internal/base/testenv"
@@ -176,5 +179,53 @@ func TestNotesRouteAnswersTheDocument(t *testing.T) {
 	status, body := notesGet(t, srv, "/studio/versions/v2.31.0/notes")
 	if status != http.StatusOK || body["markdown"] != "# hi" || body["cached"] != true || asked != "v2.31.0" {
 		t.Fatalf("got %d %v (asked %q)", status, body, asked)
+	}
+}
+
+type stubTransport func(*http.Request) (*http.Response, error)
+
+func (f stubTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestNotesRouteKeepsADocumentOnceAndNeverAnErrorPage(t *testing.T) {
+	dir := t.TempDir()
+	var hits int
+	contentType := "text/html"
+	body := "<html>oops</html>"
+	transport := stubTransport(func(r *http.Request) (*http.Response, error) {
+		hits++
+		if r.URL.String() != "https://dl.reasonix.io/studio/notes/2.31.0.md" {
+			t.Errorf("fetched %s", r.URL)
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {contentType}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})
+	t.Setenv("REASONIX_HOME", testenv.TempDir(t))
+	srv := httptest.NewServer(operatorHandler(NewHub(HubOptions{Install: &update.Install{Version: "2.10.0"}, NotesTransport: transport, NotesDir: dir})))
+	t.Cleanup(srv.Close)
+
+	status, got := notesGet(t, srv, "/studio/versions/2.31.0/notes")
+	if status != http.StatusBadGateway || got["code"] != codeNotesUnreachable {
+		t.Fatalf("html page: got %d %v", status, got)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("the refused page was written: %v", entries)
+	}
+
+	contentType, body = "text/markdown; charset=utf-8", "# notes"
+	status, got = notesGet(t, srv, "/studio/versions/2.31.0/notes?retry=1")
+	if status != http.StatusOK || got["markdown"] != "# notes" || got["cached"] != false {
+		t.Fatalf("markdown: got %d %v", status, got)
+	}
+	before := hits
+	status, got = notesGet(t, srv, "/studio/versions/2.31.0/notes")
+	if status != http.StatusOK || got["cached"] != true || hits != before {
+		t.Fatalf("second read: got %d %v, hits %d -> %d", status, got, before, hits)
+	}
+}
+
+func TestNotesRouteRefusesAnOverlongVersion(t *testing.T) {
+	srv := studioServer(t, &update.Install{Version: "2.10.0"})
+	status, got := notesGet(t, srv, "/studio/versions/2.0.0-"+strings.Repeat("a", 80)+"/notes")
+	if status != http.StatusBadRequest || got["code"] != codeNotesBadVersion {
+		t.Fatalf("got %d %v", status, got)
 	}
 }
