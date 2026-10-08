@@ -123,7 +123,9 @@ func (m *model) mcpKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 		return nil, true
 	}
 	switch msg.String() {
-	case "esc", "ctrl+c":
+	case "q":
+		m.mcp = nil
+	case "esc", "ctrl+c", "left", "h":
 		if p.detail {
 			p.detail = false
 		} else {
@@ -133,7 +135,7 @@ func (m *model) mcpKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
 		p.sel = max(p.sel-1, 0)
 	case "down", "j":
 		p.sel = min(p.sel+1, len(p.servers)-1)
-	case "enter":
+	case "enter", "right", "l":
 		p.detail = true
 	case "space":
 		if !cur.Enabled && repoDeclared(cur) {
