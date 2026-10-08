@@ -69,6 +69,7 @@ it.each(["zh", "en"])("refreshes a newly installed provider into the still-open 
     return out;
   });
   const set = vi.spyOn(port, "setModel");
+  const setDefault = vi.spyOn(port, "setDefaultModel");
   await extensions();
   await userEvent.click(document.querySelector<HTMLButtonElement>('[data-action="extensions.add"]')!);
   await userEvent.type(document.querySelector<HTMLTextAreaElement>(".addpkg textarea")!, "https://example.invalid/echo-provider");
@@ -79,7 +80,8 @@ it.each(["zh", "en"])("refreshes a newly installed provider into the still-open 
   await waitFor(() => expect(refs(select)).toContain(echo.ref));
   expect(refs(screen.getByRole<HTMLSelectElement>("combobox", { name: t("子代理") }))).toContain(echo.ref);
   await userEvent.selectOptions(select, echo.ref);
-  expect(set).toHaveBeenCalledWith(echo.ref, true);
+  expect(set).toHaveBeenCalledWith(echo.ref);
+  expect(setDefault).toHaveBeenCalledWith(echo.ref);
 });
 
 it.each(["disable", "enable", "remove", "update"])("re-reads provider models after a package %s", async (operation) => {
