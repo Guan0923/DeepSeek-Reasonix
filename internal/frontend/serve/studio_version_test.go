@@ -2,7 +2,9 @@ package serve
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -110,5 +112,69 @@ func TestPinRouteRefusesABodyItCannotRead(t *testing.T) {
 	// The identity, not the sentence: a frontend tells refusals apart by code.
 	if body.Code != codePinRejected {
 		t.Fatalf("code = %q, want %q", body.Code, codePinRejected)
+	}
+}
+
+func notesGet(t *testing.T, srv *httptest.Server, path string) (int, map[string]any) {
+	t.Helper()
+	resp, err := http.Get(srv.URL + path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var body map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&body)
+	return resp.StatusCode, body
+}
+
+func TestNotesRouteRefusesByNameWithoutAnInstall(t *testing.T) {
+	srv := studioServer(t, nil)
+	status, body := notesGet(t, srv, "/studio/versions/2.31.0/notes")
+	if status != http.StatusNotFound || body["code"] != codeNoInstall {
+		t.Fatalf("got %d %v, want 404 %s", status, body, codeNoInstall)
+	}
+}
+
+func TestNotesRouteSaysWhichKindOfFailureItWas(t *testing.T) {
+	srv := studioServer(t, &update.Install{Version: "2.10.0"})
+	var retry []bool
+	prev := notesReader
+	t.Cleanup(func() { notesReader = prev })
+	for _, tc := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{update.ErrNotesBadVersion, http.StatusBadRequest, codeNotesBadVersion},
+		{update.ErrNotesAbsent, http.StatusNotFound, codeNotesAbsent},
+		{fmt.Errorf("%w: GET: 403", update.ErrNotesUnreachable), http.StatusBadGateway, codeNotesUnreachable},
+		{update.ErrNotesTooLarge, http.StatusBadGateway, codeNotesTooLarge},
+	} {
+		notesReader = func(_ context.Context, _ update.Install, _ string, r bool) (update.VersionNotes, error) {
+			retry = append(retry, r)
+			return update.VersionNotes{}, tc.err
+		}
+		status, body := notesGet(t, srv, "/studio/versions/2.31.0/notes?retry=1")
+		if status != tc.status || body["code"] != tc.code {
+			t.Errorf("%v: got %d %v, want %d %s", tc.err, status, body, tc.status, tc.code)
+		}
+	}
+	if len(retry) == 0 || !retry[0] {
+		t.Fatalf("retry=1 was not passed through: %v", retry)
+	}
+}
+
+func TestNotesRouteAnswersTheDocument(t *testing.T) {
+	srv := studioServer(t, &update.Install{Version: "2.10.0"})
+	prev := notesReader
+	t.Cleanup(func() { notesReader = prev })
+	var asked string
+	notesReader = func(_ context.Context, in update.Install, v string, _ bool) (update.VersionNotes, error) {
+		asked = v
+		return update.VersionNotes{Version: "2.31.0", Markdown: "# hi", Cached: true}, nil
+	}
+	status, body := notesGet(t, srv, "/studio/versions/v2.31.0/notes")
+	if status != http.StatusOK || body["markdown"] != "# hi" || body["cached"] != true || asked != "v2.31.0" {
+		t.Fatalf("got %d %v (asked %q)", status, body, asked)
 	}
 }

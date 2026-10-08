@@ -334,6 +334,10 @@ export const EN_KERNEL: Record<string, string> = {
   "这个 Studio 不是安装版（从源码启动），没有可以查看或切换的版本":
     "This Studio is not an installed build (it runs from source), so it has no version to show or change",
   "版本固定未能保存：{detail}": "The version hold was not saved: {detail}",
+  "这不是一个已发布的版本号": "That is not a published version number",
+  "这个版本没有发布更新内容": "This version has no published notes",
+  "暂时取不到更新内容，请检查网络后重试": "What's new cannot be reached right now. Check the network and try again",
+  "这个版本的更新内容超出了允许的大小，已拒绝读取": "This version's notes are larger than allowed and were not read",
   "已有一个版本切换正在进行，请等待其完成后重试":
     "A version change is already running — wait for it to finish and try again",
   "本次版本切换未能启动：{detail}": "This version change did not start: {detail}",
