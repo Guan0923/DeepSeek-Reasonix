@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEscape } from "./dismiss";
 import { t } from "../i18n";
 import type { AgentPort, HookCatalog, HookDryRun, HookEntry } from "../port/port";
@@ -79,6 +79,7 @@ export function Hooks({ port, onChanged }: Props) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [tried, setTried] = useState<Record<string, HookDryRun>>({});
+  const mine = useMemo(() => cat?.hooks.filter((h) => h.scope === (scope === "user" ? "global" : "project")) ?? [], [cat, scope]);
 
   const reload = () => {
     port
@@ -93,7 +94,6 @@ export function Hooks({ port, onChanged }: Props) {
 
   if (!cat) return <div className="empty">{t("无法读取 hooks 配置。")}</div>;
 
-  const mine = cat.hooks.filter((h) => h.scope === (scope === "user" ? "global" : "project"));
   const plugin = cat.hooks.filter((h) => h.scope === "plugin");
   const broken = cat.sources.filter((s) => s.status === "malformed" || s.status === "unreadable");
 
