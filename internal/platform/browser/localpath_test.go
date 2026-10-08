@@ -46,7 +46,7 @@ func TestCheckURLReadsATypedLocalPath(t *testing.T) {
 	if got, err := checkURL(outside, []string{root}); CodeOf(err) != CodeURLRefused {
 		t.Errorf("a path outside the workspace = %q, %v; want %s", got, err, CodeURLRefused)
 	}
-	if _, err := checkURL(`\\nas\share\x.html`, []string{root}); CodeOf(err) != CodeURLRefused {
+	if _, err := checkURL(`\\nas\share\x.html`, []string{root}); CodeOf(err) != CodeNetworkPath {
 		t.Errorf("a network path was not refused: %v", err)
 	}
 }

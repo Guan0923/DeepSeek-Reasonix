@@ -49,6 +49,17 @@ describe("what a reader is told a refusal was", () => {
       expect(english).not.toBe("fixture fallback");
     }
   });
+  it("explains a refused network path in both languages", () => {
+    for (const code of ["workspace.network_path_outside_scope", "browser.network_path"]) {
+      localStorage.setItem(STORAGE, "zh"); boot();
+      const chinese = reason(coded("fixture fallback", code));
+      expect(chinese).not.toBe("fixture fallback");
+      localStorage.setItem(STORAGE, "en"); boot();
+      const english = reason(coded("fixture fallback", code));
+      expect(english).not.toBe(chinese);
+      expect(english).not.toBe("fixture fallback");
+    }
+  });
   it("says a coded refusal in the window's own language", () => {
     expect(reason(coded("inbox item not found", "inbox.not_found"))).toBe("该条已不在待送达队列中");
   });
