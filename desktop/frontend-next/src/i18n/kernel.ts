@@ -423,6 +423,10 @@ const SAID: Record<string, string> = {
   // ── 版本：这个内核背后有没有一个可更新的 Studio ─────────────────
   "studio.no_install": "这个 Studio 不是安装版（从源码启动），没有可以查看或切换的版本",
   "studio.pin_rejected": "版本固定未能保存：{detail}",
+  "studio.notes_bad_version": "这不是一个已发布的版本号",
+  "studio.notes_absent": "这个版本没有发布更新内容",
+  "studio.notes_unreachable": "暂时取不到更新内容，请检查网络后重试",
+  "studio.notes_too_large": "这个版本的更新内容超出了允许的大小，已拒绝读取",
   "update.install_running": "已有一个版本切换正在进行，请等待其完成后重试",
   "update.install_rejected": "本次版本切换未能启动：{detail}",
   "update.restart_busy": "有 {n} 项任务正在运行，重启会中断它们",

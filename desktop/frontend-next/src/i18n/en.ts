@@ -736,6 +736,12 @@ export const EN: Record<string, string> = {
   "无法连接版本目录": "Cannot reach the version index",
   "已固定": "Pinned",
   "固定在这里": "Pin here",
+  "更新内容": "What's new",
+  "收起更新内容": "Hide what's new",
+  "{v} 的更新内容": "What's new in {v}",
+  "正在读取更新内容…": "Loading what's new…",
+  "更新内容读取失败": "What's new could not be read",
+  "在 GitHub 查看": "View on GitHub",
 
   // ── 账号 ─────────────────────────────────────────────────────────
   "正在检查登录状态…": "Checking sign-in status…",
