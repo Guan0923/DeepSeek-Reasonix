@@ -334,13 +334,7 @@ func (h *Host) connect(ctx context.Context, token string, saved *identity, priva
 	}
 	conn, response, err := h.dialer.DialContext(ctx, url, headers)
 	if err != nil {
-		if response != nil && response.StatusCode == http.StatusUnauthorized {
-			_ = clearIdentity()
-		}
-		if response != nil && response.StatusCode >= 400 && response.StatusCode < 500 {
-			return fmt.Errorf("%w: %w", errRelayRefused, err)
-		}
-		return err
+		return classifyRelayDialError(response, err)
 	}
 	defer conn.Close()
 	conn.SetReadLimit(64 << 10)
@@ -429,6 +423,19 @@ func (h *Host) connect(ctx context.Context, token string, saved *identity, priva
 			}
 		}
 	}
+}
+
+func classifyRelayDialError(response *http.Response, err error) error {
+	if response == nil {
+		return err
+	}
+	if response.StatusCode == http.StatusUnauthorized {
+		_ = clearIdentity()
+	}
+	if response.StatusCode >= 400 && response.StatusCode < 500 {
+		return fmt.Errorf("%w: %w", errRelayRefused, err)
+	}
+	return err
 }
 
 func (h *Host) handle(
