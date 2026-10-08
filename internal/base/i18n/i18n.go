@@ -658,10 +658,7 @@ type Messages struct {
 	WriteEnvErr               string // "write .env:" — prefix for env-write failure
 
 	// provider HTTP error explanations — actionable, reason + fix per status code
-	ProviderErrBadRequest string // 400
-	// ProviderErrDroppedReasoning explains a refused body whose
-	// assistant thinking this host left out for want of a declared protocol.
-	ProviderErrDroppedReasoning    string
+	ProviderErrBadRequest          string // 400
 	ProviderErrAuth                string // 401 — no key configured / sent
 	ProviderErrAuthRejected        string // 401 — a key was sent but the server rejected it
 	ProviderErrDNSNotFound         string // model host name does not resolve
