@@ -43,9 +43,9 @@
 
 <br/>
 
-<p align="center"><strong>Open source · MIT · a single Go binary</strong></p>
-<h3 align="center">A reliable coding agent for complex software engineering tasks.</h3>
-<p align="center">One local engine, four ways in — terminal, desktop app, browser, or your editor over ACP. Plan mode, permissions, a workspace sandbox and per-turn checkpoints keep a long autonomous run something you can still read and undo.</p>
+<p align="center"><strong>Open source · MIT · runs on your own computer</strong></p>
+<h3 align="center">An AI coding assistant where you decide how much it does alone, and can rewind.</h3>
+<p align="center">Tell it what you want. It reads your project, edits files and runs commands. You can have it ask before every step, or let it act on its own within set limits; files it changed can be rewound to how they were.</p>
 <p align="center">Maintained by <strong>Huahui Yu</strong>.</p>
 
 > [!IMPORTANT]
@@ -56,6 +56,36 @@
 > Douyin: **做游戏的小鱼** (Douyin ID `22703872788`) · [QR code](./docs/assets/douyin.png)
 
 <br/>
+
+## What it is
+
+Reasonix is an open-source AI coding assistant that runs on your own computer. You describe a task in plain language; it reads code, edits files and runs commands and tests inside the project folder you choose, and shows you each step.
+
+You pick the model: a DeepSeek preset is built in, any OpenAI-compatible service is one config entry, and you pay the model provider directly.
+
+## What you get
+
+- **Hand it the work.** It reads code, edits files and runs tests and commands, all inside your project folder.
+- **You stay in charge.** Choose to be asked every time, or let everyday actions run on their own; rules you set to forbid something always hold. To see the approach first, use plan mode; it starts work only after you approve.
+- **You can go back.** It snapshots a file before changing it, and you can rewind by conversation turn without touching your git history. Snapshots cover files changed by its edit tools, not what a shell command did.
+
+## 30-second start
+
+1. Download and install the desktop app, Reasonix Studio, from the [releases page](https://github.com/esengine/DeepSeek-Reasonix/releases?q=studio-v&expanded=true).
+2. Open it and enter your model provider and key when asked.
+3. Open your project folder and write what you want, for example "add retry on failure to the http client".
+4. Depending on the level you chose, it stops and asks before actions that need your say-so; allow to continue, or refuse.
+
+Prefer a terminal? Download the `reasonix` command-line tool, run `reasonix setup` to pick a model, then run `reasonix`. See [Install](#install) and [Quick start](#quick-start).
+
+## Four ways to use it
+
+- **Desktop app (Studio).** A graphical app; the best place to start.
+- **Terminal.** A full-screen text interface; `reasonix run "task"` also works in scripts.
+- **Browser.** `reasonix web` opens a web interface on your own machine.
+- **Editor.** Install the extension in VS Code; other editors that support ACP (Agent Client Protocol, a common way for an editor to connect to an AI assistant) can connect to `reasonix acp`.
+
+All four run the same local program. What follows is for advanced users and contributors.
 
 ## Versions
 
@@ -81,6 +111,8 @@ or reimplemented on 2.x where they fit the new architecture.
   and the decisions still open.
 
 ## Features
+
+Technical highlights for advanced users.
 
 - **Config-driven.** Providers, the agent, enabled tools, and plugins are all
   declared in `reasonix.toml`. No hardcoded models.
