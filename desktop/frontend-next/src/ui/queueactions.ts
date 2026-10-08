@@ -20,6 +20,7 @@ export function useQueueActions({ port, dispatch, fail, moved, sessionPath }: In
   const [queue, setQueue] = useState<QueueSnapshot | null>(null);
   // The last line taken back, numbered so the same text twice is two requests.
   const [restored, setRestored] = useState({ n: 0, text: "" });
+  const onRestoreText = useCallback((text: string) => setRestored((r) => ({ n: r.n + 1, text })), []);
   // The queue as the kernel holds it. The frame says only that it moved, so the
   // answer is read back whole — which is also what puts another window's lines,
   // and the CLI's, in front of this one. The optimistic rows say only what was
@@ -73,13 +74,13 @@ export function useQueueActions({ port, dispatch, fail, moved, sessionPath }: In
         const text = await port.readQueued(itemId);
         await port.cancelQueued(itemId);
         dispatch({ kind: "__unsent", id: itemId } as never);
-        setRestored((r) => ({ n: r.n + 1, text }));
+        onRestoreText(text);
       } catch (e) {
         taking.current.delete(itemId);
         fail(e);
       }
     },
-    [port, fail, dispatch],
+    [port, fail, dispatch, onRestoreText],
   );
-  return { queue, restored, onQueueEdit, onQueueMove, onQueueRetry, onQueueRefresh, onQueuePause, onQueueRead, onQueueSendNow, onQueueCancel };
+  return { queue, restored, onRestoreText, onQueueEdit, onQueueMove, onQueueRetry, onQueueRefresh, onQueuePause, onQueueRead, onQueueSendNow, onQueueCancel };
 }
