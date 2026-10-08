@@ -37,14 +37,12 @@ export function useQueueActions({ port, dispatch, fail, moved, sessionPath }: In
   const onQueueRefresh = useCallback((id: string) => void port.refreshQueued(id).catch(fail), [port, fail]);
   const onQueuePause = useCallback((on: boolean) => void port.setQueuePaused(on).catch(fail), [port, fail]);
   const onQueueRead = useCallback((id: string) => port.readQueued(id), [port]);
-  // "Send now" means the only thing it can while a turn holds the session: end
-  // that turn, and the queue dispatches this line as the next one. Guidance the
-  // running turn already accepted has to leave it first — a turn that ends
-  // without reading an accepted steer parks it as uncertain and pauses the
-  // whole queue, which is the opposite of sending it.
+  // Cancellation lets the dispatcher take the queue head. Accepted guidance
+  // must leave the active turn and become a follow-up before that turn ends.
   const onQueueSendNow = useCallback(
     async (item: QueueItem) => {
       try {
+        let itemId = item.id;
         if (item.state === "steer_accepted") {
           const text = await port.readQueued(item.id);
           await port.cancelQueued(item.id);
@@ -52,14 +50,16 @@ export function useQueueActions({ port, dispatch, fail, moved, sessionPath }: In
           const id = localId();
           dispatch({ kind: "__user", text, pending: false, id } as never);
           const again = await port.queueFollowup(text);
-          if (again?.itemId) dispatch({ kind: "__queued", id, itemId: again.itemId, queued: "followup" } as never);
+          itemId = again.itemId;
+          dispatch({ kind: "__queued", id, itemId, queued: "followup" } as never);
         }
+        await port.moveQueued(itemId, 0);
         await port.cancel();
       } catch (e) {
         fail(e);
       }
     },
-    [port, fail],
+    [port, fail, dispatch],
   );
   // The panel knows the entry, never the row the composer minted for it, so
   // taking one back here has to name it the way the kernel does. The body is
