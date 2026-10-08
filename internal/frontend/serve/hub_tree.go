@@ -408,17 +408,33 @@ func (h *Hub) removeSession(w http.ResponseWriter, r *http.Request) {
 			paths = append(paths, p)
 		}
 	}
+	// Every guard is taken before anything is erased, so a held copy refuses the
+	// request with the lead and the rest intact. The lead goes last.
+	guards := make([]*sessionstore.SessionRemovalGuard, 0, len(paths))
 	for _, p := range paths {
-		if !h.removeOneSession(w, dir, p) {
+		guard, ok := acquireRemovalGuard(w, p)
+		if !ok {
+			for _, g := range guards {
+				g.Release()
+			}
+			return
+		}
+		guards = append(guards, guard)
+	}
+	for i := len(paths) - 1; i >= 0; i-- {
+		if !eraseGuardedSession(w, dir, paths[i], guards[i]) {
+			for _, g := range guards[:i] {
+				g.Release()
+			}
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// removeOneSession erases one transcript and answers the request itself when it
-// cannot, returning false.
-func (h *Hub) removeOneSession(w http.ResponseWriter, dir, path string) bool {
+// acquireRemovalGuard answers the request itself when the session is held,
+// returning false.
+func acquireRemovalGuard(w http.ResponseWriter, path string) (*sessionstore.SessionRemovalGuard, bool) {
 	// A pane's current path is narrower than "anyone writing this file": a
 	// recovery branch or a mid-rotation session is held without being one.
 	// Taking the guard beats probing it, which leaves a window for a writer.
@@ -428,14 +444,20 @@ func (h *Hub) removeOneSession(w http.ResponseWriter, dir, path string) bool {
 		if errors.As(err, &held) {
 			if who := sessionHolder(held); who != nil {
 				busy(w, "session.in_use_by", "another process holds this conversation open", who)
-				return false
+				return nil, false
 			}
 			busy(w, "session.in_use", "this conversation is still being written to", nil)
-			return false
+			return nil, false
 		}
 		writeErr(w, http.StatusInternalServerError, err)
-		return false
+		return nil, false
 	}
+	return guard, true
+}
+
+// eraseGuardedSession erases one transcript under its guard and answers the
+// request itself when it cannot, returning false with the guard released.
+func eraseGuardedSession(w http.ResponseWriter, dir, path string, guard *sessionstore.SessionRemovalGuard) bool {
 	if err := removeSessionFiles(dir, path); err != nil {
 		guard.Release()
 		writeErr(w, http.StatusInternalServerError, err)

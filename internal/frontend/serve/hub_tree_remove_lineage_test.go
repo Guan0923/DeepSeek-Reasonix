@@ -169,7 +169,9 @@ func TestRemoveRefusesWhenACoveredSiblingIsHeld(t *testing.T) {
 	if body.Code != "session.in_use" {
 		t.Errorf("refusal code = %q, want session.in_use", body.Code)
 	}
-	if !exists(l.covered) {
-		t.Error("held sibling erased despite the refusal")
+	for name, p := range map[string]string{"held copy": l.covered, "lead": l.lead, "diverged copy": l.diverged} {
+		if !exists(p) {
+			t.Errorf("%s erased despite the refusal", name)
+		}
 	}
 }
