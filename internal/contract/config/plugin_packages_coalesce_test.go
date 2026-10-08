@@ -26,14 +26,12 @@ func TestEnabledPackagesConcurrentCallersShareParses(t *testing.T) {
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 	for range callers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			if got := r.enabledPackages(); len(got) != 1 || got[0].Name != "ecc" {
 				t.Errorf("enabledPackages = %+v", got)
 			}
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
