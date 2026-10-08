@@ -303,6 +303,36 @@ func TestApprovalPanelAnswersTheRowUnderTheCursor(t *testing.T) {
 	}
 }
 
+// 1.x moved the approval cursor with j/k and Ctrl+N/Ctrl+P as well as the
+// arrows, and docs/CLI.md still says approval rows take them.
+func TestApprovalCursorMovesWithJKAndCtrlNP(t *testing.T) {
+	m, k := testModel(t)
+	apply(m, eventwire.Event{Kind: "approval_request", Approval: &eventwire.Approval{ID: "ap1", Tool: "bash", Subject: "rm x", AllowsSession: true, AllowsPersist: true}})
+	for _, step := range []struct {
+		key  tea.KeyPressMsg
+		want int
+	}{
+		{tea.KeyPressMsg{Code: 'j', Text: "j"}, 1},
+		{tea.KeyPressMsg{Code: 'j', Text: "j"}, 2},
+		{tea.KeyPressMsg{Code: 'k', Text: "k"}, 1},
+		{ctrlN, 2},
+		{ctrlP, 1},
+	} {
+		m.Update(step.key)
+		if m.tr.OpenPrompt() == nil {
+			t.Fatalf("%s answered the approval instead of moving the cursor", step.key)
+		}
+		if m.apSel.row != step.want {
+			t.Fatalf("cursor after %s = %d, want %d", step.key, m.apSel.row, step.want)
+		}
+	}
+	run(m, press(m, "enter"))
+	calls := strings.Join(k.seen(), "\n")
+	if !strings.Contains(calls, `POST /approve {"allow":true,"id":"ap1","persist":false,"session":true}`) || strings.Count(calls, "POST /approve") != 1 {
+		t.Fatalf("enter on the second row should grant the session once:\n%s", calls)
+	}
+}
+
 func TestLargePasteFoldsAndExpandsOnSend(t *testing.T) {
 	m, k := testModel(t)
 	big := strings.Repeat("line\n", 12) + "line"
