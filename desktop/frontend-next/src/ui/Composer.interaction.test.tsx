@@ -5,10 +5,15 @@ import "./testkit";
 import { Composer } from "./Composer";
 import { MockPort } from "../port/mock";
 import { DeliveryError, HttpError } from "../port/port";
-import type { AgentPort, ApprovalMode, Attachment, Completion, ModelEntry, Preset, SessionStatus } from "../port/port";
+import type { AgentPort, ApprovalMode, Attachment, Completion, ModelEntry, Preset, SessionStatus, WorkspaceGit } from "../port/port";
 import { draftKey } from "./drafts";
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
+
+// The workspace's git answer, the way /workspace/git words it. Tests that name
+// an override get it; the rest get a plain repository on main.
+const git = (over: Partial<WorkspaceGit> = {}): WorkspaceGit =>
+  ({ repo: true, name: "reasonix", branch: "main", detached: false, added: 0, removed: 0, untracked: 0, ...over });
 
 const status = (over: Partial<SessionStatus> = {}) =>
   ({
@@ -42,7 +47,7 @@ function touchPointer() {
 }
 
 function draw(
-  over: { running?: boolean; onSubmit?: (text: string) => Promise<boolean>; port?: MockPort; st?: SessionStatus; changeCount?: number; host?: string } = {},
+  over: { running?: boolean; onSubmit?: (text: string) => Promise<boolean>; port?: MockPort; st?: SessionStatus; changeCount?: number; host?: string; git?: WorkspaceGit | null } = {},
 ) {
   const port = over.port ?? new MockPort();
   const onSubmit = over.onSubmit ?? vi.fn(async () => true);
@@ -57,6 +62,7 @@ function draw(
       onChanged={vi.fn()}
       onError={vi.fn()}
       changeCount={over.changeCount}
+      git={"git" in over ? over.git : git()}
       draftKey={draftKey(over.host ?? "", st.workspaceRoot ?? "/workspace", st.sessionPath ?? "")}
     />,
   );
@@ -437,6 +443,26 @@ describe("composer menus", () => {
   it("shows real workspace changes beside the current branch", async () => {
     draw({ changeCount: 3 });
     expect(await screen.findByText("3 个变更")).toBeTruthy();
+    expect(await screen.findByText("main")).toBeTruthy();
+  });
+
+  // The reading is the tree's, not the capability scope's project identity: a
+  // detached HEAD names its commit.
+  it("names a detached HEAD by its commit", async () => {
+    draw({ git: git({ branch: "4f2c1ab", detached: true }) });
+    expect(await screen.findByText("4f2c1ab")).toBeTruthy();
+  });
+
+  it("says when the workspace has no repository instead of vanishing", () => {
+    draw({ git: git({ repo: false }) });
+    expect(screen.getByRole("img", { name: "非 Git 仓库" })).toBeTruthy();
+  });
+
+  // Not answered yet is not the same fact as not a repository, and the two
+  // must not render as one word.
+  it("renders nothing before git has answered", () => {
+    draw({ git: null });
+    expect(document.querySelector(".studio-branch")).toBeNull();
   });
 
   it("dismisses completion when focus moves to a toolbar control", async () => {

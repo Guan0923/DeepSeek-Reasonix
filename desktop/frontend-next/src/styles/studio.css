@@ -2275,6 +2275,7 @@ body { font-size: 14px; line-height: 1.75; }
 }
 .studio-branch:hover { outline: none; }
 .studio-branch:focus-visible { outline: 2px solid #94968f; outline-offset: 1px; }
+.studio-branch[data-norepo], .studio-branch[data-norepo]:hover { color: var(--ghost); background: none; }
 .studio-branch .studio-icon { width: 13px; height: 13px; stroke-width: 1.65; }
 .studio-branch small {
   margin-left: 1px;
@@ -2289,9 +2290,6 @@ body { font-size: 14px; line-height: 1.75; }
   z-index: 65;
   left: 0;
   bottom: calc(100% + 9px);
-  width: max-content;
-  min-width: 210px;
-  max-width: 260px;
   display: grid;
   gap: 3px;
   padding: 10px 12px;
@@ -2310,7 +2308,7 @@ body { font-size: 14px; line-height: 1.75; }
 .studio-branch-card::after {
   content: "";
   position: absolute;
-  left: 15px;
+  left: var(--branch-tip-anchor, 15px);
   top: 100%;
   width: 8px;
   height: 8px;
