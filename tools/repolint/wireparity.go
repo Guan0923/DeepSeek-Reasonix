@@ -27,7 +27,6 @@ const (
 	tsWorkspaceFile = "desktop/frontend-next/src/port/workspace.ts"
 	tsLookFile      = "desktop/frontend-next/src/port/look.ts"
 	tsHubFile       = "desktop/frontend-next/src/port/hub.ts"
-	tsLookFile      = "desktop/frontend-next/src/port/look.ts"
 	tsChartFile     = "desktop/frontend-next/src/ui/chart/spec.ts"
 )
 
@@ -167,7 +166,6 @@ var mirroredWireTypes = []wireMirror{
 	{"internal/platform/gitcommit/gitcommit.go", "File", tsWorkspaceFile, "CommitFile"},
 	// The scale range the slider is drawn from: a bound the page cannot read
 	// would leave it a range of its own.
-	{"internal/frontend/serve/appearance.go", "appearanceView", tsLookFile, "Appearance"},
 	{"internal/frontend/serve/appearance.go", "zoomRangeView", tsLookFile, "ZoomRange"},
 	// The chart spec a stored render_chart call carries. The page re-validates it
 	// on load, so a field it cannot read is one the card silently drops.
