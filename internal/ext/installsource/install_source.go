@@ -63,7 +63,8 @@ type Options struct {
 	// a preview handed out. On for the model, whose apply would otherwise be the
 	// first moment anyone could learn what the source holds; off for hosts.
 	RequireApprovedPlan bool
-	// PreparePlugin replaces plugin source resolution; tests only.
+	// PreparePlugin replaces plugin source resolution. Tests only: production
+	// code constructing Options must not set it.
 	PreparePlugin func(ctx context.Context, source, mode string) (root, commit string, cleanup func(), err error)
 }
 

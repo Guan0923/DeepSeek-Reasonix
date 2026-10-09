@@ -59,10 +59,10 @@ type response struct {
 	Warnings []string  `json:"warnings,omitempty"`
 	Error    string    `json:"error,omitempty"`
 	Next     string    `json:"next,omitempty"`
-	// PreviewTruncated is set when this answer, or any action in it, is shown cut short.
+	// PreviewTruncated is set when text in this answer, or in a listed action, was cut or removed.
 	PreviewTruncated bool `json:"previewTruncated,omitempty"`
 	// HiddenActions counts planned steps left out of Actions; none of them is high risk.
-	// It is separate from PreviewTruncated, which says only that text was cut or escaped.
+	// It is separate from PreviewTruncated, which says only that text was cut or removed.
 	HiddenActions int `json:"hiddenActions,omitempty"`
 
 	// ContentDigest is what a reviewer records to pin this exact material;
