@@ -46,6 +46,9 @@ interface Props {
   // path as changeCount (turn boundaries, writes). null is "not answered yet";
   // repo:false is a workspace with no repository, and the two render apart.
   git?: WorkspaceGit | null;
+  // Called after a branch switch landed, so the change list, the branch reading
+  // and the session's workspace view re-read what the checkout moved.
+  onTreeChanged?: () => void;
   // Bumped when settings change; a source edited there can change the ladder.
   pulse?: number;
   draftKey?: string;
@@ -96,7 +99,7 @@ function releaseChip(c: Chip) {
 let chipSeq = 0;
 const chipId = () => `c${++chipSeq}`;
 
-export function Composer({ port, status, running, quote, restore, focus, onSubmit, onChanged, onError, onSettings = () => {}, changeCount = 0, git = null, pulse = 0, draftKey = "" }: Props) {
+export function Composer({ port, status, running, quote, restore, focus, onSubmit, onChanged, onError, onSettings = () => {}, changeCount = 0, git = null, onTreeChanged, pulse = 0, draftKey = "" }: Props) {
   const touch = touchKeyboard();
   const providerOrder = useProviderOrder();
   const [submitting, setSubmitting] = useState(false);
@@ -672,7 +675,7 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
             label={<><StudioIcon name="agent" /><span className="studio-sr-label">{t("计划")}</span><span>{status?.plan ? "Plan" : "Agent"}</span><StudioIcon name="down" /></>}
           />
         </div>
-        <BranchChip git={git} changeCount={changeCount} />
+        <BranchChip port={port} git={git} changeCount={changeCount} onChanged={onChanged} onSwitched={onTreeChanged} onError={onError} />
         {/* The toggle keeps its legacy meaning: it follows `plan`, which the
             kernel turns off the moment a plan is approved. The lifecycle is a
             separate reading — an approved plan is still running, and saying so

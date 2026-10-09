@@ -2261,7 +2261,7 @@ body { font-size: 14px; line-height: 1.75; }
 }
 .studio-branch-pop { position: relative; flex: none; }
 .studio-branch {
-  cursor: default;
+  cursor: pointer;
   border-radius: 6px !important;
   box-shadow: none;
   transform: none;

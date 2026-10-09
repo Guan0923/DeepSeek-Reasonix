@@ -1,4 +1,4 @@
-import type { ChangeDiff, WorkspaceChanges, WorkspaceGit } from "./port";
+import type { ChangeDiff, WorkspaceBranches, WorkspaceChanges, WorkspaceGit } from "./port";
 import { SseFeedback } from "./sse_feedback";
 
 // The workspace's tree facts: what it differs by and which branch git says it
@@ -11,6 +11,14 @@ export class SseWorkspace extends SseFeedback {
 
   workspaceGit() {
     return this.get<WorkspaceGit>("/workspace/git");
+  }
+
+  branches() {
+    return this.get<WorkspaceBranches>("/workspace/branches");
+  }
+
+  switchBranch(name: string) {
+    return this.post0<WorkspaceGit>("/workspace/branch/switch", { name });
   }
 
   changeDiff(path: string) {
