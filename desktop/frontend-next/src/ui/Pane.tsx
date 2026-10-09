@@ -390,7 +390,7 @@ function PaneView({ port, rt, title, active, visible, sideHost, side, onFocus, o
 
       <PaneShown.Provider value={shown}>
       <LiveWork.Provider value={live}>
-      <Transcript
+      <Transcript port={port}
         reply={reply}
         onResend={onResend}
         items={s.items}
