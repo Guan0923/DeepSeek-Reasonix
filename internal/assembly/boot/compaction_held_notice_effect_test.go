@@ -79,10 +79,10 @@ context_window = 20000
 	ctrl.SetSessionPath(sessionstore.NewSessionPath(ctrl.SessionDir(), ctrl.Label()))
 
 	for i := 0; prov.attempts() == 0; i++ {
-		if i > 12 {
+		if i > 120 {
 			t.Fatal("the summary was never attempted; the fixture never reached the trigger")
 		}
-		if err := ctrl.Run(context.Background(), "go "+strings.Repeat("log line ", 1100)); err != nil {
+		if err := ctrl.Run(context.Background(), "go "+strings.Repeat("log line ", 150)); err != nil {
 			t.Fatalf("turn %d: %v", i, err)
 		}
 	}
