@@ -86,10 +86,13 @@ type Messages struct {
 
 	// terminal transcript rows the kernel does not word.
 	TUIDeclinedFmt          string // an approval the user refused — %s tool, %s subject
-	NoticeContextBudgetFmt  string // the model was warned the compaction trigger is near — %d percent, %d tokens left
 	NoticeUnappliedSteerFmt string // guidance that arrived too late for its turn — %s the guidance
+	NoticeExtSkippedFmt     string // an optional extension skipped, its sidecar not running — %s extension, %s point
+	NoticeInboxRecoveredFmt string // a reopened inbox came up paused with unfinished instructions — %d count
 	TUIQuestion             string // an answered question that carried no prompt
 	TUISubagentCallsFmt     string // calls a sub-agent made under its task — %d count
+	TUIChartMoreRowsFmt     string // rows of a chart table past the preview — %d count
+	TUIChartMoreColsFmt     string // columns of a chart table that did not fit — %d count
 	TUIStallTokensFmt       string // progress watch: %d context windows (%d tokens) with nothing observable
 	TUIStallRepeating       string // progress watch: the model repeats itself
 	TUIStallIdleFmt         string // progress watch: %d tool rounds with nothing observable
@@ -281,6 +284,9 @@ type Messages struct {
 	McpPanelDetailHint           string // /mcp server detail keyboard hint
 	McpPanelNoTools              string // /mcp server detail: nothing to list
 	McpPanelOff                  string // /mcp panel row: server switched off
+	McpPanelPending              string // /mcp panel row: repository server awaiting the user's approval
+	McpPanelChanged              string // /mcp panel row: what an enabled repository server launches changed
+	McpPanelLaunchFmt            string // /mcp panel: what the selected pending server would start
 	McpToolDestructive           string // /mcp detail: tool tag
 	McpToolReadOnly              string // /mcp detail: tool tag
 	McpPanelConfirmFmt           string // /mcp: enabling a repository-declared server; server name and launch line
@@ -656,10 +662,7 @@ type Messages struct {
 	WriteEnvErr               string // "write .env:" — prefix for env-write failure
 
 	// provider HTTP error explanations — actionable, reason + fix per status code
-	ProviderErrBadRequest string // 400
-	// ProviderErrDroppedReasoning explains a refused body whose
-	// assistant thinking this host left out for want of a declared protocol.
-	ProviderErrDroppedReasoning    string
+	ProviderErrBadRequest          string // 400
 	ProviderErrAuth                string // 401 — no key configured / sent
 	ProviderErrAuthRejected        string // 401 — a key was sent but the server rejected it
 	ProviderErrDNSNotFound         string // model host name does not resolve
@@ -743,6 +746,9 @@ type Messages struct {
 	// usage / help
 	UsageBody             string // full multi-line help text
 	StandaloneConsoleHint string
+
+	// Feedback is the /feedback list standing and refusal wording.
+	Feedback FeedbackText
 }
 
 // M is the active catalogue. DetectLanguage replaces it; English is the

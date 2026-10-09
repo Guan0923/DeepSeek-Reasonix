@@ -54,10 +54,16 @@ interface Props {
   checkDisabled?: boolean;
   onToggle: (m: string) => void;
   onAdd: (m: string) => void;
+  // The same read the section header offers, placed where a missing model is noticed.
+  onFetch?: () => void;
+  fetching?: boolean;
+  fetchDisabled?: boolean;
+  fetchFail?: string;
 }
 
 export function ModelChoice({
   models, picked, vision, def, onDefault, onVision, visionLocked, facts, onCheck, checkDisabled, onToggle, onAdd,
+  onFetch, fetching, fetchDisabled, fetchFail,
 }: Props) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
@@ -82,8 +88,10 @@ export function ModelChoice({
     setQ("");
   };
 
+  const tally = checkTally(picked, facts);
   return (
     <>
+      {facts && <p className="msummary" role="status">{tally}</p>}
       <div className="msearch">
         <input
           type="search"
@@ -99,7 +107,19 @@ export function ModelChoice({
           }}
         />
         {query && <span className="cnt">{hits.length} / {models.length}</span>}
+        {onFetch && (
+          <button className="mfetch" data-action="provider.probe" onClick={onFetch} disabled={fetchDisabled}>
+            {t(fetching ? "正在从服务商读取…" : "没找到？从服务商读取可用模型")}
+          </button>
+        )}
       </div>
+      {fetchFail && (
+        <div className="find" data-lvl="err" role="alert">
+          <span className="t">{t("读取模型列表失败")}</span>
+          <span className="why">{fetchFail}</span>
+          <span className="why">{t("可以直接输入完整模型 ID 添加。")}</span>
+        </div>
+      )}
 
       <div className="mrows">
         {shown.map((m) => (
@@ -179,7 +199,7 @@ function ModelEvidence({ fact }: { fact: ModelFact }) {
           ? checkReason(fact.reason)
           : "待验证";
   return (
-    <span className="mevidence" role={fact.status === "unavailable" ? "alert" : "status"} aria-live="polite">
+    <span className="mevidence" role={fact.status === "unavailable" && !fact.checking ? "alert" : undefined}>
       <span>{t(origin)}</span>
       {state && <><i aria-hidden="true" data-state={fact.checking ? "checking" : fact.status ?? "unverified"} />{t(state)}</>}
       {!fact.checking && fact.httpStatus ? <code className="mhttp">{`HTTP ${fact.httpStatus}`}</code> : null}
@@ -213,4 +233,17 @@ function cap(hits: string[], on: Set<string>): [string[], number] {
   let room = Math.max(CAP - hits.filter((m) => on.has(m)).length, 0);
   const out = hits.filter((m) => on.has(m) || room-- > 0);
   return [out, hits.length - out.length];
+}
+
+function checkTally(picked: string[], facts?: Record<string, ModelFact>): string {
+  if (!facts || !picked.some((m) => facts[m]?.status || facts[m]?.checking)) return "";
+  const count = { available: 0, unavailable: 0, unknown: 0, checking: 0, todo: 0 };
+  for (const m of picked) count[facts[m]?.checking ? "checking" : facts[m]?.status ?? "todo"]++;
+  return [
+    count.available && t("{n} 个可用", { n: count.available }),
+    count.unavailable && t("{n} 个不可用", { n: count.unavailable }),
+    count.unknown && t("{n} 个无法确定", { n: count.unknown }),
+    count.checking && t("{n} 个验证中", { n: count.checking }),
+    count.todo && t("{n} 个未验证", { n: count.todo }),
+  ].filter(Boolean).join(" · ");
 }

@@ -1,6 +1,8 @@
-import { HttpError } from "./http_error";
+import { DeliveryError, HttpError } from "./http_error";
+import type { DeliveryFault } from "./http_error";
 import type { Attachment, DroppedRef } from "./attachment";
-export { HttpError };
+export { DeliveryError, HttpError };
+export type { DeliveryFault };
 export type { Attachment, DroppedRef };
 
 import type { AccountState, AccountUser, DeviceGrant } from "./account";
@@ -15,12 +17,12 @@ import type { UsageQuery, UsageReport } from "./usage";
 export { DEFAULT_USAGE_DAYS } from "./usage";
 export type { MemoryEdit } from "./memory";
 export type { Money, UsageDay, UsageModel, UsageProvider, UsageQuery, UsageReport } from "./usage";
-import type { CompactionSettings, Completion, CompletionItem, ModelEntry, ModelMode, ModelPrice, RoleAssignments } from "./model";
+import type { CompactionSettings, Completion, CompletionItem, ModelEntry, ModelMode, ModelPrice, RoleAssignments, RoleOverride } from "./model";
 import type { NetworkProbe, NetworkSettings } from "./network";
 import type { ApprovalDefault, ApprovalMode, WorkspaceTrust, ApprovalVerdict, BrowserTab, Checkpoint, HistoryMessage, HostTodo, JobEntry, Preset, RewindPlan, RewindResult, RewindScope, SessionEntry, SessionStatus, WalletLine, WalletReading, PlanAction } from "./session";
 import type { ContextBreakdown, ShellOption, ShellSettings } from "./shell";
 import type { SkillCatalog, SkillEntry } from "./skill";
-import type { UpdateProgress, VersionEntry, VersionHub } from "./version";
+import type { UpdateProgress, VersionEntry, VersionHub, VersionNotes } from "./version";
 import type { ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceInfo } from "./workspace";
 
 // The port is one contract; its subjects each keep their own file, the way the
@@ -31,9 +33,9 @@ export type { AccountState, AccountUser, ApprovalDefault, ApprovalMode, Approval
   HookCatalog, HookDryRun, HookEntry, HookEventInfo, HookSource, JobEntry, McpCatalog, McpDraft,
   McpDraftServer, McpEntry, McpInstallResult, McpInstallScope, McpLoad, McpRisk, McpTool, MemoryCatalog,
   MemoryEntry, ModelEntry, ModelMode, ModelPrice, NetworkProbe, NetworkSettings, Preset, RewindPlan,
-  RewindResult, RewindScope, RoleAssignments, ScopeLayer, SessionEntry, SessionStatus,
+  RewindResult, RewindScope, RoleAssignments, RoleOverride, ScopeLayer, SessionEntry, SessionStatus,
   ShellOption, ShellSettings, SkillCatalog, SkillEntry, UpdateProgress, VersionEntry,
-  VersionHub, WalletLine, WalletReading, ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceInfo };
+  VersionHub, VersionNotes, WalletLine, WalletReading, ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceInfo };
 
 import type { ExecutionGraphRead, TrajectoryRead, WireEvent } from "./wire";
 import type { PluginExport, PluginInstallRequest, PluginPackage, PluginPlan } from "./plugin";
@@ -85,6 +87,9 @@ export interface ChipCall {
 export interface Queued {
   itemId: string;
   disposition?: string;
+  // The queue was held when the line arrived: it waits there as a follow-up and
+  // nothing dispatches it until the queue is resumed.
+  paused?: boolean;
 }
 
 /** GET /inbox. What is actually waiting, kernel-side. The optimistic rows this
@@ -189,7 +194,7 @@ export interface AgentPort {
   // The community market: a source like a pasted address, not a trust root.
   // Install is the same plan-then-apply pair, pinned to the reviewed digest.
   marketList(q: MarketQuery): Promise<MarketList>;
-  marketDetail(slug: string): Promise<MarketDetail>;
+  marketDetail(slug: string, opts?: { refresh?: boolean }): Promise<MarketDetail>;
   planMarket(req: MarketRequest): Promise<MarketPlan>;
   installMarket(req: MarketRequest): Promise<MarketPlan>;
   // Publishing spends the account session; both refuse when signed out.
@@ -298,6 +303,11 @@ export interface AgentPort {
   // Persisted, then the runtime is rebuilt: boot reads every role model while
   // assembling, so an assignment cannot reach a runtime that is already up.
   setRole(role: string, ref: string): Promise<void>;
+  // Entries that win over a role's global model, per role. The global value
+  // roles() reports is not what runs while one of these exists.
+  roleOverrides(): Promise<Record<string, RoleOverride[]>>;
+  // Removes one user-config entry and rebuilds, so the global model takes over.
+  clearRoleOverride(role: string, key: string): Promise<void>;
   storage(query?: StorageQuery): Promise<StorageState>;
   planStorageMove(root: string, dir: string): Promise<StoragePlan>;
   moveStorage(root: string, dir: string): Promise<StoragePlan>;
@@ -330,6 +340,8 @@ export interface AgentPort {
   removeProvider(name: string): Promise<void>;
   versions(): Promise<VersionHub>;
   pinVersion(version: string): Promise<void>;
+  // A published release's notes. retry asks past the kernel's short memory of a failed fetch.
+  versionNotes(version: string, retry?: boolean): Promise<VersionNotes>;
   // Installs a published version, forward or back — the same call either way,
   // because a rollback that took a second code path would be the less-tested
   // one. Resolves only on failure: a success ends with the process handing over
@@ -395,6 +407,9 @@ export interface AgentPort {
   sessions(): Promise<SessionEntry[]>;
   resume(path: string): Promise<void>;
   newSession(): Promise<void>;
+  // Clears the unread mark on the conversation this pane has open. Unmarked
+  // sessions are a no-op on the kernel, and an older kernel answers 404.
+  markSessionViewed(): Promise<void>;
   deleteSession(name: string): Promise<void>;
   status(): Promise<SessionStatus>;
   /** The provider's wallet, or null when this provider has no wallet endpoint —
@@ -466,7 +481,7 @@ export interface AgentPort {
 
   // chips carries skill chips beside the line; without it the line is parsed
   // as typed, so a kernel that predates chips still runs a leading one.
-  submit(text: string, chips?: ChipCall): Promise<void>;
+  submit(text: string, chips?: ChipCall): Promise<Queued | void>;
   // /submit 409s once a turn holds the session. Mid-turn input is durable and
   // goes through the inbox, which delivers it at the next tool boundary. The
   // receipt is what makes it cancellable while it waits there.
@@ -552,8 +567,12 @@ export interface AgentPort {
   // The person's answer to "trust this folder?" for the session's workspace.
   decideWorkspaceTrust(trust: "trusted" | "declined"): Promise<void>;
   setPreset(preset: Preset): Promise<void>;
-  // Switches this session only; asDefault also records it as the model new sessions start on.
-  setModel(ref: string, asDefault?: boolean): Promise<void>;
+  // Switches this session only.
+  setModel(ref: string): Promise<void>;
+  // Records the model new sessions start on in the config of the machine this
+  // port answers for. A brokered pane's default lives on the machine its models
+  // come from, so its refusal is typed: settings.default_model_brokered.
+  setDefaultModel(ref: string): Promise<void>;
   setEffort(effort: string): Promise<void>;
   // "" turns the session's model mode off.
   setModelMode(mode: string): Promise<void>;
