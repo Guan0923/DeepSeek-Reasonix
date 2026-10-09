@@ -127,9 +127,24 @@ func TestFallbackWarningDoesNotOverpromise(t *testing.T) {
 			t.Fatalf("the warning claims %q fails, but PowerShell 7 chains and the redirect is rewritten: %q", bad, msg)
 		}
 	}
-	for _, want := range []string{"head or grep", `prefer="powershell"`, "bash.exe"} {
+	for _, want := range []string{"head or grep", `prefer="pwsh"`, "bash.exe"} {
 		if !strings.Contains(msg, want) {
 			t.Fatalf("the warning should mention %q: %q", want, msg)
+		}
+	}
+}
+
+// prefer="powershell" would pick Windows PowerShell 5.1 ahead of pwsh, so the advice
+// must name the interpreter that is in use, or silencing the warning costs && chains.
+func TestFallbackWarningAdviceKeepsTheInterpreterInUse(t *testing.T) {
+	for _, tc := range []struct{ path, want string }{
+		{`C:\Program Files\PowerShell\7\pwsh.exe`, `prefer="pwsh"`},
+		{`C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`, `prefer="powershell"`},
+	} {
+		var w strings.Builder
+		warnBashFallback(&w, Shell{Kind: ShellPowerShell, Path: tc.path, Fallback: FallbackNotFound})
+		if !strings.Contains(w.String(), tc.want) {
+			t.Errorf("for %s want %s in %q", tc.path, tc.want, w.String())
 		}
 	}
 }

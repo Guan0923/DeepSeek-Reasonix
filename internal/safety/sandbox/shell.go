@@ -181,7 +181,13 @@ func warnBashFallback(warn io.Writer, sh Shell) {
 		FallbackProbeTimeout: "Git Bash did not answer in time",
 		FallbackProbeFailed:  "Git Bash did not run a command",
 	}[sh.Fallback]
-	fmt.Fprintf(warn, "warning: [tools.shell] %s; using PowerShell at %q. Commands written for bash that need POSIX tools such as head or grep will fail there. Install Git for Windows or set [tools.shell] path to its bash.exe; set prefer=\"powershell\" to silence this.\n", why, sh.Path)
+	// prefer="powershell" tries Windows PowerShell 5.1 before pwsh, so the advice
+	// names the interpreter actually in use rather than trading pwsh 7 away.
+	keep := "powershell"
+	if sh.SupportsChaining() {
+		keep = "pwsh"
+	}
+	fmt.Fprintf(warn, "warning: [tools.shell] %s; using PowerShell at %q. Commands written for bash that need POSIX tools such as head or grep will fail there. Install Git for Windows or set [tools.shell] path to its bash.exe; set prefer=%q to keep this interpreter and silence this.\n", why, sh.Path, keep)
 }
 
 // available lists the interpreters this host really has, in the order auto
