@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"reasonix/internal/base/diff"
-	"reasonix/internal/base/fileutil"
 	"reasonix/internal/contract/tool"
 	"reasonix/internal/safety/evidence"
 	"reasonix/internal/state/checkpoint"
@@ -207,9 +206,6 @@ func (a *Agent) touchedTheWorkspace(r evidence.Receipt) bool {
 // relative path is resolved against the workspace by every file tool, so it is
 // inside by construction; only an absolute one can leave.
 func (a *Agent) pathInWorkspace(path string) bool {
-	if fileutil.UnderVCSStore(path) {
-		return false
-	}
 	root := a.writeWorkspaceRoot
 	if root == "" {
 		return true

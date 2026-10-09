@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -8,21 +9,29 @@ import (
 	"reasonix/internal/runtime/taskmonitor"
 )
 
-// hostOwnedPath reports whether path is state the host or a tool wrote about
-// the work rather than the work. Only what the host itself writes counts; a
-// marker file anyone can create, the model included, declares nothing.
+// hostOwnedPath reports whether path lies in the task-snapshot store, the host's
+// own path convention. It de-noises the receipt only: any writer can create files
+// there, and a symlink anywhere on the way means the path leads elsewhere.
 func hostOwnedPath(root, path string) bool {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(root, path)
 	}
 	rel, err := filepath.Rel(root, path)
-	if err != nil || rel == "." {
+	if err != nil || !underDir(rel, taskmonitor.StoreDir) {
 		return false
 	}
-	if underDir(rel, taskmonitor.StoreDir) {
-		return true
+	at := root
+	for part := range strings.SplitSeq(rel, string(filepath.Separator)) {
+		at = filepath.Join(at, part)
+		info, err := os.Lstat(at)
+		if err != nil {
+			return os.IsNotExist(err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return false
+		}
 	}
-	return false
+	return true
 }
 
 func underDir(rel, dir string) bool {
