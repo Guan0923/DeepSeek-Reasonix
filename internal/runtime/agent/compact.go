@@ -692,7 +692,9 @@ func (a *contextWindow) summarizeAt(ctx context.Context, region []provider.Messa
 				// The digest is already streaming; forwarding it is what lets a
 				// frontend show a fold working rather than a spinner that cannot
 				// tell slow from stuck. Coalesced downstream like any delta.
-				a.svc.sink.Emit(event.Event{Kind: event.CompactionProgress, Text: chunk.Text})
+				if chunk.Text != "" {
+					a.svc.sink.Emit(event.Event{Kind: event.CompactionProgress, Text: chunk.Text})
+				}
 			case provider.ChunkUsage:
 				usage = chunk.Usage
 			case provider.ChunkError:

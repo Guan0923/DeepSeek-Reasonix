@@ -111,3 +111,61 @@ func TestTruncatedSummaryWithNoHeadroomDoesNotRetry(t *testing.T) {
 		t.Fatalf("summary requests = %d, want 1: the model cap leaves nothing to grow into", len(p.caps))
 	}
 }
+
+func TestTruncatedSummaryRetryRestartsTheStreamedDigest(t *testing.T) {
+	p := &truncatingProvider{truncateAtOrBelow: 1 << 30}
+	var mu sync.Mutex
+	var frames []event.Event
+	a := New(p, tool.NewRegistry(), foldableSessionOverForce(6), Options{
+		ContextWindow: 5000, CompactRatio: 0.5, RecentKeep: 2,
+		MaxOutputTokens: 4 * summaryOutputMaxTokens, ArchiveDir: testenv.TempDir(t),
+	}, event.FuncSink(func(e event.Event) {
+		if e.Kind == event.CompactionProgress {
+			mu.Lock()
+			frames = append(frames, e)
+			mu.Unlock()
+		}
+	}))
+	_ = prepareContext(context.Background(), a, CompactionTriggerManual)
+
+	// Replay as the card does: text appends, a text-less frame restarts.
+	var card string
+	restarts := 0
+	for _, e := range frames {
+		if e.Text == "" {
+			card, restarts = "", restarts+1
+			continue
+		}
+		card += e.Text
+	}
+	if restarts != 1 || card != "## Goal\ncut off mid" {
+		t.Fatalf("restarts=%d card=%q, want one restart and only the second attempt's text", restarts, card)
+	}
+}
+
+// A window with room for more than the first cap but less than the doubled one
+// must clip the retry to that room.
+func TestTruncatedSummaryRetryStaysInsideSharedWindowRoom(t *testing.T) {
+	prov := &sharedWindowTestProvider{budget: 128 * 1024, shared: true, finish: "length"}
+	a := &Agent{agentConfig: agentConfig{contextWindow: 1_000_000}, svc: agentServices{prov: prov, sink: event.Discard}, sess: sessionRuntime{output: outputBudgetState{outputBudget: prov.budget}}}
+	region := []provider.Message{{Role: provider.RoleUser, Content: strings.Repeat("字", 20_000)}}
+	a.sess.output.lastUsage.Store(&provider.Usage{PromptTokens: 20_000})
+	a.window().setPromptTokenCalibration(20_000, requestCalibrationShapeOf(provider.Request{Messages: region}))
+	sent := provider.Request{Messages: []provider.Message{
+		{Role: provider.RoleSystem, Content: summarySystemPrompt},
+		{Role: provider.RoleUser, Content: renderTranscript(region) + summaryClosingInstruction},
+	}}
+	const room = summaryOutputMaxTokens + 4096
+	a.contextWindow = a.window().estimatedRequestTokens(sent) + outputBudgetReserve + room
+
+	_, _, err := a.window().summarizeOnce(context.Background(), region, "")
+	if !errors.Is(err, errSummaryOutputTruncated) {
+		t.Fatalf("err = %v, want truncation", err)
+	}
+	if prov.calls != 2 {
+		t.Fatalf("calls = %d, want one retry", prov.calls)
+	}
+	if got := prov.last.MaxTokens; got <= summaryOutputMaxTokens || got > room {
+		t.Fatalf("retry cap = %d, want above %d and within the %d tokens the window has left", got, summaryOutputMaxTokens, room)
+	}
+}

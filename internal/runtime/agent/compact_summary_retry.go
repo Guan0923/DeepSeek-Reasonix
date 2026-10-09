@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"reasonix/internal/contract/event"
 	"reasonix/internal/contract/provider"
 )
 
@@ -34,6 +35,8 @@ func (a *contextWindow) summarizeOnce(ctx context.Context, fold []provider.Messa
 	if !errors.As(err, &cut) || cut.Retried || ctx.Err() != nil {
 		return summary, usage, err
 	}
+	// The cut digest has already streamed to the card; the retry writes a new one.
+	a.svc.sink.Emit(event.Event{Kind: event.CompactionProgress})
 	summary2, usage2, err2 := a.summarizeAt(ctx, fold, instructions, summaryRetryOutputMaxTokens, cut.Cap)
 	if errors.Is(err2, errNoOutputHeadroom) {
 		return summary, usage, err
