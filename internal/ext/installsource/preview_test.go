@@ -170,7 +170,8 @@ func TestExecuteAppliedReportsRealPathsWhileJSONIsBounded(t *testing.T) {
 	home := filepath.Join(testenv.TempDir(t), "h​ome")
 	tl := NewTool(Options{ProjectRoot: testenv.TempDir(t), HomeDir: home})
 	raw, _ := json.Marshal(map[string]any{"source": src, "kind": "skill", "scope": "global", "apply": true})
-	out, applied, err := tl.ExecuteApplied(t.Context(), raw)
+	out, res, err := tl.ExecuteApplied(t.Context(), raw)
+	applied := res.Applied
 	if err != nil || len(applied) != 1 {
 		t.Fatalf("applied=%v err=%v out=%s", applied, err, out)
 	}

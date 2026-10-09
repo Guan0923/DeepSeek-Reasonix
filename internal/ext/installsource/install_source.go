@@ -172,20 +172,7 @@ func (t *Tool) Execute(ctx context.Context, raw json.RawMessage) (string, error)
 	return t.execute(ctx, raw, nil)
 }
 
-// AppliedItem is what an apply actually wrote, taken from the unprojected
-// action: callers that record or act on it must not read the bounded JSON.
-type AppliedItem struct {
-	Kind, Name, Target, ConfigPath string
-}
-
-// ExecuteApplied is Execute that also returns the actions that completed.
-func (t *Tool) ExecuteApplied(ctx context.Context, raw json.RawMessage) (string, []AppliedItem, error) {
-	var applied []AppliedItem
-	out, err := t.execute(ctx, raw, &applied)
-	return out, applied, err
-}
-
-func (t *Tool) execute(ctx context.Context, raw json.RawMessage, applied *[]AppliedItem) (output string, err error) {
+func (t *Tool) execute(ctx context.Context, raw json.RawMessage, res *Result) (output string, err error) {
 	defer func() { err = secrets.DiagnosticError(err) }()
 	var req request
 	if err := json.Unmarshal(raw, &req); err != nil {
@@ -234,7 +221,7 @@ func (t *Tool) execute(ctx context.Context, raw json.RawMessage, applied *[]Appl
 	if err := checkExpectedDigest(req.ExpectDigest, actions); err != nil {
 		return "", err
 	}
-	planID := computePlanID(req, actions)
+	planID := res.fingerprint(req, actions)
 	if len(actions) == 0 {
 		out := response{
 			OK:       false,
@@ -304,13 +291,13 @@ func (t *Tool) execute(ctx context.Context, raw json.RawMessage, applied *[]Appl
 		}
 	}
 
-	return t.executeApply(ctx, req, actions, warnings, planID, applied), nil
+	return t.executeApply(ctx, req, actions, warnings, planID, res), nil
 }
 
 // executeApply runs the apply phase. The first failed action short-circuits
 // the rest only when a single failure implies the plan is unusable; for
 // MCP installs in particular, partial completion is reported honestly.
-func (t *Tool) executeApply(ctx context.Context, req request, actions []action, warnings []string, planID string, applied *[]AppliedItem) string {
+func (t *Tool) executeApply(ctx context.Context, req request, actions []action, warnings []string, planID string, res *Result) string {
 	ok := true
 	anySucceeded := false
 	for i := range actions {
@@ -325,8 +312,8 @@ func (t *Tool) executeApply(ctx context.Context, req request, actions []action, 
 		}
 		actions[i].Status = "done"
 		anySucceeded = true
-		if applied != nil {
-			*applied = append(*applied, AppliedItem{Kind: actions[i].Kind, Name: actions[i].Name, Target: actions[i].Target, ConfigPath: actions[i].ConfigPath})
+		if res != nil {
+			res.Applied = append(res.Applied, AppliedItem{Kind: actions[i].Kind, Name: actions[i].Name, Target: actions[i].Target, ConfigPath: actions[i].ConfigPath})
 		}
 		warnings = append(warnings, actions[i].Warnings...)
 	}

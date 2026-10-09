@@ -133,7 +133,7 @@ func pluginViewFor(home, workspaceRoot string, p pluginpkg.InstalledPlugin) plug
 	view.Compatibility = textutil.ShownIdentity(pkg.Compatibility.Status)
 	view.Skipped = pluginpkg.DisplayIssues(pkg.Compatibility.Skipped)
 
-	inv := pkg.Inventory()
+	inv := pkg.InventoryForDisplay()
 	for _, sk := range inv.Skills {
 		view.Skills = append(view.Skills, pluginItem{
 			Name: sk.Name, Description: sk.Description, Invocation: "/" + p.Name + ":" + sk.Name,

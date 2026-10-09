@@ -22,12 +22,14 @@ type PreviewLimit struct {
 
 // BoundProse prepares author-supplied prose for an approval surface. Escape
 // sequences and invisible characters are removed, line breaks survive up to
-// the limit, and the second result reports whether anything was cut off.
-// Output is a pure function of the input: the same text always yields the same
-// bytes, and text holding none of the above comes back unchanged.
+// the limit, and the second result reports whether anything was cut off or
+// removed, since the reader cannot tell that text was deleted. Output is a pure
+// function of the input and comes back unchanged when none of that applies.
 func BoundProse(s string, lim PreviewLimit) (string, bool) {
 	s, cut := capInput(s, lim)
-	s = ansi.Strip(strings.ToValidUTF8(s, "\uFFFD"))
+	valid := strings.ToValidUTF8(s, "\uFFFD")
+	s = ansi.Strip(valid)
+	removed := s != valid
 	rs := []rune(s)
 	hidden := hiddenMask(rs)
 	var b strings.Builder
@@ -43,17 +45,19 @@ func BoundProse(s string, lim PreviewLimit) (string, bool) {
 		case r == '\t':
 			b.WriteByte('\t')
 		case hidden[i]:
+			removed = true
 		default:
 			b.WriteRune(r)
 		}
 	}
 	out, clipped := clipLines(b.String(), lim)
-	return markCapped(out, lim, cut && !clipped), cut || clipped
+	return markCapped(out, lim, cut && !clipped), cut || clipped || removed
 }
 
 // BoundLiteral prepares text that names or runs something. Nothing is removed:
 // every control, escape, line break and invisible character is rendered as a
-// visible \u{hex} escape, so what the reader sees is what is there.
+// visible \u{hex} escape, so what the reader sees is what is there. A literal
+// backslash that begins "u{" is escaped too, so typed text cannot pass for one.
 func BoundLiteral(s string, lim PreviewLimit) (string, bool) {
 	s, cut := capInput(s, lim)
 	rs := []rune(strings.ToValidUTF8(s, "\uFFFD"))
@@ -61,7 +65,7 @@ func BoundLiteral(s string, lim PreviewLimit) (string, bool) {
 	var b strings.Builder
 	b.Grow(len(s))
 	for i, r := range rs {
-		if hidden[i] {
+		if hidden[i] || (r == '\\' && i+2 < len(rs) && rs[i+1] == 'u' && rs[i+2] == '{') {
 			fmt.Fprintf(&b, `\u{%x}`, r)
 			continue
 		}

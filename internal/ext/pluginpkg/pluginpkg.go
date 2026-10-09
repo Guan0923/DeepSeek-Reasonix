@@ -951,7 +951,7 @@ func (p Package) Inventory() Inventory {
 		Themes:     p.ThemeFiles(),
 		Hooks:      p.hookRefs(),
 		MCPServers: p.mcpServerRefs(),
-	}.bounded()
+	}
 }
 
 // commandRefs loads the package's command dirs through the same loader the

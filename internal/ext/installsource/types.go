@@ -61,6 +61,8 @@ type response struct {
 	Next     string    `json:"next,omitempty"`
 	// PreviewTruncated is set when this answer, or any action in it, is shown cut short.
 	PreviewTruncated bool `json:"previewTruncated,omitempty"`
+	// HiddenActions counts planned steps left out of Actions; none of them is high risk.
+	HiddenActions int `json:"hiddenActions,omitempty"`
 
 	// ContentDigest is what a reviewer records to pin this exact material;
 	// empty when the plan's material cannot be pinned.

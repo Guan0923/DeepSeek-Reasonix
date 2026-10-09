@@ -171,7 +171,7 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
             ))}
           </section>
         ))}
-        <PreviewCut shown={plan.previewTruncated} />
+        <PreviewCut shown={plan.previewTruncated} hidden={plan.hiddenActions} />
         {plan.warnings?.map((wmsg) => (
           <div className="why" key={wmsg}>
             {wmsg}
@@ -264,10 +264,15 @@ export function AddPlugin({ port, onClose, onInstalled, updating, source, onAppl
   );
 }
 
-// The kernel shortened something in this plan; what the person confirms is the
-// complete plan, never the text drawn from it.
-export function PreviewCut({ shown }: { shown?: boolean }) {
-  return shown ? <div className="why" data-testid="preview-cut">{t("此项的部分内容过长，预览只显示了一部分；确认的是完整的安装计划。")}</div> : null;
+export function PreviewCut({ shown, hidden }: { shown?: boolean; hidden?: number }) {
+  if (!shown && !hidden) return null;
+  return (
+    <div className="why" data-testid="preview-cut">
+      {hidden ? t("另有 {n} 项未显示；高风险项都已列出。", { n: hidden }) : null}
+      {hidden && shown ? " " : null}
+      {shown ? t("部分文字过长或含不可见字符，预览没有显示全部。") : null}
+    </div>
+  );
 }
 
 // The plan's own riskReasons are written for the model that reads the tool's
@@ -313,7 +318,7 @@ export function Candidate({ a }: { a: PluginAction }) {
       {a.previewTruncated && (
         <div className="risk" data-kind="shell">
           <span className="lb">{t("已截断")}</span>
-          <span className="why">{t("此项的部分内容过长，预览只显示了一部分；确认的是完整的安装计划。")}</span>
+          <span className="why">{t("部分文字过长或含不可见字符，预览没有显示全部。")}</span>
         </div>
       )}
       {a.riskReasons?.length ? (

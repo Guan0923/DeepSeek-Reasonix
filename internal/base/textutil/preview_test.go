@@ -54,8 +54,8 @@ func TestBoundProseRemovesHiddenText(t *testing.T) {
 		if name == "esc csi" {
 			w = "aredb"
 		}
-		if got != w || cut {
-			t.Errorf("%s: BoundProse(%q) = %q, %v; want %q", name, in, got, cut, w)
+		if got != w || !cut {
+			t.Errorf("%s: BoundProse(%q) = %q, %v; want %q (removal is flagged)", name, in, got, cut, w)
 		}
 	}
 }
@@ -110,11 +110,11 @@ func TestBoundProseTruncationNeverSplitsGraphemes(t *testing.T) {
 	}
 }
 
-func TestBoundProseFlagIsExactlyTruncation(t *testing.T) {
+func TestBoundProseFlagMeansTextIsCutOrRemoved(t *testing.T) {
 	lim := PreviewLimit{Graphemes: 5, Lines: 2}
 	for in, wantCut := range map[string]bool{
-		"12345": false, "123456": true, "\u200b12345": false, "12\n34": false, "1\n2\n3": true,
-		"12345\x1b[0m": false, "1\n2\n\n": false, "ab\u202ec": false,
+		"12345": false, "123456": true, "\u200b12345": true, "12\n34": false, "1\n2\n3": true,
+		"12345\x1b[0m": true, "1\n2\n\n": false, "ab\u202ec": true,
 	} {
 		if _, cut := BoundProse(in, lim); cut != wantCut {
 			t.Errorf("BoundProse(%q) cut = %v, want %v", in, cut, wantCut)
@@ -240,5 +240,38 @@ func TestStackedCombiningMarksAreCapped(t *testing.T) {
 	again, _ := BoundProse("e"+strings.Repeat("́", 7)+"é", testLimit)
 	if again != "e"+strings.Repeat("́", 6)+"é" {
 		t.Fatalf("run must reset at the next base: %q", again)
+	}
+}
+
+func TestBoundLiteralTypedEscapeDiffersFromTheCharacter(t *testing.T) {
+	typed, _ := BoundLiteral(`a\u{200b}`, PreviewLocator)
+	real, _ := BoundLiteral("a\u200b", PreviewLocator)
+	if typed == real {
+		t.Fatalf("both render as %q", typed)
+	}
+	if again, _ := BoundLiteral(`C:\Users\x`, PreviewLocator); again != `C:\Users\x` {
+		t.Fatalf("ordinary backslashes changed: %q", again)
+	}
+}
+
+func TestBoundProseFlagsEveryDeletion(t *testing.T) {
+	for name, in := range map[string]string{
+		"unterminated OSC": "head\x1b]tail",
+		"unterminated DCS": "head\x1bPtail",
+		"complete CSI":     "he\x1b[31mad",
+		"zero width":       "he\u200bad",
+		"control":          "he\x00ad",
+		"bidi":             "he\u202ead",
+	} {
+		if out, cut := BoundProse(in, PreviewProse); !cut || strings.ContainsAny(out, "\x1b\x00\u200b\u202e") {
+			t.Errorf("%s: out=%q cut=%v", name, out, cut)
+		}
+	}
+	for name, in := range map[string]string{
+		"plain": "head tail", "crlf": "a\r\nb", "lone cr": "a\rb", "separator": "a\u2028b", "tab": "a\tb", "joiner in script": "क्‍ष",
+	} {
+		if _, cut := BoundProse(in, PreviewProse); cut {
+			t.Errorf("%s flagged although nothing was removed", name)
+		}
 	}
 }

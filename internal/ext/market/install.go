@@ -158,7 +158,7 @@ func (s *Service) execute(ctx context.Context, pkg Package, v Version, expect st
 		}
 	}
 	raw, _ := json.Marshal(body)
-	out, applied, err := s.NewInstaller().ExecuteApplied(ctx, raw)
+	out, res, err := s.NewInstaller().ExecuteApplied(ctx, raw)
 	if err != nil {
 		return Outcome{Version: v}, err
 	}
@@ -167,7 +167,7 @@ func (s *Service) execute(ctx context.Context, pkg Package, v Version, expect st
 		return Outcome{Version: v}, err
 	}
 	if apply {
-		if items := doneItems(applied); len(items) > 0 {
+		if items := doneItems(res.Applied); len(items) > 0 {
 			rec := Record{Slug: pkg.Slug, Kind: pkg.Kind, Version: v.Version, ContentHash: expect,
 				Unreviewed: unreviewed, Items: items, At: s.now().UTC().Format(time.RFC3339)}
 			if err := saveRecord(s.Home, rec); err != nil {
@@ -185,15 +185,11 @@ func (s *Service) execute(ctx context.Context, pkg Package, v Version, expect st
 
 func (s *Service) themeCheck(ctx context.Context, body map[string]any, slug string) error {
 	raw, _ := json.Marshal(body)
-	out, err := s.NewInstaller().Execute(ctx, raw)
+	_, res, err := s.NewInstaller().ExecuteApplied(ctx, raw)
 	if err != nil {
 		return err
 	}
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(out), &fields); err != nil {
-		return err
-	}
-	if !themesOnly(fields["actions"]) {
+	if !res.ThemesOnly {
 		return fmt.Errorf("%w: %s", ErrNotTheme, slug)
 	}
 	return nil
@@ -288,32 +284,6 @@ func npmPackage(s string) bool {
 	name, _, _ := installsource.SplitPackageSpec(s)
 	for p := range strings.SplitSeq(strings.TrimPrefix(name, "@"), "/") {
 		if !slugPart(p) {
-			return false
-		}
-	}
-	return true
-}
-
-// themesOnly holds the theme category to its name: every planned action is a
-// plugin package that contributes themes and nothing that runs or prompts.
-func themesOnly(raw json.RawMessage) bool {
-	var actions []struct {
-		Kind         string          `json:"kind"`
-		ThemeCount   int             `json:"themeCount"`
-		SkillCount   int             `json:"skillCount"`
-		AgentCount   int             `json:"agentCount"`
-		CommandCount int             `json:"commandCount"`
-		HookCount    int             `json:"hookCount"`
-		ToolCount    int             `json:"toolCount"`
-		PromptCount  int             `json:"promptCount"`
-		Runtime      json.RawMessage `json:"runtime"`
-	}
-	if json.Unmarshal(raw, &actions) != nil || len(actions) == 0 {
-		return false
-	}
-	for _, a := range actions {
-		others := a.SkillCount + a.AgentCount + a.CommandCount + a.HookCount + a.ToolCount + a.PromptCount
-		if a.Kind != "plugin" || a.ThemeCount == 0 || others != 0 || (len(a.Runtime) > 0 && string(a.Runtime) != "null") {
 			return false
 		}
 	}

@@ -94,7 +94,7 @@ func InstalledShowText(reasonixHome, name string) (string, error) {
 	} else {
 		b.WriteString("usage: enable this plugin before its skills, agents, commands, hooks, or MCP servers participate in sessions.\n")
 	}
-	appendInventoryText(&b, p.Name, pkg.Inventory())
+	appendInventoryText(&b, p.Name, pkg.InventoryForDisplay())
 	for _, warning := range DisplayLines(warnings) {
 		fmt.Fprintf(&b, "warning: %s\n", warning)
 	}

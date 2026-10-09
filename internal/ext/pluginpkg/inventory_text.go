@@ -2,6 +2,11 @@ package pluginpkg
 
 import "reasonix/internal/base/textutil"
 
+// InventoryForDisplay is Inventory projected for a surface that shows it. The
+// plain Inventory stays the package's own text, which callers that decide or
+// fingerprint must read.
+func (p Package) InventoryForDisplay() Inventory { return p.Inventory().bounded() }
+
 // bounded projects every author-supplied string in the inventory through the
 // shared preview limits: names as identities, paths and commands as locators,
 // descriptions as prose. Renderers of an installed package read the inventory

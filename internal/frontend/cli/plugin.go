@@ -248,7 +248,7 @@ func pluginShowCommand(args []string) int {
 	if summary.Runtime {
 		fmt.Print(pluginpkg.RuntimeTrustText(pkg.Manifest.Runtime))
 	}
-	printPluginInventory(p.Name, pkg.Inventory())
+	printPluginInventory(p.Name, pkg.InventoryForDisplay())
 	for _, warning := range pluginpkg.DisplayLines(warnings) {
 		fmt.Println("warning:", warning)
 	}

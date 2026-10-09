@@ -24,6 +24,25 @@ const (
 	maxProseItems    = textutil.MaxProseItems
 )
 
+// hostLiteral renders package-supplied text that a host-written sentence embeds.
+// Nothing is deleted from it, so the sentence around it is never swallowed.
+func hostLiteral(s string) string { return textutil.ShownLocator(s) }
+
+// themesOnly holds the theme category to its name. It reads the unprojected
+// plan: the bounded preview shows fewer steps than the plan installs.
+func themesOnly(actions []action) bool {
+	if len(actions) == 0 {
+		return false
+	}
+	for _, a := range actions {
+		others := a.SkillCount + a.AgentCount + a.CommandCount + a.HookCount + a.ToolCount + a.PromptCount
+		if a.Kind != "plugin" || a.ThemeCount == 0 || others != 0 || a.Runtime != nil {
+			return false
+		}
+	}
+	return true
+}
+
 type previewer struct{ cut bool }
 
 func (p *previewer) identity(s string) string { return p.text(s, limitIdentity, textutil.BoundLiteral) }
@@ -72,7 +91,11 @@ func (p *previewer) pairs(in map[string]string) map[string]string {
 	}
 	out := make(map[string]string, len(keys))
 	for _, k := range keys {
-		out[p.locator(k)] = p.locator(in[k])
+		shown := p.locator(k)
+		if _, dup := out[shown]; dup {
+			p.cut = true
+		}
+		out[shown] = p.locator(in[k])
 	}
 	return out
 }
@@ -124,6 +147,25 @@ func previewAction(a action) action {
 	return a
 }
 
+// capActions keeps every high-risk step and the first MaxActions of the rest,
+// so the steps a person most needs to see are never the ones left out.
+func capActions(in []action) ([]action, int) {
+	out := make([]action, 0, min(len(in), textutil.MaxActions))
+	rest, hidden := 0, 0
+	for _, a := range in {
+		switch {
+		case a.RiskLevel == RiskHigh:
+			out = append(out, a)
+		case rest < textutil.MaxActions:
+			rest++
+			out = append(out, a)
+		default:
+			hidden++
+		}
+	}
+	return out, hidden
+}
+
 // previewResponse bounds the plan-level fields and rolls the per-action flag
 // up, so a consumer that reads only the envelope still learns of a cut.
 func previewResponse(r response) response {
@@ -133,10 +175,8 @@ func previewResponse(r response) response {
 	r.Source = p.locator(r.Source)
 	r.Warnings = p.proses(r.Warnings)
 	r.Error, r.Next = p.prose(r.Error), p.prose(r.Next)
-	if len(r.Actions) > textutil.MaxActions {
-		r.Actions = r.Actions[:textutil.MaxActions]
-		p.cut = true
-	}
+	r.Actions, r.HiddenActions = capActions(r.Actions)
+	p.cut = p.cut || r.HiddenActions > 0
 	for _, a := range r.Actions {
 		p.cut = p.cut || a.PreviewTruncated
 	}

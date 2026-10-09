@@ -134,3 +134,19 @@ func TestInstalledShowTextBoundsHookAndMCPText(t *testing.T) {
 		t.Fatalf("hook command must show the escape and the cut: %q", show)
 	}
 }
+
+func TestInventoryIsRawAndDisplayIsASeparateProjection(t *testing.T) {
+	root := testenv.TempDir(t)
+	writeV2Plugin(t, root, `{"apiVersion":"reasonix.io/plugin/v2","name":"raw","version":"1.0.0",
+"hooks":{"SessionStart":[{"command":"run​x"}]}}`)
+	pkg, _, err := ParseDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := pkg.Inventory().Hooks; len(got) != 1 || got[0].Command != "run​x" {
+		t.Fatalf("Inventory must return the package's own text: %+v", got)
+	}
+	if got := pkg.InventoryForDisplay().Hooks; len(got) != 1 || got[0].Command != `run\u{200b}x` {
+		t.Fatalf("display projection: %+v", got)
+	}
+}

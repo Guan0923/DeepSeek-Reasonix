@@ -126,7 +126,7 @@ func (t *Tool) tryGitHubRepo(ctx context.Context, req request) ([]action, []stri
 				return actions, warnings
 			}
 			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("%s: %s", cand, err.Error()))
+				warnings = append(warnings, fmt.Sprintf("%s: %s", hostLiteral(cand), err.Error()))
 			}
 		}
 		if req.Kind == "auto" || req.Kind == "skill" {
