@@ -149,8 +149,12 @@ func TestJobNoticesFollowTheUILanguage(t *testing.T) {
 	if got := renderNotice(&Item{Code: event.NoticeCodeJobKilled, Text: "english", Detail: bare}); !strings.Contains(got, "后台任务已终止：bash-7") {
 		t.Fatalf("killed = %q", got)
 	}
-	if got := renderNotice(&Item{Code: event.NoticeCodeJobFailed, Text: "english"}); !strings.Contains(got, "后台任务失败") {
+	failed := event.JobNotice{Kind: "bash", ID: "bash-9", Label: "make", Error: "exit status 2"}.Encode()
+	if got := renderNotice(&Item{Code: event.NoticeCodeJobFailed, Text: "english", Detail: failed}); !strings.Contains(got, "后台任务 make 失败，需要处理: exit status 2") {
 		t.Fatalf("failed = %q", got)
+	}
+	if got := renderNotice(&Item{Code: event.NoticeCodeJobFailed, Text: "kernel english", Detail: "old diagnostic"}); !strings.Contains(got, "kernel english") {
+		t.Fatalf("a failure with no payload must keep its text, got %q", got)
 	}
 	if got := renderNotice(&Item{Text: "background bash finished: bash-126"}); !strings.Contains(got, "background bash finished: bash-126") {
 		t.Fatalf("a replayed notice with no code must keep its text, got %q", got)

@@ -6,7 +6,7 @@ import "encoding/json"
 // sentence is worded from, so a sink that prints Text must not append it again.
 func DetailIsPayload(code string) bool {
 	return code == NoticeCodeUnappliedSteer || code == NoticeCodeExtensionSkipped || code == NoticeCodeInboxRecovered ||
-		code == NoticeCodeJobFinished || code == NoticeCodeJobKilled
+		code == NoticeCodeJobFinished || code == NoticeCodeJobKilled || code == NoticeCodeJobFailed
 }
 
 // ExtensionSkipReasonNoLiveSidecar: the extension's companion process is not running.
@@ -64,12 +64,14 @@ func DecodeInboxRecovered(detail string) (InboxRecovered, bool) {
 	return p, true
 }
 
-// JobNotice is the Detail payload of NoticeCodeJobFinished and NoticeCodeJobKilled:
+// JobNotice is the Detail payload of the three NoticeCodeJob* notices:
 // which background job ended, by kind, id and the label it was started with.
 type JobNotice struct {
 	Kind  string `json:"kind"`
 	ID    string `json:"id"`
 	Label string `json:"label,omitempty"`
+	// Error is the job function's own error text, set on a failure only.
+	Error string `json:"error,omitempty"`
 }
 
 // Encode renders the payload as the notice's Detail.

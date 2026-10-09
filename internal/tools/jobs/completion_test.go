@@ -215,7 +215,41 @@ func TestCompletionNoticeCarriesTypedIdentity(t *testing.T) {
 		t.Fatalf("English fallback = %q", fin.Text)
 	}
 	failed, ok := codes[event.NoticeCodeJobFailed]
-	if !ok || failed.Level != event.LevelWarn || !strings.Contains(failed.Detail, "unexpected EOF") {
-		t.Fatalf("failed notice = %+v", failed)
+	fp, fok := event.DecodeJobNotice(failed.Detail)
+	if !ok || failed.Level != event.LevelWarn || !fok || fp.Kind != "bash" || fp.Label != "make build" || fp.Error != "unexpected EOF" {
+		t.Fatalf("failed notice = %+v payload %+v", failed, fp)
+	}
+}
+
+func TestKilledJobEmitsCodedNotice(t *testing.T) {
+	sink := &recordingSink{}
+	m := NewManager(sink)
+	defer m.Close()
+	j := m.Start("bash", "sleep 60", func(ctx context.Context, _ io.Writer) (string, error) {
+		<-ctx.Done()
+		return "", ctx.Err()
+	})
+	if !m.Kill(j.ID) {
+		t.Fatal("Kill on a running job returned false")
+	}
+	<-j.done
+	waitFor(t, func() bool {
+		sink.mu.Lock()
+		defer sink.mu.Unlock()
+		for _, ev := range sink.events {
+			if ev.Code == event.NoticeCodeJobKilled {
+				return true
+			}
+		}
+		return false
+	})
+	for _, ev := range sink.events {
+		if ev.Code != event.NoticeCodeJobKilled {
+			continue
+		}
+		p, ok := event.DecodeJobNotice(ev.Detail)
+		if !ok || p.ID != j.ID || p.Label != "sleep 60" || ev.Level != event.LevelInfo || !strings.Contains(ev.Text, "killed") {
+			t.Fatalf("killed notice = %+v payload %+v", ev, p)
+		}
 	}
 }

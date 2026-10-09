@@ -90,7 +90,7 @@ type Messages struct {
 	NoticeExtSkippedFmt     string // an optional extension skipped, its sidecar not running — %s extension, %s point
 	NoticeJobFinishedFmt    string // a background job ended — %s its label, else its id
 	NoticeJobKilledFmt      string // a background job was killed — %s its label, else its id
-	NoticeJobFailed         string // a background job failed; the diagnostic follows
+	NoticeJobFailedFmt      string // a background job failed — %s its label, else its id
 	NoticeInboxRecoveredFmt string // a reopened inbox came up paused with unfinished instructions — %d count
 	TUIQuestion             string // an answered question that carried no prompt
 	TUISubagentCallsFmt     string // calls a sub-agent made under its task — %d count

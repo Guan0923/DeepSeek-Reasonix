@@ -94,7 +94,7 @@ var English = Messages{
 	NoticeExtSkippedFmt:     "Extension %s's sidecar is not running, so it was skipped at %s. Check it with /plugins and start it, or disable the extension.",
 	NoticeJobFinishedFmt:    "Background job finished: %s",
 	NoticeJobKilledFmt:      "Background job killed: %s",
-	NoticeJobFailed:         "Background job failed: needs attention",
+	NoticeJobFailedFmt:      "Background job %s failed: needs attention",
 	NoticeInboxRecoveredFmt: "Recovered %d unfinished instruction(s). The inbox is paused: review them with /queue, then resume.",
 	TUIQuestion:             "question",
 	TUISubagentCallsFmt:     "%d sub-agent call(s)",

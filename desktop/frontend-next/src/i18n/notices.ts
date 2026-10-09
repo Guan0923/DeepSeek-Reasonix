@@ -28,7 +28,7 @@ export const NOTICE_TEXT: Record<string, string> = {
   display_currency: "费用显示币种已设为 {mode}",
   job_finished: "后台任务已结束：{name}",
   job_killed: "后台任务已终止：{name}",
-  job_failed: "后台任务失败，需要处理",
+  job_failed: "后台任务 {name} 失败，需要处理",
   compacted: "已压缩",
   compact_declined: "无需压缩：{why}",
   compact_failed: "压缩失败：{why}",

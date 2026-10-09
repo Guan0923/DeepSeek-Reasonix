@@ -191,10 +191,17 @@ describe("a background job notice", () => {
       .toBe(t("后台任务已终止：{name}", { name: "task-3" }));
   });
 
-  it("keeps the diagnostic under a failure", () => {
-    const box = draw({ code: "job_failed", text: "background bash failed: needs attention", detail: "background bash failed: bash-1 — boom" });
-    expect(box.querySelector(".find .t")?.textContent).toBe(t("后台任务失败，需要处理"));
-    expect(box.querySelector(".why")?.textContent).toContain("boom");
+  it("names the failed job and keeps its own error underneath", () => {
+    const box = draw({ code: "job_failed", text: "background bash failed: bash-1 — boom",
+      detail: JSON.stringify({ kind: "bash", id: "bash-1", label: "make build", error: "exit status 2" }) });
+    expect(box.querySelector(".find .t")?.textContent).toBe(t("后台任务 {name} 失败，需要处理", { name: "make build" }));
+    expect(box.querySelector(".why")?.textContent).toBe("exit status 2");
+  });
+
+  it("keeps the text of a failure stored without a payload", () => {
+    expect(text({ code: "job_failed", text: "background bash failed: needs attention", detail: "background bash failed: bash-1 — boom" }))
+      .toBe("background bash failed: needs attention");
+    expect(text({ code: undefined, text: "background bash failed: needs attention", detail: "x" })).toBe("background bash failed: needs attention");
   });
 
   it("keeps the text of a stored notice with no code, or an unreadable payload", () => {

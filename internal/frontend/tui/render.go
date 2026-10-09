@@ -336,13 +336,26 @@ func codedNoticeText(it *Item) string {
 			return fmt.Sprintf(i18n.M.NoticeJobFinishedFmt, name)
 		}
 	case event.NoticeCodeJobFailed:
-		return i18n.M.NoticeJobFailed
+		if p, ok := event.DecodeJobNotice(it.Detail); ok {
+			name := p.Label
+			if name == "" {
+				name = p.ID
+			}
+			return fmt.Sprintf(i18n.M.NoticeJobFailedFmt, name) + jobError(p.Error)
+		}
 	case event.NoticeCodeExtensionSkipped:
 		if p, ok := event.DecodeExtensionSkipped(it.Detail); ok && p.Reason == event.ExtensionSkipReasonNoLiveSidecar {
 			return fmt.Sprintf(i18n.M.NoticeExtSkippedFmt, p.Extension, p.Point)
 		}
 	}
 	return it.Text
+}
+
+func jobError(msg string) string {
+	if msg == "" {
+		return ""
+	}
+	return ": " + textutil.TruncateGraphemes(textutil.SanitizeDisplay(msg), unappliedSteerCap, "…")
 }
 
 func renderNotice(it *Item) string {

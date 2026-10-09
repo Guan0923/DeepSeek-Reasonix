@@ -95,7 +95,7 @@ var Chinese = Messages{
 	NoticeExtSkippedFmt:     "扩展 %s 的配套后台程序没有运行，本次在 %s 已被跳过。用 /plugins 查看并启动它，或停用该扩展。",
 	NoticeJobFinishedFmt:    "后台任务已结束：%s",
 	NoticeJobKilledFmt:      "后台任务已终止：%s",
-	NoticeJobFailed:         "后台任务失败，需要处理",
+	NoticeJobFailedFmt:      "后台任务 %s 失败，需要处理",
 	NoticeInboxRecoveredFmt: "已恢复 %d 条未完成的指令。待发送已暂停，请先用 /queue 查看，再继续派发。",
 	TUIQuestion:             "提问",
 	TUISubagentCallsFmt:     "%d 次子代理调用",
