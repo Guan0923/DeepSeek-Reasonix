@@ -1848,9 +1848,7 @@ body { background: var(--page) !important; }
   background-color: transparent !important;
 }
 :root[data-bg] :is(.rail, .chrome) {
-  background: color-mix(in srgb, var(--page) 72%, transparent) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(1.15);
-  backdrop-filter: blur(12px) saturate(1.15);
+  background: color-mix(in srgb, var(--page) 80%, transparent) !important;
 }
 
 .hero .rmark {
@@ -3303,8 +3301,6 @@ body { font-size: 14px; line-height: 1.75; }
 .pane > .tabs {
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   border-bottom-color: var(--border);
-  -webkit-backdrop-filter: blur(14px) saturate(1.02);
-  backdrop-filter: blur(14px) saturate(1.02);
 }
 .pane > .tabs .tab { color: var(--muted); }
 .pane > .tabs .tab:hover { color: var(--text); background: var(--overlay); }
@@ -3330,9 +3326,7 @@ body { font-size: 14px; line-height: 1.75; }
 .studio-user-foot .acctrow:hover,
 .studio-settings:hover { background: var(--accent-wash); color: var(--text); }
 :root[data-bg] .railfoot {
-  background: color-mix(in srgb, var(--surface) 72%, transparent) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(1.12);
-  backdrop-filter: blur(12px) saturate(1.12);
+  background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
 }
 :root[data-theme="light"][data-bg] :is(.rail, .chrome) {
   background: color-mix(in srgb, var(--page) 86%, transparent) !important;
