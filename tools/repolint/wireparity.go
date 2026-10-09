@@ -164,9 +164,8 @@ var mirroredWireTypes = []wireMirror{
 	{"internal/session/control/commit.go", "CommitRequest", tsWorkspaceFile, "CommitRequest"},
 	{"internal/session/control/commit.go", "CommitResult", tsWorkspaceFile, "CommitResult"},
 	{"internal/platform/gitcommit/gitcommit.go", "File", tsWorkspaceFile, "CommitFile"},
-	// The scale range the slider is drawn from. A bound the page cannot read is
-	// a slider with a range of its own, which is how it came to promise 2.5
-	// while the save held it to 1.8.
+	// The scale range the slider is drawn from: a bound the page cannot read
+	// would leave it a range of its own.
 	{"internal/frontend/serve/appearance.go", "appearanceView", tsLookFile, "Appearance"},
 	{"internal/frontend/serve/appearance.go", "zoomRangeView", tsLookFile, "ZoomRange"},
 	// The chart spec a stored render_chart call carries. The page re-validates it

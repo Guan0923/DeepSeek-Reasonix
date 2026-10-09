@@ -4,6 +4,7 @@ import { effectsMode, onEffectsChange, setEffectsMode, type EffectsMode } from "
 import type { AgentPort, Appearance as Look, ThemePack } from "../port/port";
 import { ZOOM_PRESETS } from "./zoom";
 import { chord } from "./keys";
+import { host } from "../port/host";
 import { MONO_FAMILIES, UI_FAMILIES, installed, readSizeOf, readSteps } from "./look";
 import { STORAGE as LANG_KEY, t } from "../i18n";
 import { pct } from "../i18n/format";
@@ -307,7 +308,7 @@ export function Appearance({ port, theme, onTheme, contrast, onContrast, weight,
           <h3>{t("大小")}</h3>
         </div>
         <p className="hint">{t("「界面」会同时缩放边距与控件，「正文」仅调整对话中的文字大小，两者独立设置。")}</p>
-        <p className="hint">{t("键盘：{up} 放大，{down} 缩小，{reset} 恢复标准，同样调整「界面」大小。", { up: chord("+"), down: chord("-"), reset: chord("0") })}</p>
+        {host().inShell() && <p className="hint">{t("键盘：{up} 放大，{down} 缩小，{reset} 恢复标准，同样调整「界面」大小。", { up: chord("+"), down: chord("-"), reset: chord("0") })}</p>}
         <div className="grp-items">
           <div className="prow">
             <span className="tx">{t("界面")}</span>

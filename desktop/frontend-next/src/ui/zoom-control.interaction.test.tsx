@@ -6,6 +6,7 @@ import { Appearance } from "./Appearance";
 import { usePaint } from "./paint";
 import { MockHub } from "../port/mock_hub";
 import { boot, STORAGE } from "../i18n";
+import { host } from "../port/host";
 
 beforeEach(() => {
   localStorage.setItem(STORAGE, "zh");
@@ -61,5 +62,15 @@ describe("the interface size control", () => {
     again();
     expect(screen.getByRole("button", { name: "宽松" }).getAttribute("aria-pressed")).toBe("true");
     expect(paint.result.current.look.readSize).toBeUndefined();
+  });
+
+  it("names the keyboard chords only where they are registered", async () => {
+    vi.spyOn(host(), "inShell").mockReturnValue(true);
+    const shell = await open();
+    expect(document.body.textContent).toContain("键盘：");
+    cleanup();
+    vi.spyOn(host(), "inShell").mockReturnValue(false);
+    await open();
+    expect(document.body.textContent).not.toContain("键盘：");
   });
 });
