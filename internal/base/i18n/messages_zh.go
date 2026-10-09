@@ -41,6 +41,7 @@ var Chinese = Messages{
 		"candidate_not_smaller":            "折叠后的上下文不比原来小，没有采用",
 		"candidate_above_ceiling":          "折叠后仍超过检查点上限（受保护的内容太多），没有采用",
 		"candidate_above_trigger":          "折叠后仍不低于压缩阈值，没有采用",
+		"result_above_trigger":             "折叠后的上下文仍不低于压缩阈值，已暂停自动重试",
 		"candidate_above_physical_ceiling": "折叠后仍超过窗口的物理上限，没有采用",
 		"savings_below_minimum":            "固定前缀已占满检查点上限，这次折叠省下的空间太少，没有采用",
 		"fixed_prefix_above_trigger":       "无法折叠的固定部分本身已超过压缩阈值",
@@ -59,6 +60,7 @@ var Chinese = Messages{
 	NoticeCompacted:          "已压缩",
 	NoticeCompactDeclinedFmt: "无需压缩：%s",
 	NoticeCompactFailedFmt:   "压缩失败：%s",
+	NoticeCompactHeldFmt:     "自动压缩暂缓，上次尝试没有完成：%s",
 	ReceiptGapKinds: map[string]string{
 		"unbacked_claim":            "声称过但账本不支持",
 		"unproven_criterion":        "验收项没有证据",

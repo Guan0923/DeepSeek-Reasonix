@@ -315,6 +315,10 @@ func codedNoticeText(it *Item) string {
 		if why, ok := i18n.M.CompactionWhy[it.Detail]; ok {
 			return fmt.Sprintf(i18n.M.NoticeCompactFailedFmt, why)
 		}
+	case event.NoticeCodeCompactHeld:
+		if why, ok := i18n.M.CompactionWhy[it.Detail]; ok {
+			return fmt.Sprintf(i18n.M.NoticeCompactHeldFmt, why)
+		}
 	case event.NoticeCodeUnappliedSteer:
 		if it.Detail != "" {
 			return fmt.Sprintf(i18n.M.NoticeUnappliedSteerFmt, textutil.TruncateGraphemes(textutil.SanitizeDisplay(it.Detail), unappliedSteerCap, "…"))

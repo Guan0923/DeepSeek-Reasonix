@@ -158,6 +158,19 @@ describe("a /compact notice", () => {
       .toBe("无需压缩：没有值得折叠的内容");
   });
 
+  it("words a held automatic compaction from the failure code that holds it", () => {
+    const box = draw({
+      level: "warn",
+      code: "compact_held",
+      text: "Automatic compaction is paused: the last attempt did not finish (summary_failed).",
+      detail: "summary_failed",
+    });
+    const said = box.querySelector(".find .t")?.textContent ?? "";
+    expect(said).toBe("自动压缩暂缓，上次尝试没有完成：生成摘要的请求失败了");
+    expect(said).not.toContain("summary_failed");
+    expect(box.querySelector(".find .why")).toBeNull();
+  });
+
   it("keeps the kernel's text for a code this build cannot word", () => {
     const box = draw({ code: "compact_failed", text: "compaction failed: kernel english", detail: "future_code" });
     expect(box.querySelector(".find .t")?.textContent).toBe("compaction failed: kernel english");

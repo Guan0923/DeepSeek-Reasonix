@@ -40,6 +40,7 @@ var English = Messages{
 		"candidate_not_smaller":            "The folded context was no smaller than the original and was not used",
 		"candidate_above_ceiling":          "The folded context still exceeds the checkpoint ceiling (too much protected content) and was not used",
 		"candidate_above_trigger":          "The folded context is still at or above the compaction threshold and was not used",
+		"result_above_trigger":             "The folded context is still at or above the compaction threshold, so automatic retries are paused",
 		"candidate_above_physical_ceiling": "The folded context still exceeds the window's physical limit and was not used",
 		"savings_below_minimum":            "The fixed prefix fills the checkpoint ceiling and this fold saves too little to be worth it",
 		"fixed_prefix_above_trigger":       "The part that cannot be folded is already over the compaction threshold",
@@ -58,6 +59,7 @@ var English = Messages{
 	NoticeCompacted:          "Compacted",
 	NoticeCompactDeclinedFmt: "Nothing to compact: %s",
 	NoticeCompactFailedFmt:   "Compaction failed: %s",
+	NoticeCompactHeldFmt:     "Automatic compaction is paused, the last attempt did not finish: %s",
 	ReceiptGapKinds: map[string]string{
 		"unbacked_claim":            "claimed but unsupported",
 		"unproven_criterion":        "criterion without proof",

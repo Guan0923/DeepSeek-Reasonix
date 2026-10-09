@@ -486,6 +486,8 @@ export const EN_SETTINGS: Record<string, string> = {
   "已压缩": "Compacted",
   "无需压缩：{why}": "Nothing to compact: {why}",
   "压缩失败：{why}": "Compaction failed: {why}",
+  "自动压缩暂缓，上次尝试没有完成：{why}": "Automatic compaction is paused, the last attempt did not finish: {why}",
+  "折叠后的上下文仍不低于压缩阈值，已暂停自动重试": "The folded context is still at or above the compaction threshold, so automatic retries are paused",
   "本段的 {n} 处改动均已写入简报": "All {n} changes made here are in the digest",
   "{kept}/{required} 处改动写进了简报": "{kept}/{required} changes are in the digest",
   "另有 {n} 处仅保留索引地址，需通过 recall 取回原文": "{n} more are index entries only; recall fetches the original",

@@ -93,6 +93,10 @@ func TestCompactionNoticesAndCardNameTheirReasonInTheUILanguage(t *testing.T) {
 	if got := renderNotice(declined); !strings.Contains(got, "无需压缩") || !strings.Contains(got, "没有变化") {
 		t.Fatalf("declined notice = %q", got)
 	}
+	held := &Item{Code: "compact_held", Text: "Automatic compaction is paused: kernel english", Detail: "summary_failed"}
+	if got := renderNotice(held); !strings.Contains(got, "自动压缩暂缓") || !strings.Contains(got, "请求失败") || strings.Contains(got, "kernel english") {
+		t.Fatalf("held notice = %q", got)
+	}
 	unknown := &Item{Code: "compact_failed", Text: "compaction failed: kernel english", Detail: "future_code"}
 	if got := renderNotice(unknown); !strings.Contains(got, "kernel english") {
 		t.Fatalf("unknown code must keep the kernel text, got %q", got)

@@ -59,6 +59,7 @@ type Messages struct {
 	NoticeCompacted              string            // /compact succeeded
 	NoticeCompactDeclinedFmt     string            // /compact declined — %s the reason
 	NoticeCompactFailedFmt       string            // /compact failed — %s the reason
+	NoticeCompactHeldFmt         string            // automatic compaction held after a failed attempt — %s the reason
 	NoSessionToResume            string            // shown when --continue / --resume finds nothing
 	NoSessionToResumeStartingNew string            // shown when --continue finds nothing and a fresh session starts
 	ResumeRequiresTTY            string            // shown when --resume runs piped instead of on a terminal

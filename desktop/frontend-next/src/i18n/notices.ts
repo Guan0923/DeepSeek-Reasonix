@@ -29,6 +29,7 @@ export const NOTICE_TEXT: Record<string, string> = {
   compacted: "已压缩",
   compact_declined: "无需压缩：{why}",
   compact_failed: "压缩失败：{why}",
+  compact_held: "自动压缩暂缓，上次尝试没有完成：{why}",
   extension_skipped: "扩展 {ext} 的配套后台程序没有运行，该扩展本次（在 {point}）已被跳过；到「工具与集成」里查看并启动它，或停用该扩展",
   perseveration_loop: "模型卡在重复输出同一段文字，这一轮已停止；可以重试、补充引导，或换一个供应商/模型",
 };

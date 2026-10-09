@@ -71,6 +71,8 @@ const (
 	NoticeCodeCompactDeclined = "compact_declined"
 	// /compact failed; Detail is the failure code, its text the English fallback.
 	NoticeCodeCompactFailed = "compact_failed"
+	// Automatic compaction is due but an earlier attempt's failure still holds the retry; Detail is that failure's code.
+	NoticeCodeCompactHeld = "compact_held"
 	// An optional extension was left out of an operation; Detail is the ExtensionSkipped payload.
 	NoticeCodeExtensionSkipped = "extension_skipped"
 	// A reopened session's inbox held unfinished instructions and came up paused; Detail is the InboxRecovered payload.
