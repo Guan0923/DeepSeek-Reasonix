@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"reasonix/internal/base/diff"
+	"reasonix/internal/base/fileutil"
 	"reasonix/internal/contract/tool"
 	"reasonix/internal/safety/evidence"
 	"reasonix/internal/state/checkpoint"
@@ -206,10 +207,17 @@ func (a *Agent) touchedTheWorkspace(r evidence.Receipt) bool {
 // relative path is resolved against the workspace by every file tool, so it is
 // inside by construction; only an absolute one can leave.
 func (a *Agent) pathInWorkspace(path string) bool {
-	if a.writeWorkspaceRoot == "" {
+	if fileutil.UnderVCSStore(path) {
+		return false
+	}
+	root := a.writeWorkspaceRoot
+	if root == "" {
 		return true
 	}
-	return !filepath.IsAbs(path) || writeclaim.PathWithin(a.writeWorkspaceRoot, path)
+	if filepath.IsAbs(path) && !writeclaim.PathWithin(root, path) {
+		return false
+	}
+	return !hostOwnedPath(root, path)
 }
 
 // mutationBaseline is what the turn's remaining obligations are measured from:
