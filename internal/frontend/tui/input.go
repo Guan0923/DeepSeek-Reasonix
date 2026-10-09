@@ -128,6 +128,10 @@ func (m *model) onKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "tab":
 		return m, m.fetchCompletion()
 	case "enter":
+		if m.scr != nil && strings.TrimSpace(m.composer.Value()) == "" {
+			m.followTail()
+			return m, nil
+		}
 		return m, m.send(false)
 	case "ctrl+s":
 		return m, m.send(true)
