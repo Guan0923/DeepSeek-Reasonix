@@ -455,7 +455,7 @@ describe("composer menus", () => {
 
   it("says when the workspace has no repository instead of vanishing", () => {
     draw({ git: git({ repo: false }) });
-    expect(screen.getByText("非 Git 仓库")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "非 Git 仓库" })).toBeTruthy();
   });
 
   // Not answered yet is not the same fact as not a repository, and the two
