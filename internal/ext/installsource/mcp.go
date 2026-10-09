@@ -13,6 +13,11 @@ import (
 	"reasonix/internal/contract/config"
 )
 
+// maxMCPJSONServers caps the servers one .mcp.json may declare, as
+// maxMarketplacePlugins caps a marketplace: every eager entry is a high-risk
+// action the preview never hides, so an unbounded file would all be shown.
+const maxMCPJSONServers = 64
+
 // mcpEntryAction assembles the DTO for a single MCP server install. The
 // caller decides whether apply=true actually runs cfg.UpsertPlugin +
 // SaveTo + connectMCP.
@@ -205,6 +210,9 @@ func parseMCPJSON(b []byte) ([]config.PluginEntry, []string, error) {
 	}
 	if len(raw.MCPServers) == 0 {
 		return nil, nil, newErr(ErrManifestMissing, ".mcp.json has no mcpServers")
+	}
+	if len(raw.MCPServers) > maxMCPJSONServers {
+		return nil, nil, &hostFactError{sentinel: ErrInvalidManifest, facts: fmt.Sprintf(".mcp.json declares %d servers; limit is %d", len(raw.MCPServers), maxMCPJSONServers)}
 	}
 	names := make([]string, 0, len(raw.MCPServers))
 	for name := range raw.MCPServers {

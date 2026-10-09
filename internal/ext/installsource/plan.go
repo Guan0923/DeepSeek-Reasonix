@@ -93,6 +93,8 @@ func (t *Tool) planDownloadedURL(ctx context.Context, req request, sourceURL str
 				actions = append(actions, t.mcpEntryAction(req, e, sourceURL))
 			}
 			return actions, warnings, nil
+		} else if req.Kind == "mcp" && looksLikeMCPJSONURL(sourceURL) {
+			return nil, nil, err
 		}
 	}
 	if req.Kind == "auto" || req.Kind == "skill" {
