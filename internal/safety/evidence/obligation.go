@@ -46,12 +46,11 @@ const (
 // respelling or a wrapper is not a rewrite and the file's raw text is never the
 // identity.
 type CheckContract struct {
-	baseline           []string
-	current            []string
-	capturedTests      int
-	workspaceProseOnly bool
-	delivery           bool
-	observeRoot        string
+	baseline      []string
+	current       []string
+	capturedTests int
+	delivery      bool
+	observeRoot   string
 }
 
 func (c CheckContract) WithObserveRoot(root string) CheckContract {
@@ -59,8 +58,7 @@ func (c CheckContract) WithObserveRoot(root string) CheckContract {
 	return c
 }
 
-func (c CheckContract) WithWorkspaceProseOnly(proseOnly, delivery bool) CheckContract {
-	c.workspaceProseOnly = proseOnly
+func (c CheckContract) WithDelivery(delivery bool) CheckContract {
 	c.delivery = delivery
 	return c
 }
@@ -155,32 +153,50 @@ func (l *Ledger) Obligations(contract CheckContract) []Obligation {
 	return append(out, l.checkObligations(contract, at)...)
 }
 
-// ProseOnlyWithoutChecks requires established scope for every mutation;
-// a watched subset cannot exempt effects the host never observed.
+// ProseOnlyWithoutChecks waives the generic check when every change this task
+// made is a prose file and the project names no check of its own. Scope must be
+// established for every mutation; a watched subset cannot exempt effects the
+// host never observed.
 func (l *Ledger) ProseOnlyWithoutChecks(contract CheckContract) bool {
-	if l == nil || !contract.workspaceProseOnly || contract.delivery || len(contract.baseline) != 0 || len(contract.current) != 0 || contract.capturedTests != 0 {
+	if contract.delivery || len(contract.baseline) != 0 || len(contract.current) != 0 || contract.capturedTests != 0 {
 		return false
+	}
+	beyond, scoped, changed := l.mutationsBeyondProse(contract.observeRoot)
+	return changed && scoped && len(beyond) == 0
+}
+
+// MutationPathsBeyondProse names the changed paths that keep the generic check
+// owed, in first-written order.
+func (l *Ledger) MutationPathsBeyondProse(contract CheckContract) []string {
+	beyond, _, _ := l.mutationsBeyondProse(contract.observeRoot)
+	return beyond
+}
+
+func (l *Ledger) mutationsBeyondProse(root string) (beyond []string, scoped, changed bool) {
+	if l == nil {
+		return nil, false, false
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	changed := false
+	scoped = true
 	for _, r := range l.receipts {
 		if !r.Success || !r.Mutation {
 			continue
 		}
+		changed = true
 		// Named-path writers establish scope by contract; other tools need a
 		// complete observation rather than a watched subset.
 		if r.MutationEvidence != MutationProven || len(r.Paths) == 0 || (!r.Write && !r.PathsComplete) {
-			return false
+			scoped = false
+			continue
 		}
 		for _, path := range r.MutationPaths {
-			if !proseMutationPath(contract.observeRoot, path) {
-				return false
+			if !proseMutationPath(root, path) && !slices.Contains(beyond, path) {
+				beyond = append(beyond, path)
 			}
 		}
-		changed = true
 	}
-	return changed
+	return beyond, scoped, changed
 }
 
 // checkObligations owes every criterion either declaration named, baseline

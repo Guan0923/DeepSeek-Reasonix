@@ -398,7 +398,7 @@ func (a *Agent) mutationEpoch() uint64 {
 // requirement it replaced.
 func (a *Agent) checkContract() evidence.CheckContract {
 	return evidence.CaptureCheckContract(a.task.checkpoint.BaselineChecks, a.declaredChecks()).
-		WithCapturedTests(len(a.task.baselineCriteria)).WithWorkspaceProseOnly(a.workspaceIsProseOnly(), a.deliveryProfile).WithObserveRoot(a.observeRoot)
+		WithCapturedTests(len(a.task.baselineCriteria)).WithDelivery(a.deliveryProfile).WithObserveRoot(a.observeRoot)
 }
 
 // DeclaredProjectChecks is the declaration this process loaded, for a host that
@@ -504,7 +504,7 @@ func (a *Agent) appendVerificationGap(out *finalReadinessCheck, missing []string
 // to the model that just ran one; what it needs is the command named and a
 // shape whose status answers for the check.
 func (a *Agent) verificationGap(writer int) (string, bool) {
-	const ask = "run a relevant verification command after the latest write for the current role setting"
+	ask := "run a relevant verification command after the latest write for the current role setting" + a.verificationCause()
 	if unreadable, ok := a.task.ledger.LatestUnreadableVerificationAfter(writer); ok && strings.TrimSpace(unreadable.Command) != "" {
 		return fmt.Sprintf("%s — %q ran, but its exit status is the last stage's, not the check's, "+
 			"so it proves nothing either way; re-run the check on its own", ask, strings.TrimSpace(unreadable.Command)), true
@@ -529,6 +529,25 @@ func (a *Agent) verificationGap(writer int) (string, bool) {
 		}
 	}
 	return ask, true
+}
+
+// verificationCause names what keeps the check owed. A turn whose every change
+// is prose, in a project declaring no checks, owes none; the paths that are not
+// prose, or the declaration, are what lifts that.
+func (a *Agent) verificationCause() string {
+	contract := a.checkContract()
+	if paths := a.task.ledger.MutationPathsBeyondProse(contract); len(paths) > 0 {
+		const shown = 3
+		list := strings.Join(quoteEach(paths[:min(len(paths), shown)]), ", ")
+		if len(paths) > shown {
+			list += fmt.Sprintf(" and %d more", len(paths)-shown)
+		}
+		return " (not documentation-only: " + list + " changed)"
+	}
+	if len(a.projectChecks) > 0 {
+		return " (the project declares checks)"
+	}
+	return ""
 }
 
 func quoteEach(items []string) []string {
