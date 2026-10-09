@@ -377,6 +377,7 @@ export const EN: Record<string, string> = {
   "界面": "Interface",
   "微调": "Fine-tune",
   "界面大小微调": "Fine-tune interface size",
+  "键盘：{up} 放大，{down} 缩小，{reset} 恢复标准，同样调整「界面」大小。": "Keyboard: {up} larger, {down} smaller, {reset} back to standard; these change Interface size.",
   "正文": "Body text",
   "紧凑": "Compact",
   "标准": "Standard",
