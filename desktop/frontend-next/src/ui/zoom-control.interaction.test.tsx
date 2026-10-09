@@ -66,7 +66,7 @@ describe("the interface size control", () => {
 
   it("names the keyboard chords only where they are registered", async () => {
     vi.spyOn(host(), "inShell").mockReturnValue(true);
-    const shell = await open();
+    await open();
     expect(document.body.textContent).toContain("键盘：");
     cleanup();
     vi.spyOn(host(), "inShell").mockReturnValue(false);
