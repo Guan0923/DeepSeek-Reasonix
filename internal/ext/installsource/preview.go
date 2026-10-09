@@ -176,7 +176,6 @@ func previewResponse(r response) response {
 	r.Warnings = p.proses(r.Warnings)
 	r.Error, r.Next = p.prose(r.Error), p.prose(r.Next)
 	r.Actions, r.HiddenActions = capActions(r.Actions)
-	p.cut = p.cut || r.HiddenActions > 0
 	for _, a := range r.Actions {
 		p.cut = p.cut || a.PreviewTruncated
 	}

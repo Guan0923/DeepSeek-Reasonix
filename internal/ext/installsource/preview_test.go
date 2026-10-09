@@ -156,7 +156,7 @@ func TestPreviewResponseCapsActionCount(t *testing.T) {
 		acts[i].Name = "a"
 	}
 	r := previewResponse(response{Actions: acts})
-	if len(r.Actions) != textutil.MaxActions || !r.PreviewTruncated {
+	if len(r.Actions) != textutil.MaxActions || r.HiddenActions != 30 || r.PreviewTruncated {
 		t.Fatalf("%d actions, truncated=%v", len(r.Actions), r.PreviewTruncated)
 	}
 	if r := previewResponse(response{Actions: acts[:textutil.MaxActions]}); len(r.Actions) != textutil.MaxActions || r.PreviewTruncated {

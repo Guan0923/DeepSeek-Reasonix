@@ -316,9 +316,9 @@ export function Candidate({ a }: { a: PluginAction }) {
         </div>
       ))}
       {a.previewTruncated && (
-        <div className="risk" data-kind="shell">
+        <div className="risk">
           <span className="lb">{t("已截断")}</span>
-          <span className="why">{t("部分文字过长或含不可见字符，预览没有显示全部。")}</span>
+          <span className="dt">{t("部分文字")}</span>
         </div>
       )}
       {a.riskReasons?.length ? (

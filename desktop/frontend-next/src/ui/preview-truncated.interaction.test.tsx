@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "./testkit";
-import { AddPlugin, Candidate } from "./AddPlugin";
+import { AddPlugin, Candidate, PreviewCut } from "./AddPlugin";
 import { MockPort } from "../port/mock";
 import { PlanConfirm } from "./MarketConfirm";
 import type { AgentPort, MarketPlan, PluginAction, PluginPlan } from "../port/port";
@@ -29,10 +29,11 @@ it("market confirmation stays quiet for a complete plan", () => {
 
 it("a cut step is marked on its own row", () => {
   const { container } = render(<Candidate a={{ ...action, previewTruncated: true }} />);
-  expect(container.textContent).toContain("预览没有显示全部");
+  expect(container.textContent).toContain("已截断");
+  expect(container.textContent).not.toContain("预览没有显示全部");
   cleanup();
   const { container: whole } = render(<Candidate a={action} />);
-  expect(whole.textContent).not.toContain("预览没有显示全部");
+  expect(whole.textContent).not.toContain("已截断");
 });
 
 it("a cut says what is not shown and never claims the plan is complete", () => {
@@ -64,4 +65,25 @@ it("the add-plugin confirmation shows the plan-level cut", async () => {
   render(<AddPlugin port={port} source="https://github.com/demo/kit" onClose={() => {}} onInstalled={() => {}} />);
   await userEvent.click(await screen.findByRole("button", { name: "查看内容" }));
   expect((await screen.findByTestId("preview-cut")).textContent).toContain("另有 3 项未显示");
+});
+
+it("hidden steps alone do not claim any text was cut", () => {
+  render(<PreviewCut hidden={30} />);
+  const text = screen.getByTestId("preview-cut").textContent ?? "";
+  expect(text).toContain("另有 30 项未显示");
+  expect(text).not.toContain("不可见字符");
+});
+
+it("cut text alone does not claim steps are missing", () => {
+  render(<PreviewCut shown />);
+  const text = screen.getByTestId("preview-cut").textContent ?? "";
+  expect(text).toContain("不可见字符");
+  expect(text).not.toContain("另有");
+});
+
+it("both are said when both happened", () => {
+  render(<PreviewCut shown hidden={2} />);
+  const text = screen.getByTestId("preview-cut").textContent ?? "";
+  expect(text).toContain("另有 2 项未显示");
+  expect(text).toContain("不可见字符");
 });

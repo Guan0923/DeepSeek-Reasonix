@@ -29,7 +29,7 @@ func TestPreviewResponseNeverHidesHighRisk(t *testing.T) {
 			other++
 		}
 	}
-	if high != 20 || other != textutil.MaxActions || r.HiddenActions != 20 || !r.PreviewTruncated {
+	if high != 20 || other != textutil.MaxActions || r.HiddenActions != 20 || r.PreviewTruncated {
 		t.Fatalf("high=%d other=%d hidden=%d truncated=%v", high, other, r.HiddenActions, r.PreviewTruncated)
 	}
 	if r := previewResponse(response{Actions: acts[:textutil.MaxActions]}); r.HiddenActions != 0 || r.PreviewTruncated {
@@ -113,7 +113,7 @@ func TestMarketplacePastTheCapKeepsTheGateAndTheHighRowVisible(t *testing.T) {
 	for _, a := range r.Actions {
 		sawHigh = sawHigh || (a.Name == "zz-run" && a.RiskLevel == RiskHigh)
 	}
-	if !sawHigh || len(r.Actions) != textutil.MaxActions+1 || r.HiddenActions != 10 || !r.PreviewTruncated || !strings.HasPrefix(r.PlanID, "high:") {
+	if !sawHigh || len(r.Actions) != textutil.MaxActions+1 || r.HiddenActions != 10 || r.PreviewTruncated || !strings.HasPrefix(r.PlanID, "high:") {
 		t.Fatalf("high row visible=%v shown=%d hidden=%d planId=%s", sawHigh, len(r.Actions), r.HiddenActions, r.PlanID)
 	}
 }
@@ -123,7 +123,7 @@ func TestMarketplaceOfOnlyThemesPastTheCapIsThemesOnlyAndSaysWhatIsHidden(t *tes
 	out, res := planMarketplace(t, opts, root)
 	var r response
 	_ = json.Unmarshal([]byte(out), &r)
-	if !res.ThemesOnly || len(r.Actions) != textutil.MaxActions || r.HiddenActions != 10 || !r.PreviewTruncated || r.Kinds.Plugin != 60 {
+	if !res.ThemesOnly || len(r.Actions) != textutil.MaxActions || r.HiddenActions != 10 || r.PreviewTruncated || r.Kinds.Plugin != 60 {
 		t.Fatalf("themesOnly=%v shown=%d hidden=%d truncated=%v kinds=%+v", res.ThemesOnly, len(r.Actions), r.HiddenActions, r.PreviewTruncated, r.Kinds)
 	}
 }
@@ -213,5 +213,19 @@ func TestThemesOnlyRejectsEachCountAndRuntimeAlone(t *testing.T) {
 	}
 	if !themesOnly([]action{base()}) {
 		t.Fatal("the baseline is themes only")
+	}
+}
+
+func TestHiddenStepsAndCutTextAreReportedSeparately(t *testing.T) {
+	many := make([]action, textutil.MaxActions+5)
+	if r := previewResponse(response{Actions: many}); r.HiddenActions != 5 || r.PreviewTruncated {
+		t.Fatalf("hidden steps alone: hidden=%d truncated=%v", r.HiddenActions, r.PreviewTruncated)
+	}
+	if r := previewResponse(response{Actions: []action{{PreviewTruncated: true}}}); r.HiddenActions != 0 || !r.PreviewTruncated {
+		t.Fatalf("cut text alone: hidden=%d truncated=%v", r.HiddenActions, r.PreviewTruncated)
+	}
+	both := append([]action{{PreviewTruncated: true}}, make([]action, textutil.MaxActions+4)...)
+	if r := previewResponse(response{Actions: both}); r.HiddenActions != 5 || !r.PreviewTruncated {
+		t.Fatalf("both: hidden=%d truncated=%v", r.HiddenActions, r.PreviewTruncated)
 	}
 }
