@@ -183,11 +183,14 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
     if (focus) box.current?.focus();
   }, [focus]);
 
+  // The kernel's own report that no turn is live ends a stop even when the
+  // turn-done event never reached this window.
+  const kernelIdle = status?.running === false;
   useEffect(() => {
-    if (running) return;
+    if (running && !kernelIdle) return;
     stoppingRef.current = false;
     setStopping(false);
-  }, [running]);
+  }, [running, kernelIdle]);
 
   const sizeBox = useCallback(() => {
     const el = box.current;
@@ -455,11 +458,11 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
                     <span className="nm" title={c.a?.path ?? c.name}>{c.name}</span>
                     {c.state === "adding" && <span className="sz live">{t("正在添加…")}</span>}
                     {c.state === "ready" && <span className="sz">{isPicture(c) ? t("图片") : t("文件")}</span>}
+                    {c.state === "failed" && c.error && <span className="why" title={c.error}>{c.error}</span>}
                     {c.state === "failed" && (
         <button
                         className="retry"
                         data-action="session.attach"
-                        title={c.error}
                         onClick={() => {
                           if (!c.blob) return;
                           setShots((prev) => prev.map((x) => (x === c ? { ...c, state: "adding", error: "" } : x)));
@@ -712,6 +715,8 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
             current={status?.modelRef}
             items={modelMenu(models, providerOrder)}
             menuClassName="studio-model-menu"
+            searchAlways
+            searchPlaceholder={t("搜索模型或服务商…")}
             menuTitle={<><b>{t("选择模型")}</b><small>{t("用于后续任务")}</small></>}
             onOpen={loadModels}
             pending={busy["model"]}
@@ -756,7 +761,7 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
                 if (stoppingRef.current) return;
                 stoppingRef.current = true;
                 setStopping(true);
-                void port.cancel().catch((e: unknown) => {
+                void port.cancel().then(onChanged, (e: unknown) => {
                   stoppingRef.current = false;
                   setStopping(false);
                   onError(e);

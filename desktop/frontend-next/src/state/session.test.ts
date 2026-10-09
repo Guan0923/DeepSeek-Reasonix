@@ -130,6 +130,14 @@ describe("rebuilding a reopened transcript", () => {
     expect(users([{ role: "user", content: "<reasoning-language>zh</reasoning-language>" }])).toHaveLength(0);
   });
 
+  it("strips a failed-MCP-prompt block from a replayed turn", () => {
+    const got = users([
+      { role: "user", content: "<mcp-prompt-failure>\nThe user invoked MCP prompt \"p\"\n</mcp-prompt-failure>\n你好" },
+    ]);
+    expect(got).toHaveLength(1);
+    expect(got[0].text).toBe("你好");
+  });
+
   it("leaves an ordinary turn as its text", () => {
     const got = users([{ role: "user", content: "第一句话" }]);
     expect(got).toHaveLength(1);
@@ -209,6 +217,17 @@ describe("a notice about the runtime rather than the conversation", () => {
     expect(s.runtime).toEqual([]);
   });
 
+  it("carries a skipped-extension notice with its code and payload, once per extension", () => {
+    const skipped = (extension: string) => ({
+      kind: "notice", audience: "operator", level: "warn", code: "extension_skipped", text: "skipped",
+      detail: JSON.stringify({ extension, point: "tool.before", reason: "no_live_sidecar" }),
+    }) as SessionEvent;
+    const s = run([skipped("a"), skipped("a"), skipped("b")]);
+    expect(notices(s)).toEqual([]);
+    expect(s.runtime.map((n) => n.code)).toEqual(["extension_skipped", "extension_skipped"]);
+    expect(s.runtime.map((n) => JSON.parse(n.detail ?? "{}").extension)).toEqual(["a", "b"]);
+  });
+
   it("keeps legacy capability proxy audits out of the transcript", () => {
     const s = run([notice(undefined, "info", "capability proxy: use_capability → web_fetch")]);
     expect(notices(s)).toEqual([]);
@@ -221,6 +240,18 @@ describe("a line that is still queued", () => {
   const rows = (st: SessionState) => st.items.filter((i): i is Extract<Item, { t: "user" }> => i.t === "user");
   const queued = (id: string, itemId: string, kind: "steer" | "followup"): SessionEvent =>
     ({ kind: "__queued", id, itemId, queued: kind }) as SessionEvent;
+
+  it("raises one held-queue notice per window, and only for a paused receipt", () => {
+    const held = (id: string, itemId: string): SessionEvent =>
+      ({ kind: "__queued", id, itemId, queued: "followup", paused: true }) as SessionEvent;
+    const plain = run([typed("row-1", "a"), queued("row-1", "inbox-1", "steer")]);
+    expect(plain.runtime).toEqual([]);
+    const st = run([typed("row-1", "a"), held("row-1", "inbox-1"), typed("row-2", "b"), held("row-2", "inbox-2")]);
+    expect(st.runtime.map((n) => n.code)).toEqual(["queue_paused_hold"]);
+    const gone = run([typed("row-1", "a"), held("row-1", "inbox-1")]);
+    const after = reduce(reduce(gone, { kind: "__runtime_seen", id: gone.runtime[0].id } as SessionEvent), held("row-1", "inbox-1"));
+    expect(after.runtime).toHaveLength(1);
+  });
 
   // The row is on screen before the kernel has answered. The receipt is what
   // gives it a name to be taken back by, and without it the card has a button

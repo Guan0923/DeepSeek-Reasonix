@@ -103,6 +103,14 @@ grid to break.
   itself now, with dark ink on it. `--err` carries its own ink for the same
   reason: a danger button borrowed `--accent-fg`, which held only while the two
   hues happened to share a lightness.
+- Text takes the ink, never the base.
+  - Light `--warn` reads 4.58:1 on white and 3.86:1 on the floating layer, under
+    the 4.5 line.
+  - A label, count or note coloured `--warn`, `--ok` or `--err` uses
+    `--warn-ink`, `--ok-ink` or `--err-ink`.
+  - Borders, washes and glyph marks (status symbols, check ticks, hover icons)
+    stay on the base: a graphic needs 3:1, which the base clears.
+  - `ink-text.test.ts` fails a bare hue as `color` outside its glyph list.
 - An ink is read on every tint it lands on, not only the lightest one. The
   light `--accent-ink` cleared the popover's own surface at 6.4:1 and the
   selected row inside it — that same surface with 7% text mixed in — at 4.40,
@@ -127,6 +135,11 @@ grid to break.
     lightness band, chroma floor, adjacent-pair colour-vision separation
     (ΔE ≥ 8), normal-vision floor (≥ 15), and contrast with the ground.
   - In light, four segments fall below 3:1 and rely on the legend's text labels.
+  - Chart series take `--cat-1` … `--cat-5` by index. A sixth series onward
+    repeats the ramp with a second channel (dash for lines, hatch for bars,
+    lower opacity for slices) because five distinguishable hues is the ceiling,
+    and every chart carries a legend or a data table so colour is never the only
+    way to read a series.
 - `--lights-w` / `--lights-h` are the window corner macOS draws its controls
   over, and they are zero everywhere the shell does not hand that corner to the
   page. Whichever element occupies the corner reserves them, so a layout change

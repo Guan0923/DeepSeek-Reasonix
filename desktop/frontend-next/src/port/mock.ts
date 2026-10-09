@@ -1,6 +1,6 @@
 import type { PlanAction } from "./session";
 import { HttpError } from "./port";
-import type { AccountState, AgentPort, ChangeDiff, Completion, CompletionItem, DeviceGrant, VersionHub, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, SessionEntry, SessionStatus, WalletReading, MemoryCatalog, MemoryEdit, UsageReport, MemoryEntry, WorkspaceInfo, WorkspaceChanges, Attachment, DroppedRef, Queue, QueueItem, Queued, NotifyPrefs, TrayPrefs, UsageQuery } from "./port";
+import type { AccountState, AgentPort, ChangeDiff, Completion, CompletionItem, DeviceGrant, VersionHub, VersionNotes, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, RoleOverride, SessionEntry, SessionStatus, WalletReading, MemoryCatalog, MemoryEdit, UsageReport, MemoryEntry, WorkspaceInfo, WorkspaceChanges, Attachment, DroppedRef, Queue, QueueItem, Queued, ChipCall, NotifyPrefs, TrayPrefs, UsageQuery } from "./port";
 import type { ExecutionGraphRead, TrajectoryRead, WireEvent } from "./wire";
 import { MockFeedback } from "./mock_feedback";
 import { SCRIPT, mockMsgIndex, mockTurnStart } from "./fixture";
@@ -80,6 +80,16 @@ export class MockPort extends MockFeedback implements AgentPort {
 
   async setRole(role: string, ref: string) {
     this.assigned = { ...this.assigned, [role]: ref };
+  }
+
+  overrides: Record<string, RoleOverride[]> = {};
+
+  async roleOverrides(): Promise<Record<string, RoleOverride[]>> {
+    return this.overrides;
+  }
+
+  async clearRoleOverride(role: string, key: string) {
+    this.overrides = { ...this.overrides, [role]: (this.overrides[role] ?? []).filter((o) => o.key !== key) };
   }
 
   async models(): Promise<ModelEntry[]> {
@@ -171,6 +181,9 @@ export class MockPort extends MockFeedback implements AgentPort {
   async markWelcomed(): Promise<void> { this.welcomed = true; }
 
   async pinVersion(): Promise<void> {}
+  async versionNotes(version: string): Promise<VersionNotes> {
+    return { version, markdown: "", cached: false };
+  }
   async acknowledgeLaunchHealth(): Promise<void> {} // booted from no update
   async goToVersion(): Promise<void> {
     throw new Error("演示模式不会真的安装版本");
@@ -318,6 +331,8 @@ export class MockPort extends MockFeedback implements AgentPort {
   }
 
   async deleteSession(_name: string) {}
+
+  async markSessionViewed() {}
 
   async status() {
     return { ...this.state };
@@ -509,6 +524,7 @@ export class MockPort extends MockFeedback implements AgentPort {
   // that wait is the only window in which taking it back means anything. A
   // fixture that echoed it at once made the state undesignable.
   async steer(text: string): Promise<Queued> {
+    if (this.queuePaused) return this.queueFollowup(text);
     const itemId = `inbox-${this.queued.size + 1}-${Date.now()}`;
     const at = window.setTimeout(() => {
       // Three states, not two. The kernel marks the line consumed when the turn
@@ -584,7 +600,7 @@ export class MockPort extends MockFeedback implements AgentPort {
   async queueFollowup(text: string): Promise<Queued> {
     const itemId = `inbox-followup-${Date.now()}`;
     this.addQueued(itemId, "followup", text);
-    return { itemId, disposition: "queued_followup" };
+    return { itemId, disposition: "queued_followup", paused: this.queuePaused };
   }
 
   async browserTabs(): Promise<BrowserTab[]> {
@@ -664,7 +680,8 @@ export class MockPort extends MockFeedback implements AgentPort {
     this.dropQueued(itemId);
   }
 
-  async submit(text: string) {
+  async submit(text: string, chips?: ChipCall): Promise<Queued | void> {
+    if (chips && this.queuePaused) return this.queueFollowup(text);
     if (this.state.running) {
       this.emit({ kind: "steer", text });
       return;
@@ -746,10 +763,12 @@ export class MockPort extends MockFeedback implements AgentPort {
     return mockStoragePlan(root, dir);
   }
 
-  async setModel(ref: string, asDefault = false) {
+  async setModel(ref: string) {
     this.state.modelRef = ref;
     this.state.label = ref.split("/").pop() ?? ref;
-    if (asDefault) this.defaultRef = ref;
+  }
+  async setDefaultModel(ref: string) {
+    this.defaultRef = ref;
   }
   async setEffort(effort: string) {
     this.state.effort = effort;
