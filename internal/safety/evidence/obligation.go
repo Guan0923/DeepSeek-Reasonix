@@ -158,18 +158,25 @@ func (l *Ledger) Obligations(contract CheckContract) []Obligation {
 // established for every mutation; a watched subset cannot exempt effects the
 // host never observed.
 func (l *Ledger) ProseOnlyWithoutChecks(contract CheckContract) bool {
-	if contract.delivery || len(contract.baseline) != 0 || len(contract.current) != 0 || contract.capturedTests != 0 {
+	if contract.delivery || contract.DeclaresChecks() {
 		return false
 	}
 	beyond, scoped, changed := l.mutationsBeyondProse(contract.observeRoot)
 	return changed && scoped && len(beyond) == 0
 }
 
+// DeclaresChecks reports that the project or the task's start named checks of
+// its own, which define verification there.
+func (c CheckContract) DeclaresChecks() bool {
+	return len(c.baseline) != 0 || len(c.current) != 0 || c.capturedTests != 0
+}
+
 // MutationPathsBeyondProse names the changed paths that keep the generic check
-// owed, in first-written order.
-func (l *Ledger) MutationPathsBeyondProse(contract CheckContract) []string {
-	beyond, _, _ := l.mutationsBeyondProse(contract.observeRoot)
-	return beyond
+// owed, in first-written order, and whether every mutation had its extent
+// established.
+func (l *Ledger) MutationPathsBeyondProse(contract CheckContract) (paths []string, scoped bool) {
+	beyond, scoped, _ := l.mutationsBeyondProse(contract.observeRoot)
+	return beyond, scoped
 }
 
 func (l *Ledger) mutationsBeyondProse(root string) (beyond []string, scoped, changed bool) {
@@ -180,7 +187,13 @@ func (l *Ledger) mutationsBeyondProse(root string) (beyond []string, scoped, cha
 	defer l.mu.Unlock()
 	scoped = true
 	for _, r := range l.receipts {
-		if !r.Success || !r.Mutation {
+		if !r.Mutation {
+			continue
+		}
+		// A named-path writer replaces atomically, so its failure wrote
+		// nothing; any other failed mutation may have changed files unobserved.
+		if !r.Success {
+			scoped = scoped && r.Write
 			continue
 		}
 		changed = true

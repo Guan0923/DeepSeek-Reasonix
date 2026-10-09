@@ -536,18 +536,39 @@ func (a *Agent) verificationGap(writer int) (string, bool) {
 // prose, or the declaration, are what lifts that.
 func (a *Agent) verificationCause() string {
 	contract := a.checkContract()
-	if paths := a.task.ledger.MutationPathsBeyondProse(contract); len(paths) > 0 {
+	paths, scoped := a.task.ledger.MutationPathsBeyondProse(contract)
+	switch {
+	case len(paths) > 0:
 		const shown = 3
+		paths = a.relativeUnique(paths)
 		list := strings.Join(quoteEach(paths[:min(len(paths), shown)]), ", ")
 		if len(paths) > shown {
 			list += fmt.Sprintf(" and %d more", len(paths)-shown)
 		}
 		return " (not documentation-only: " + list + " changed)"
-	}
-	if len(a.projectChecks) > 0 {
+	case !scoped:
+		return " (a change ran whose extent the host could not establish)"
+	case contract.DeclaresChecks():
 		return " (the project declares checks)"
 	}
 	return ""
+}
+
+// relativeUnique spells each path from the workspace root when it lies inside
+// it, so one file written under two spellings is named once.
+func (a *Agent) relativeUnique(paths []string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if filepath.IsAbs(p) && a.observeRoot != "" {
+			if rel, err := filepath.Rel(a.observeRoot, p); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				p = rel
+			}
+		}
+		if !slices.Contains(out, p) {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func quoteEach(items []string) []string {

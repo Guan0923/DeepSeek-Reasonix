@@ -19,14 +19,27 @@ func TestEffectMarkdownOnlyTurnInCodeWorkspace(t *testing.T) {
 		code     bool
 		turns    []testutil.Turn
 		wantPath string
+		debt     bool
 	}{
 		{name: "README only", turns: []testutil.Turn{call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`)}},
 		{name: "README then code", code: true, turns: []testutil.Turn{
 			call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`),
 			call("src", "write_file", `{"path":"Program.cs","content":"class P {}\n"}`),
-		}, wantPath: "Program.cs"},
-		{name: "code only", code: true, turns: []testutil.Turn{call("src", "write_file", `{"path":"Program.cs","content":"class P {}\n"}`)}, wantPath: "Program.cs"},
-		{name: "code renamed to prose", code: true, turns: []testutil.Turn{call("mv", "move_file", `{"source_path":"Program.cs","destination_path":"Program.md"}`)}, wantPath: "Program.cs"},
+		}, wantPath: "Program.cs", debt: true},
+		{name: "failed bash edits code then README", turns: []testutil.Turn{
+			call("b", "bash", `{"command":"echo 'class Q {}' >> Program.cs && exit 3"}`),
+			call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`),
+		}, wantPath: "could not establish", debt: true},
+		{name: "successful unscoped bash edits code then README", turns: []testutil.Turn{
+			call("b", "bash", `{"command":"echo 'class Q {}' >> Program.cs"}`),
+			call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`),
+		}, wantPath: "could not establish", debt: true},
+		{name: "failed named write to code writes nothing", turns: []testutil.Turn{
+			call("bad", "write_file", `{"path":"Program.cs/x.cs","content":"class Q {}\n"}`),
+			call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`),
+		}},
+		{name: "code only", code: true, turns: []testutil.Turn{call("src", "write_file", `{"path":"Program.cs","content":"class P {}\n"}`)}, wantPath: "Program.cs", debt: true},
+		{name: "code renamed to prose", code: true, turns: []testutil.Turn{call("mv", "move_file", `{"source_path":"Program.cs","destination_path":"Program.md"}`)}, wantPath: "Program.cs", debt: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			isolateConfigHome(t)
@@ -55,7 +68,7 @@ func TestEffectMarkdownOnlyTurnInCodeWorkspace(t *testing.T) {
 			defer ctrl.Close()
 			err = ctrl.Run(context.Background(), "update the docs")
 			var unready *agent.FinalReadinessError
-			if tc.wantPath == "" {
+			if !tc.debt {
 				if err != nil {
 					t.Fatalf("Run = %v, want completion", err)
 				}
