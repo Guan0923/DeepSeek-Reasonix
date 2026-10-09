@@ -26,6 +26,9 @@ type Protocol struct {
 	// ReasoningParams marks wires whose thinking/reasoning_effort fields a
 	// relay can reject outright, so reasoning_protocol governs the shape.
 	ReasoningParams bool
+	// EffortField is the dotted request-body path a chosen effort level lands
+	// at on this wire. Frontends word their help and example body from it.
+	EffortField string
 	// StatefulContinuation marks wires that can carry context by reference
 	// rather than replaying it, which an endpoint may not honour — so
 	// responses_mode governs it. Chat Completions replays by construction.
@@ -35,9 +38,9 @@ type Protocol struct {
 // protocols is ordered as a chooser should offer them: the common wire first,
 // then the ones a particular endpoint adds on top of it.
 var protocols = []Protocol{
-	{Kind: "openai", Answers: AnswersChat, Discovery: "openai", ReasoningParams: true},
-	{Kind: "responses", Answers: AnswersChat, Discovery: "openai", ServerWebSearch: true, StatefulContinuation: true},
-	{Kind: "anthropic", Answers: AnswersChat, Discovery: "anthropic", ServerWebSearch: true},
+	{Kind: "openai", Answers: AnswersChat, Discovery: "openai", ReasoningParams: true, EffortField: "reasoning_effort"},
+	{Kind: "responses", Answers: AnswersChat, Discovery: "openai", ServerWebSearch: true, ReasoningParams: true, StatefulContinuation: true, EffortField: "reasoning.effort"},
+	{Kind: "anthropic", Answers: AnswersChat, Discovery: "anthropic", ServerWebSearch: true, EffortField: "output_config.effort"},
 	// No Discovery: the decision API has no model listing, so the model id is
 	// declared rather than probed for.
 	{Kind: "typesafe", Answers: AnswersDecision},

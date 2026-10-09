@@ -137,6 +137,7 @@ var mirroredWireTypes = []wireMirror{
 	// A source and a model as the pickers name them. A label the page cannot
 	// read puts the config name back on screen after the user renamed it.
 	{"internal/frontend/serve/providers.go", "providerView", tsProviderFile, "ProviderEntry"},
+	{"internal/frontend/serve/providers.go", "protocolView", tsProviderFile, "Protocol"},
 	{"internal/frontend/serve/provider_check.go", "providerCheck", tsProviderFile, "ProviderCheck"},
 	{"internal/frontend/serve/provider_check.go", "providerModelCheck", tsProviderFile, "ProviderModelCheck"},
 	{"internal/frontend/serve/settings.go", "modelEntry", tsModelFile, "ModelEntry"},

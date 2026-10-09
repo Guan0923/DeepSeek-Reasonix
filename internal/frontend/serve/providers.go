@@ -84,6 +84,9 @@ type providerView struct {
 	// offers the switch only where a gateway can actually reject the request.
 	CanSetThinking bool `json:"canSetThinking"`
 	SendsThinking  bool `json:"sendsThinking"`
+	// EffortField is where a chosen effort level lands in this wire's request
+	// body, declared by the protocol so every panel words it from one source.
+	EffortField string `json:"effortField"`
 	// Continuation is how this endpoint carries context between turns, and
 	// CanSetContinuation whether its protocol has the choice at all. Empty is
 	// vendor detection, which is what an uncharacterised endpoint must keep.
@@ -152,6 +155,7 @@ func (s *Server) providers(w http.ResponseWriter, _ *http.Request) {
 			WebSearch:          config.EffectiveWebSearch(p),
 			CanSetThinking:     config.CanConfigureThinkingParams(p),
 			SendsThinking:      config.SendsThinkingParams(p),
+			EffortField:        effortFieldOf(p.Kind),
 			CanSetContinuation: config.CanConfigureContinuation(p),
 			Continuation:       string(config.ContinuationOf(p)),
 			Default:            p.DefaultModel(),
@@ -186,6 +190,7 @@ type protocolView struct {
 	Discovery       string `json:"discovery"`
 	ServerWebSearch bool   `json:"serverWebSearch"`
 	ReasoningParams bool   `json:"reasoningParams"`
+	EffortField     string `json:"effortField"`
 }
 
 // providerProtocols lists what a chooser may offer, so a wire added to the
@@ -200,6 +205,7 @@ func (s *Server) providerProtocols(w http.ResponseWriter, _ *http.Request) {
 			Discovery:       p.Discovery,
 			ServerWebSearch: p.ServerWebSearch,
 			ReasoningParams: p.ReasoningParams,
+			EffortField:     p.EffortField,
 		})
 	}
 	writeJSON(w, out)
@@ -555,4 +561,9 @@ func writeProbeFailure(w http.ResponseWriter, err error, apiKey string) {
 		message += ": " + detail
 	}
 	refuse(w, status, code, message, probe.Params)
+}
+
+func effortFieldOf(kind string) string {
+	p, _ := config.ProtocolFor(kind)
+	return p.EffortField
 }
