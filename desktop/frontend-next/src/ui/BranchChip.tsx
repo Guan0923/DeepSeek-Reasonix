@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useState, type CSSProperties } from "react";
 import { t } from "../i18n";
 import type { AgentPort, WorkspaceBranch, WorkspaceGit } from "../port/port";
 import { Picker, type MenuItem } from "./Menu";
@@ -17,6 +17,16 @@ interface Props {
   onSwitched?: () => void;
   onError: (e: unknown) => void;
 }
+
+// Sizing belongs with the pane-aware positioning below; the stylesheet owns
+// the card's visual treatment and hover/focus states.
+const cardStyle: CSSProperties = {
+  width: "max-content",
+  minWidth: 0,
+  maxWidth: "min(260px, calc(100vw - 24px))",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+};
 
 function fitCard(anchor: HTMLDivElement) {
   const card = anchor.querySelector<HTMLElement>(".studio-branch-card");
@@ -69,11 +79,11 @@ export function BranchChip({ port, git, changeCount, onChanged, onSwitched, onEr
   if (git && !git.repo) {
     return (
       <div className="studio-branch-pop" onMouseEnter={(e) => fitCard(e.currentTarget)} onFocusCapture={(e) => fitCard(e.currentTarget)}>
-        <div className="mode plain studio-branch" data-norepo="" tabIndex={0} aria-describedby={branchTipId}>
+        <div className="mode plain studio-branch" data-norepo="" role="img" aria-label={t("非 Git 仓库")} tabIndex={0} aria-describedby={branchTipId}>
           <span className="ic" aria-hidden="true"><StudioIcon name="branch" /></span>
           <span className="lb">{t("非 Git 仓库")}</span>
         </div>
-        <div className="studio-branch-card" id={branchTipId} role="tooltip">
+        <div className="studio-branch-card" style={cardStyle} id={branchTipId} role="tooltip">
           <b>{t("此工作区未受版本控制")}</b>
           <span>{t("这里没有 Git 仓库，因此没有分支可显示或切换")}</span>
         </div>
@@ -101,7 +111,7 @@ export function BranchChip({ port, git, changeCount, onChanged, onSwitched, onEr
           <StudioIcon name="down" />
         </>}
       />
-      <div className="studio-branch-card" id={branchTipId} role="tooltip">
+      <div className="studio-branch-card" style={cardStyle} id={branchTipId} role="tooltip">
         <b>{git.detached ? t("HEAD 分离 · {sha}", { sha: git.branch }) : t("当前分支 · {branch}", { branch: git.branch })}</b>
         <span>{changeCount > 0 ? t("当前工作区 · {n} 个本地变更", { n: changeCount }) : t("当前工作区 · 后续任务继续使用此分支")}</span>
         <small>{t("随回合与写入刷新 · 非实时 · 点击可切换")}</small>

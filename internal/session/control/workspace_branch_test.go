@@ -35,7 +35,7 @@ func branchFixture(t *testing.T) (*Controller, string) {
 	dir := testenv.TempDir(t)
 	git := func(args ...string) {
 		t.Helper()
-		cmd := exec.Command("git", args...)
+		cmd := exec.Command("git", append([]string{"-c", "core.autocrlf=false"}, args...)...)
 		cmd.Dir = dir
 		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
 		if out, err := cmd.CombinedOutput(); err != nil {
@@ -43,6 +43,8 @@ func branchFixture(t *testing.T) (*Controller, string) {
 		}
 	}
 	git("init", "-q", "-b", "main")
+	// The controller's later checkouts must use the fixture's LF bytes too.
+	git("config", "core.autocrlf", "false")
 	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
