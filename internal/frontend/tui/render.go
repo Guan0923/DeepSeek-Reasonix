@@ -146,7 +146,9 @@ func renderTool(it *Item, width int) string {
 			lines = append(lines, outputSummary(t.Name, it.shellOutput(), avail, it.Fold)...)
 		}
 	default:
-		if t.OutputDiff {
+		if spec, ok := chartOf(it); ok {
+			lines = append(lines, chartRows(spec, width, it.Fold)...)
+		} else if t.OutputDiff {
 			lines = append(lines, diffRows(t.Output, width, it.Fold)...)
 		} else {
 			lines = append(lines, outputSummary(t.Name, t.Output, avail, it.Fold)...)
@@ -303,10 +305,6 @@ const unappliedSteerCap = 400
 
 func codedNoticeText(it *Item) string {
 	switch it.Code {
-	case event.NoticeCodeContextBudget:
-		if f, ok := event.DecodeContextBudgetFigures(it.Detail); ok {
-			return fmt.Sprintf(i18n.M.NoticeContextBudgetFmt, f.Percent, f.Remaining)
-		}
 	case event.NoticeCodeCompacted:
 		return i18n.M.NoticeCompacted
 	case event.NoticeCodeCompactDeclined:
@@ -322,6 +320,14 @@ func codedNoticeText(it *Item) string {
 			return fmt.Sprintf(i18n.M.NoticeUnappliedSteerFmt, textutil.TruncateGraphemes(textutil.SanitizeDisplay(it.Detail), unappliedSteerCap, "…"))
 		}
 		return textutil.TruncateGraphemes(textutil.SanitizeDisplay(it.Text), unappliedSteerCap, "…")
+	case event.NoticeCodeInboxRecovered:
+		if p, ok := event.DecodeInboxRecovered(it.Detail); ok {
+			return fmt.Sprintf(i18n.M.NoticeInboxRecoveredFmt, p.Count)
+		}
+	case event.NoticeCodeExtensionSkipped:
+		if p, ok := event.DecodeExtensionSkipped(it.Detail); ok && p.Reason == event.ExtensionSkipReasonNoLiveSidecar {
+			return fmt.Sprintf(i18n.M.NoticeExtSkippedFmt, p.Extension, p.Point)
+		}
 	}
 	return it.Text
 }

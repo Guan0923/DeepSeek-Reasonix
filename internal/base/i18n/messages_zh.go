@@ -29,8 +29,10 @@ var Chinese = Messages{
 	ReceiptChangedFmt:       "改动 %d 个文件",
 	CompactionWhy: map[string]string{
 		"summary_failed":                   "生成摘要的请求失败了",
-		"summary_timeout":                  "生成摘要的请求超时了",
+		"summary_timeout":                  "生成摘要的请求停滞了：连续 6 分钟没有任何输出",
+		"summary_ceiling":                  "生成摘要的请求运行满 30 分钟仍未完成，已停止",
 		"summary_truncated":                "摘要在输出上限处被截断，没有采用",
+		"summary_not_digest":               "摘要模型没有按要求的标题给出摘要，没有采用",
 		"summary_input_too_large":          "待折叠的内容缩减后仍超过单次摘要请求的容量",
 		"hook_refused":                     "扩展拒绝了这次折叠",
 		"persist_failed":                   "折叠结果没能保存",
@@ -89,10 +91,13 @@ var Chinese = Messages{
 	ResumePickSearch:        "搜索：",
 	ResumePickNoMatch:       "没有匹配的会话",
 	TUIDeclinedFmt:          "已拒绝 %s %s",
-	NoticeContextBudgetFmt:  "上下文已用到压缩阈值的 %d%%，已告知模型约剩 %d 个词元的空间。",
 	NoticeUnappliedSteerFmt: "引导没有生效：这一轮在处理它之前就结束了。如果仍然需要，请再发送一次：\n%s",
+	NoticeExtSkippedFmt:     "扩展 %s 的配套后台程序没有运行，本次在 %s 已被跳过。用 /plugins 查看并启动它，或停用该扩展。",
+	NoticeInboxRecoveredFmt: "已恢复 %d 条未完成的指令。待发送已暂停，请先用 /queue 查看，再继续派发。",
 	TUIQuestion:             "提问",
 	TUISubagentCallsFmt:     "%d 次子代理调用",
+	TUIChartMoreRowsFmt:     "… 还有 %d 行",
+	TUIChartMoreColsFmt:     "… 还有 %d 列",
 	TUIStallTokensFmt:       "自上次有可观察的进展以来已用约 %d 倍上下文的输入（%d tokens）。是否继续由你决定。",
 	TUIStallRepeating:       "模型在重复输出同一段文字。是否继续由你决定。",
 	TUIStallIdleFmt:         "已连续 %d 轮工具调用没有可观察的进展：没有文件改动、检查或任务步骤变化，也没有新读取。是否继续由你决定。",
@@ -320,6 +325,9 @@ var Chinese = Messages{
 	McpPanelDetailHint:           "Esc 返回",
 	McpPanelNoTools:              "未报告任何工具",
 	McpPanelOff:                  "关闭",
+	McpPanelPending:              "待批准",
+	McpPanelChanged:              "启用后已变更",
+	McpPanelLaunchFmt:            "将启动：%s",
 	McpToolDestructive:           "破坏性",
 	McpToolReadOnly:              "只读",
 	McpPanelConfirmFmt:           "这会运行仓库声明的服务器 %s：%s — y/n",
@@ -639,7 +647,6 @@ var Chinese = Messages{
 	WriteEnvErr:               "写入 .env 失败：",
 
 	ProviderErrBadRequest:          "请求格式错误 (HTTP 400)：请求体被拒绝，通常是程序缺陷。若持续出现请反馈。",
-	ProviderErrDroppedReasoning:    "端点拒绝了请求体：它要求把助手的思考内容随工具调用一并回传，而这个连接没有声明思考协议，于是这部分没有发出去。把连接的思考参数设成它后面那个模型所用的协议，再重试。",
 	ProviderErrAuth:                "认证失败 (HTTP 401)：未读到 API key（缺失或未设置）。请在 .env 中配置密钥，或运行 `reasonix setup`。",
 	ProviderErrAuthRejected:        "认证失败 (HTTP 401)：服务端拒绝了你的 API key。可能是 key 错误或已过期，也可能是服务端出现瞬时鉴权/额度问题——已退避重试仍失败。请稍后再试，或检查 .env 中的密钥 / 运行 `reasonix setup`。",
 	ProviderErrDNSNotFound:         "无法解析模型服务域名 %s：DNS 查询显示该主机不存在，未建立任何连接，也没有重试。请检查网络、DNS、代理设置以及服务商的接口地址。",
@@ -771,4 +778,6 @@ var Chinese = Messages{
   密钥通过 api_key_env 从环境变量注入（如 DEEPSEEK_API_KEY）。
   运行 'reasonix setup' 生成配置；详见 docs/SPEC.md。
 `,
+
+	Feedback: feedbackChinese,
 }

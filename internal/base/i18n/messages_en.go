@@ -28,8 +28,10 @@ var English = Messages{
 	ReceiptChangedFmt:       "%d changed",
 	CompactionWhy: map[string]string{
 		"summary_failed":                   "The request that writes the summary failed",
-		"summary_timeout":                  "The request that writes the summary timed out",
+		"summary_timeout":                  "The request that writes the summary stalled: no output for 6 minutes",
+		"summary_ceiling":                  "The request that writes the summary was still running after 30 minutes and was stopped",
 		"summary_truncated":                "The summary was cut off at the output limit and was not used",
+		"summary_not_digest":               "The summarizer did not return a briefing under the required headings, so it was not used",
 		"summary_input_too_large":          "The content to fold still exceeds one summary request after shortening",
 		"hook_refused":                     "An extension refused this fold",
 		"persist_failed":                   "The result of the fold could not be saved",
@@ -88,10 +90,13 @@ var English = Messages{
 	ResumePickSearch:        "Search: ",
 	ResumePickNoMatch:       "No matches",
 	TUIDeclinedFmt:          "declined %s %s",
-	NoticeContextBudgetFmt:  "Context at %d%% of the compaction threshold — the model was told it has about %d tokens of room left.",
 	NoticeUnappliedSteerFmt: "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:\n%s",
+	NoticeExtSkippedFmt:     "Extension %s's sidecar is not running, so it was skipped at %s. Check it with /plugins and start it, or disable the extension.",
+	NoticeInboxRecoveredFmt: "Recovered %d unfinished instruction(s). The inbox is paused: review them with /queue, then resume.",
 	TUIQuestion:             "question",
 	TUISubagentCallsFmt:     "%d sub-agent call(s)",
+	TUIChartMoreRowsFmt:     "… %d more rows",
+	TUIChartMoreColsFmt:     "… %d more columns",
 	TUIStallTokensFmt:       "About %d context windows of input (%d tokens) since the run last did anything observable. Whether to keep going is your call.",
 	TUIStallRepeating:       "The model is repeating the same text. Whether to keep going is your call.",
 	TUIStallIdleFmt:         "No observable progress for %d tool rounds: no file changed, no check or task step moved, nothing new was read. Whether to keep going is your call.",
@@ -319,6 +324,9 @@ var English = Messages{
 	McpPanelDetailHint:           "Esc back",
 	McpPanelNoTools:              "no tools reported",
 	McpPanelOff:                  "off",
+	McpPanelPending:              "awaiting approval",
+	McpPanelChanged:              "changed since you enabled it",
+	McpPanelLaunchFmt:            "will start: %s",
 	McpToolDestructive:           "destructive",
 	McpToolReadOnly:              "read-only",
 	McpPanelConfirmFmt:           "this runs the repository-declared server %s: %s — y/n",
@@ -638,7 +646,6 @@ var English = Messages{
 	WriteEnvErr:               "write .env:",
 
 	ProviderErrBadRequest:          "Malformed request (HTTP 400): the request body was rejected. This is likely a bug — please report it if it persists.",
-	ProviderErrDroppedReasoning:    "The endpoint refused the request body: it wants the assistant's thinking content sent back with the tool call, and this connection declares no reasoning protocol, so it was left out. Set the connection's reasoning protocol to the one the model behind it speaks, then retry.",
 	ProviderErrAuth:                "Authentication failed (HTTP 401): your API key is missing or unset. Add it to .env or run `reasonix setup`.",
 	ProviderErrAuthRejected:        "Authentication failed (HTTP 401): the server rejected your API key. It may be wrong or expired, or the provider hit a transient auth/quota issue — retried with backoff and still failed. Try again shortly, or check the key in .env / run `reasonix setup`.",
 	ProviderErrDNSNotFound:         "Cannot resolve the model service domain name %s: the DNS lookup found no such host, so no connection was made and nothing was retried. Check the network, DNS and proxy settings, and the provider base URL.",
@@ -770,4 +777,6 @@ Configuration:
   Secrets come from the environment via api_key_env (e.g. DEEPSEEK_API_KEY).
   Run 'reasonix setup' to scaffold a config; see docs/SPEC.md.
 `,
+
+	Feedback: feedbackEnglish,
 }

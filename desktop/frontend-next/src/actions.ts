@@ -52,9 +52,12 @@ export const ACTIONS: UIAction[] = [
   // Completion verification is adaptive now, rather than a user-facing preset.
   // The legacy endpoint remains in the port for older clients and sessions,
   // but it is intentionally not advertised as an interface action.
+  { id: "chart.scroll", kind: "view", target: "none", proof: "interaction" },
+  { id: "chart.data", kind: "view", target: "none", proof: "interaction" },
   { id: "chrome.policy", kind: "view", target: "none", proof: "interaction" },
   { id: "chrome.rail", kind: "view", target: "none", proof: "browser" },
   { id: "appearance.theme", kind: "view", target: "none", proof: "interaction" },
+  { id: "appearance.nav-rail", kind: "view", target: "none", proof: "interaction" },
   { id: "workspace.search", kind: "view", target: "none", proof: "interaction" },
   { id: "session.filter", kind: "view", target: "none", proof: "interaction" },
   { id: "chrome.settings", kind: "navigation", target: "none", proof: "interaction" },
@@ -67,6 +70,7 @@ export const ACTIONS: UIAction[] = [
   // The way out of a window whose assets an update replaced underneath it.
   { id: "chrome.reload", kind: "navigation", target: "none", proof: "interaction" },
   { id: "chrome.receipt", kind: "view", target: "none", proof: "interaction" },
+  { id: "chrome.keep-awake", kind: "view", target: "none", proof: "interaction" },
   { id: "transcript.fold", kind: "view", target: "none", proof: "interaction" },
   { id: "transcript.fold-preset", kind: "view", target: "none", proof: "interaction" },
   { id: "transcript.fold-preview", kind: "view", target: "none", proof: "interaction" },
@@ -195,6 +199,7 @@ export const ACTIONS: UIAction[] = [
   { id: "feedback.retry-mine", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "feedback.link", kind: "shell-native", target: "none", proof: "interaction" },
   { id: "feedback.focus", kind: "view", target: "none", proof: "interaction" },
+  { id: "feedback.expand", kind: "view", target: "none", proof: "interaction" },
   { id: "feedback.close", kind: "view", target: "none", proof: "interaction" },
   { id: "backup.category", kind: "view", target: "entity", proof: "interaction" },
   { id: "backup.label", kind: "view", target: "none", proof: "interaction" },
@@ -319,6 +324,8 @@ export const ACTIONS: UIAction[] = [
   // Asking a machine whether it answers. Nothing on either side changes, and
   // asking twice is the point when the first answer was "not yet".
   { id: "remote.probe", kind: "repeatable", target: "entity", proof: "authority-effect" },
+  { id: "remote.hide", kind: "view", target: "entity", proof: "interaction" },
+  { id: "remote.enable", kind: "view", target: "entity", proof: "interaction" },
   { id: "remote.read", kind: "repeatable", target: "entity", proof: "authority-effect" },
   { id: "workspace.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "workspace.add-cancel", kind: "view", target: "none", proof: "interaction" },
@@ -337,6 +344,9 @@ export const ACTIONS: UIAction[] = [
   { id: "extensions.submit", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "provider.probe", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "provider.draft", kind: "interaction", target: "none", proof: "interaction" },
+  { id: "provider.discard-edits", kind: "destructive", target: "none", proof: "interaction" },
+  { id: "provider.revert", kind: "interaction", target: "none", proof: "interaction" },
+  { id: "provider.model-check-all", kind: "repeatable", target: "none", proof: "interaction" },
   { id: "provider.model-check", kind: "repeatable", target: "entity", proof: "interaction" },
   { id: "provider.add", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "provider.add-start", kind: "view", target: "none", proof: "interaction" },
@@ -346,6 +356,7 @@ export const ACTIONS: UIAction[] = [
   { id: "provider.rename", kind: "kernel-mutation", target: "entity", proof: "interaction" },
   { id: "provider.save", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "roles.model", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
+  { id: "roles.override.clear", kind: "kernel-mutation", target: "entity", proof: "interaction" },
   { id: "permissions.rule-level", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "sandbox.workspace-root", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   // Where compaction starts. Declaring it rebuilds the runtime, which is why
@@ -380,6 +391,9 @@ export const ACTIONS: UIAction[] = [
   { id: "versions.activate", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "versions.restart", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "versions.later", kind: "view", target: "none", proof: "interaction" },
+  { id: "versions.notes", kind: "repeatable", target: "none", proof: "interaction" },
+  { id: "versions.notes-retry", kind: "repeatable", target: "none", proof: "interaction" },
+  { id: "versions.notes-close", kind: "view", target: "none", proof: "interaction" },
   { id: "shell.executor", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "shell.custom-path", kind: "kernel-mutation", target: "none", proof: "authority-effect" },
   { id: "hooks.recipe", kind: "kernel-mutation", target: "entity", proof: "authority-effect" },
@@ -427,6 +441,7 @@ export const ACTIONS: UIAction[] = [
   { id: "appearance.scheme", kind: "view", target: "none", proof: "browser" },
   { id: "appearance.weight", kind: "view", target: "none", proof: "browser" },
   { id: "appearance.contrast", kind: "view", target: "none", proof: "browser" },
+  { id: "appearance.effects", kind: "view", target: "none", proof: "browser" },
   { id: "pane.close", kind: "destructive", target: "none", proof: "authority-effect" },
   { id: "settings.section", kind: "navigation", target: "none", proof: "interaction" },
   // Finding a setting changes what is on screen and nothing else: it reaches

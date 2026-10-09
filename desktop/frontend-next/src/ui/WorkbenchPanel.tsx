@@ -9,6 +9,7 @@ import type {
   WorkspaceChange,
   WorkspaceFile,
 } from "../port/port";
+import { openPage, pageForEmptyColumn } from "./browser_open";
 import { AgentBrowserPanel, ManualBrowserPanel, UNREAD_TABS } from "./BrowserPanel";
 import { DiffView } from "./cards/DiffView";
 import { StudioIcon } from "./StudioIcon";
@@ -19,6 +20,8 @@ import { useGlance } from "./glance";
 import { useMarkdownPoll } from "./useMarkdownPoll";
 import { pinToViewport } from "./place";
 import { WorkbenchExplorerHead } from "./WorkbenchExplorerHead";
+import { WorkbenchFileBar, type FileMode } from "./WorkbenchFileBar";
+import { useHtmlPreview } from "./useHtmlPreview";
 import { setShowsHiddenFiles, showsHiddenFiles } from "../state/prefs";
 import { useCommitCard } from "./CommitCard";
 
@@ -105,7 +108,7 @@ function treeRows(
 
 export function WorkbenchPanel({
   port,
-  tabs,
+  tabs: allTabs,
   manual,
   shown,
   scheme,
@@ -138,6 +141,8 @@ export function WorkbenchPanel({
   onSurfaces: (n: number) => void;
   onExternal: (url: string) => void;
 }) {
+  const preview = useHtmlPreview(port, allTabs, remote);
+  const tabs = preview.tabs;
   const [files, setFiles] = useState<string[]>([]),
     [directories, setDirectories] = useState<string[]>([]),
     [openFiles, setOpenFiles] = useState<string[]>([]);
@@ -152,6 +157,7 @@ export function WorkbenchPanel({
   // surface steps the list aside.
   const pick = useCallback((key: string) => {
     setShowFiles(false);
+    setFailed("");
     setSelected(key);
   }, []);
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set()),
@@ -165,7 +171,7 @@ export function WorkbenchPanel({
   const [browsers, setBrowsers] = useState<string[]>([]),
     [hosts, setHosts] = useState<Record<string, string>>({});
   const minted = useRef(0);
-  const [mode, setMode] = useState<"file" | "diff" | "read">("file");
+  const [mode, setMode] = useState<FileMode>("file");
   const [file, setFile] = useState<WorkspaceFile | null>(null),
     [draft, setDraft] = useState(""),
     [diff, setDiff] = useState("");
@@ -274,8 +280,7 @@ export function WorkbenchPanel({
     // A shell that draws views opens a view here too: a framed page is refused
     // by any site sending X-Frame-Options or frame-ancestors, as many do.
     if (host().drawsBrowserViews()) {
-      port
-        .browserOpen("about:blank", true)
+      pageForEmptyColumn(port)
         .then((tab) => pick(`browser:${tab.target}`))
         .catch((e) => setFailed(reason(e)));
       return;
@@ -307,7 +312,7 @@ export function WorkbenchPanel({
   useEffect(() => {
     const before = lastAgent.current;
     lastAgent.current = agentAt;
-    if (before === null || !agentAt || before === agentAt) return;
+    if (!before || !agentAt || before === agentAt) return;
     dropBlankStart();
     pick(`browser:${agentTarget}`);
   }, [agentAt, agentTarget, dropBlankStart, pick]);
@@ -333,10 +338,26 @@ export function WorkbenchPanel({
   // source view is one click away.
   const filePath = active?.kind === "file" ? active.path : "";
   const readable = /\.(md|markdown|mdx)$/i.test(filePath);
+  const previewable = !!filePath && preview.can(filePath);
   useEffect(() => {
-    if (readable) setMode((m) => (m === "file" ? "read" : m));
-    else setMode((m) => (m === "read" ? "file" : m));
-  }, [filePath, readable]);
+    setMode((m) => {
+      const kept = (m === "read" && !readable) || (m === "preview" && !previewable) ? "file" : m;
+      return kept === "file" ? (readable ? "read" : previewable ? "preview" : "file") : kept;
+    });
+  }, [filePath, readable, previewable]);
+  const previewTab = previewable ? preview.tabFor(filePath) : undefined;
+  const { open: openPreview, sync: syncPreview } = preview;
+  const revision = file?.path === filePath ? file.revision : undefined;
+  useEffect(() => {
+    if (mode !== "preview" || !previewable || !shown || previewTab || (!revision && !failed)) return;
+    openPreview(filePath, revision).catch((e) => {
+      setFailed(reason(e));
+      setMode("file");
+    });
+  }, [mode, previewable, shown, previewTab, revision, failed, filePath, openPreview, tabs]);
+  useEffect(() => {
+    if (mode === "preview" && revision) syncPreview(filePath, revision);
+  }, [mode, filePath, revision, syncPreview]);
   const rows = useMemo(
     () => treeRows(files, directories, query, collapsed),
     [files, directories, query, collapsed],
@@ -393,7 +414,7 @@ export function WorkbenchPanel({
       live = false;
     };
   }, [port, openPath, shown, changeKey, glance, running, wrote]);
-  useMarkdownPoll({ port, filePath: shown && readable && mode === "read" ? filePath : "", held, issued, setFailed, setFile, setDraft });
+  useMarkdownPoll({ port, filePath: shown && ((readable && mode === "read") || (previewable && mode === "preview")) ? filePath : "", held, issued, setFailed, setFile, setDraft });
   // Picking a file is asking to read it. Docked, the list and the file share one
   // column, so the list steps aside; side by side it stays where it is.
   const openFile = (path: string) => {
@@ -454,7 +475,7 @@ export function WorkbenchPanel({
       return;
     }
     try {
-      const tab = await port.browserOpen("about:blank", true);
+      const tab = await openPage(port, "about:blank");
       pick(`browser:${tab.target}`);
     } catch (e) {
       setFailed(reason(e));
@@ -469,7 +490,10 @@ export function WorkbenchPanel({
     else if (surface.kind === "file")
       setOpenFiles((v) => v.filter((p) => p !== surface.path));
     else setDismissed((v) => new Set(v).add(key));
-    if (selected === key) setSelected("");
+    if (selected === key) {
+      setSelected("");
+      setFailed("");
+    }
     if (!showFiles && surfaces.every((s) => keyOf(s) === key)) onCloseManual();
   };
   const save = async () => {
@@ -554,6 +578,11 @@ export function WorkbenchPanel({
       </header>
       <div className="workbench-body" data-files={showFiles ? "" : undefined}>
         <main className="workbench-canvas">
+          {failed && active?.kind !== "file" && (
+            <div className="workbench-error" role="alert">
+              {failed}
+            </div>
+          )}
           {!active && (
             <div className="workbench-empty">
               <StudioIcon name="file" />
@@ -581,48 +610,27 @@ export function WorkbenchPanel({
           )}
           {active?.kind === "file" && (
             <>
-              <div className="workbench-filebar">
-                <strong>{active.path}</strong>
-                <div role="group">
-                  {readable && (
-                    <button data-action="workbench.mode" data-value="read" aria-pressed={mode === "read"} onClick={() => setMode("read")}>
-                      {t("阅读")}
-                    </button>
-                  )}
-                  <button
-                    data-action="workbench.mode"
-                    data-value="file"
-                    aria-pressed={mode === "file"}
-                    onClick={() => setMode("file")}
-                  >
-                    {readable ? t("编辑") : t("文件")}
-                  </button>
-                  <button
-                    data-action="workbench.mode"
-                    data-value="diff"
-                    aria-pressed={mode === "diff"}
-                    onClick={() => setMode("diff")}
-                  >
-                    Diff
-                  </button>
-                </div>
-                <button
-                  className="workbench-save"
-                  data-action="workbench.save"
-                  data-target={active.path}
-                  disabled={busy || !file || draft === file.content}
-                  onClick={() => void save()}
-                >
-                  <StudioIcon name="check" />
-                  {t("保存")}
-                </button>
-              </div>
-              {failed && (
+              <WorkbenchFileBar
+                path={active.path}
+                mode={mode}
+                onMode={setMode}
+                readable={readable}
+                previewable={previewable}
+                canSave={!busy && !!file && draft !== file.content}
+                onSave={() => void save()}
+              />
+              {failed && !(mode === "preview" && previewTab) && (
                 <div className="workbench-error" role="alert">
                   {failed}
                 </div>
               )}
-              {busy && !file ? (
+              {mode === "preview" ? (
+                previewTab ? (
+                  <AgentBrowserPanel tabs={[previewTab]} shown={shown} showTabs={false} />
+                ) : (
+                  <div className="workbench-empty">{t("正在读取…")}</div>
+                )
+              ) : busy && !file ? (
                 <div className="workbench-empty">{t("正在读取…")}</div>
               ) : mode === "diff" ? (
                 <div className="workbench-diff">
