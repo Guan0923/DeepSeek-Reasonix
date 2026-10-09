@@ -146,7 +146,9 @@ export const EN_KERNEL: Record<string, string> = {
   "连接 {host} 失败：{detail}": "Could not reach {host}: {detail}",
   "{host} 不接受该凭据。请更换密钥，或在设置中填写正确的环境变量名。":
     "{host} rejected these credentials. Try another key, or name the right environment variable in settings.",
-  "任务正在运行，请先停止再切换模型": "A task is running — stop it before switching models",
+  "当前回合正在进行，请先停止或等它结束再切换模型": "A turn is in progress — stop it or wait for it to finish before switching models",
+  "回合已结束，但还有 {count} 个后台任务在运行，切换模型会终止它们。请先在「后台任务」里停止，再切换模型":
+    "The turn has finished, but {count} background job(s) are still running and switching models would end them. Stop them under Background jobs, then switch",
   "任务正在运行，请先停止再调整推理强度": "A task is running — stop it before changing the reasoning effort",
   "{provider} 没说自己有哪些推理强度档位。要有，得在它的配置块里写 reasoning_protocol 或 supported_efforts":
     "{provider} names no reasoning-effort levels. To give it some, set reasoning_protocol or supported_efforts in its config block",

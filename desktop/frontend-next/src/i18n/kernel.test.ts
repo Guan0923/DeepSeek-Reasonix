@@ -35,6 +35,15 @@ describe("what a reader is told a refusal was", () => {
       expect(english).not.toBe("fixture fallback");
     }
   });
+  it("tells a running turn from jobs left after it, and counts the jobs", () => {
+    const turn = reason(coded("fixture fallback", "busy.switch_model"));
+    const jobs = reason(coded("fixture fallback", "busy.switch_model_jobs", { count: 3 }));
+    expect(turn).toContain("回合正在进行");
+    expect(jobs).toContain("3 个后台任务");
+    expect(jobs).toContain("回合已结束");
+    localStorage.setItem(STORAGE, "en"); boot();
+    expect(reason(coded("fixture fallback", "busy.switch_model_jobs", { count: 3 }))).toContain("3 background job(s)");
+  });
   it("explains a serve left running instead of replaced, in both languages", () => {
     for (const code of ["remote.serve_provider_mismatch", "remote.serve_not_attachable"]) {
       const error = coded("fixture fallback", code, { host: "box" });

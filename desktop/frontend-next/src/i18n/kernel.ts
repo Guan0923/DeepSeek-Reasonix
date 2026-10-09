@@ -35,7 +35,8 @@ const SAID: Record<string, string> = {
   "workspace.write_conflict": "另一个会话持有所需的写入范围。本次操作未执行；请结束当前轮次，待该范围释放后再重试",
   // ── 忙：不是出错，是「现在不行」 ─────────────────────────────────
   "plan.decision_stale": "该决定已不符合当前状态：计划在你回答前已发生变更",
-  "busy.switch_model": "任务正在运行，请先停止再切换模型",
+  "busy.switch_model": "当前回合正在进行，请先停止或等它结束再切换模型",
+  "busy.switch_model_jobs": "回合已结束，但还有 {count} 个后台任务在运行，切换模型会终止它们。请先在「后台任务」里停止，再切换模型",
   "busy.change_effort": "任务正在运行，请先停止再调整推理强度",
   "busy.change_workspace": "任务正在运行，请先停止再切换工作区",
   "busy.reload_extensions": "任务正在运行，请先停止再重载扩展",
