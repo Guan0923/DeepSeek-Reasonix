@@ -43,7 +43,7 @@ export class MockProvider extends MockBoundary {
       name: "myrelay", kind: "openai", effortField: "reasoning_effort", baseUrl: "https://relay.example.com/v1",
       models: ["gpt-4o", "claude-sonnet-4"], default: "gpt-4o",
       hasKey: true, inUse: false, preset: false, keyEnv: "MYRELAY_API_KEY",
-      visionModels: ["gpt-4o"], canSetVision: true,
+      visionModels: ["gpt-4o"], canSetVision: true, canSetThinking: true, sendsThinking: true,
       reasoningProtocol: "openai", supportedEfforts: ["low", "medium", "high"],
       modelEfforts: { "claude-sonnet-4": { supportedEfforts: ["low", "high", "max"], defaultEffort: "high" } },
       contextWindow: 131072,
