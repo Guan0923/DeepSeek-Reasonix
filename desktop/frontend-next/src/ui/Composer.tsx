@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { reason } from "../i18n/kernel";
-import type { AgentPort, ChipCall, ModelEntry, SessionStatus, Attachment } from "../port/port";
+import type { AgentPort, ChipCall, ModelEntry, SessionStatus, Attachment, WorkspaceGit } from "../port/port";
 import { Picker } from "./Menu";
+import { BranchChip } from "./BranchChip";
 import { Policy } from "./Policy";
 import { modelMenu } from "./modelmenu";
 import { effortMenu, effortReading, effortsFor, forcesThinkingFor, routeEffortPick } from "./effort";
@@ -41,6 +42,10 @@ interface Props {
   onError: (e: unknown) => void;
   onSettings?: (section?: string) => void;
   changeCount?: number;
+  // The work tree's Git state as git itself reports it, refreshed on the same
+  // path as changeCount (turn boundaries, writes). null is "not answered yet";
+  // repo:false is a workspace with no repository, and the two render apart.
+  git?: WorkspaceGit | null;
   // Bumped when settings change; a source edited there can change the ladder.
   pulse?: number;
   draftKey?: string;
@@ -91,17 +96,9 @@ function releaseChip(c: Chip) {
 let chipSeq = 0;
 const chipId = () => `c${++chipSeq}`;
 
-export function Composer({ port, status, running, quote, restore, focus, onSubmit, onChanged, onError, onSettings = () => {}, changeCount = 0, pulse = 0, draftKey = "" }: Props) {
+export function Composer({ port, status, running, quote, restore, focus, onSubmit, onChanged, onError, onSettings = () => {}, changeCount = 0, git = null, pulse = 0, draftKey = "" }: Props) {
   const touch = touchKeyboard();
   const providerOrder = useProviderOrder();
-  const [branch, setBranch] = useState("");
-  useEffect(() => {
-    let alive = true;
-    port.capabilityScope()
-      .then((scope) => alive && setBranch(scope.repo ? (scope.branch || t("分离状态")) : ""))
-      .catch(() => alive && setBranch(""));
-    return () => { alive = false; };
-  }, [port, status?.workspaceRoot]);
   const [submitting, setSubmitting] = useState(false);
   const { text, setText, beginSubmit, finishSubmit } = useDraft(draftKey, submitting);
   // The caret decides which token is being completed, so it is state here
@@ -123,7 +120,6 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
   const guide = useId();
   const completionId = useId();
   const attachTipId = useId();
-  const branchTipId = useId();
   // Set only when a completion moved the caret: the browser puts it at the end
   // of a programmatic value, which is wrong for anything accepted mid-line.
   const pending = useRef<number | null>(null);
@@ -676,25 +672,7 @@ export function Composer({ port, status, running, quote, restore, focus, onSubmi
             label={<><StudioIcon name="agent" /><span className="studio-sr-label">{t("计划")}</span><span>{status?.plan ? "Plan" : "Agent"}</span><StudioIcon name="down" /></>}
           />
         </div>
-        {branch && (
-          <div className="studio-branch-pop">
-            <div
-              className="mode plain studio-branch"
-              tabIndex={0}
-              aria-label={t("当前 Git 分支：{branch}", { branch })}
-              aria-describedby={branchTipId}
-            >
-              <span className="ic" aria-hidden="true"><StudioIcon name="branch" /></span>
-              <span className="lb">{branch}</span>
-              {changeCount > 0 && <small>{t("{n} 个变更", { n: changeCount })}</small>}
-            </div>
-            <div className="studio-branch-card" id={branchTipId} role="tooltip">
-              <b>{t("当前分支 · {branch}", { branch })}</b>
-              <span>{changeCount > 0 ? t("当前工作区 · {n} 个本地变更", { n: changeCount }) : t("当前工作区 · 后续任务继续使用此分支")}</span>
-              <small>{t("仅作状态提示，无需点击")}</small>
-            </div>
-          </div>
-        )}
+        <BranchChip git={git} changeCount={changeCount} />
         {/* The toggle keeps its legacy meaning: it follows `plan`, which the
             kernel turns off the moment a plan is approved. The lifecycle is a
             separate reading — an approved plan is still running, and saying so

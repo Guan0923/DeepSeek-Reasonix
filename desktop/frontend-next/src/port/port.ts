@@ -23,7 +23,7 @@ import type { ApprovalDefault, ApprovalMode, WorkspaceTrust, ApprovalVerdict, Br
 import type { ContextBreakdown, ShellOption, ShellSettings } from "./shell";
 import type { SkillCatalog, SkillEntry } from "./skill";
 import type { UpdateProgress, VersionEntry, VersionHub, VersionNotes } from "./version";
-import type { ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceInfo } from "./workspace";
+import type { ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceGit, WorkspaceInfo } from "./workspace";
 
 // The port is one contract; its subjects each keep their own file, the way the
 // wire and the layers below already do. This is where a reader still finds
@@ -35,7 +35,7 @@ export type { AccountState, AccountUser, ApprovalDefault, ApprovalMode, Approval
   MemoryEntry, ModelEntry, ModelMode, ModelPrice, NetworkProbe, NetworkSettings, Preset, RewindPlan,
   RewindResult, RewindScope, RoleAssignments, RoleOverride, ScopeLayer, SessionEntry, SessionStatus,
   ShellOption, ShellSettings, SkillCatalog, SkillEntry, UpdateProgress, VersionEntry,
-  VersionHub, VersionNotes, WalletLine, WalletReading, ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceInfo };
+  VersionHub, VersionNotes, WalletLine, WalletReading, ChangeDiff, CommitFile, CommitProposal, CommitRequest, CommitResult, WorkspaceChange, WorkspaceChanges, WorkspaceEntry, WorkspaceFile, WorkspaceFiles, WorkspaceGit, WorkspaceInfo };
 
 import type { ExecutionGraphRead, TrajectoryRead, WireEvent } from "./wire";
 import type { PluginExport, PluginInstallRequest, PluginPackage, PluginPlan } from "./plugin";
@@ -445,6 +445,10 @@ export interface AgentPort {
   // file created and then removed by a shell command leaves both events behind
   // and nothing on disk.
   changes(): Promise<WorkspaceChanges>;
+  // The work tree's identity as git itself reports it: which branch, or which
+  // commit when HEAD is detached. This is the composer's branch reading — the
+  // capability scope's file-derived answer is for the picker's project name.
+  workspaceGit(): Promise<WorkspaceGit>;
   // What one of those paths actually differs by. The list says a file moved;
   // only this says how, and asking per path is what keeps a session that
   // touched two hundred files from shipping two hundred diffs nobody opened.

@@ -1,6 +1,6 @@
 import type { PlanAction } from "./session";
 import { HttpError } from "./port";
-import type { AccountState, AgentPort, ChangeDiff, Completion, CompletionItem, DeviceGrant, VersionHub, VersionNotes, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, RoleOverride, SessionEntry, SessionStatus, WalletReading, MemoryCatalog, MemoryEdit, UsageReport, MemoryEntry, WorkspaceInfo, WorkspaceChanges, Attachment, DroppedRef, Queue, QueueItem, Queued, ChipCall, NotifyPrefs, TrayPrefs, UsageQuery } from "./port";
+import type { AccountState, AgentPort, ChangeDiff, Completion, CompletionItem, DeviceGrant, VersionHub, VersionNotes, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, RoleOverride, SessionEntry, SessionStatus, WalletReading, MemoryCatalog, MemoryEdit, UsageReport, MemoryEntry, WorkspaceInfo, WorkspaceChanges, WorkspaceGit, Attachment, DroppedRef, Queue, QueueItem, Queued, ChipCall, NotifyPrefs, TrayPrefs, UsageQuery } from "./port";
 import type { ExecutionGraphRead, TrajectoryRead, WireEvent } from "./wire";
 import { MockFeedback } from "./mock_feedback";
 import { SCRIPT, mockMsgIndex, mockTurnStart } from "./fixture";
@@ -355,6 +355,15 @@ export class MockPort extends MockFeedback implements AgentPort {
 
   async dropRefs(paths: string[]): Promise<DroppedRef[]> {
     return paths.map((path) => ({ ref: "@" + path, path }));
+  }
+
+  // Held in a field so a switch is visible to the next read, as the kernel's endpoints keep.
+  branchState: WorkspaceGit = {
+    repo: true, name: "reasonix", branch: "main", detached: false, added: 2, removed: 1, untracked: 3,
+  };
+
+  async workspaceGit(): Promise<WorkspaceGit> {
+    return { ...this.branchState };
   }
 
   // The tree the scripted transcript is written against. It used to answer

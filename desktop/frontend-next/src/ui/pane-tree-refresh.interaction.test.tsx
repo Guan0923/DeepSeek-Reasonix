@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import "./testkit";
 import { Pane } from "./Pane";
 import { MockPort } from "../port/mock";
@@ -28,7 +28,7 @@ function open() {
       theme="dark" dockW={560} dockMax={880} onDockW={() => {}} />,
   );
   const send = (ev: object) => act(() => emit(ev as WireEvent));
-  return { changes, send };
+  return { port, changes, send };
 }
 
 describe("the explorer during a turn", () => {
@@ -44,5 +44,19 @@ describe("the explorer during a turn", () => {
     pane.send({ kind: "tool_dispatch", tool: { id: "w1", name: "write_file", readOnly: false } });
     pane.send({ kind: "tool_result", tool: { id: "w1", name: "write_file", readOnly: false, output: "ok" } });
     expect(pane.changes).toHaveBeenCalledTimes(1);
+  });
+
+  // The composer's branch reading rides the same refresh path: a switch made
+  // in an external terminal shows up when the turn boundary re-reads the tree,
+  // not live.
+  it("updates the composer's branch chip after a turn ends", async () => {
+    const pane = open();
+    expect(await screen.findByText("main")).toBeTruthy();
+
+    pane.send({ kind: "turn_started" });
+    await waitFor(() => expect(pane.changes).toHaveBeenCalled());
+    pane.port.branchState = { ...pane.port.branchState, branch: "studio" };
+    pane.send({ kind: "turn_done" });
+    await waitFor(() => expect(screen.getByText("studio")).toBeTruthy());
   });
 });
