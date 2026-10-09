@@ -131,6 +131,13 @@ func (m *model) onKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.send(false)
 	case "ctrl+s":
 		return m, m.send(true)
+	case "ctrl+enter":
+		// Only a running turn takes it: idle, a press meant as a newline must
+		// not submit the draft.
+		if m.tr.Running {
+			return m, m.send(true)
+		}
+		return m, nil
 	case "esc":
 		return m, m.escape(empty)
 	case "ctrl+c":
