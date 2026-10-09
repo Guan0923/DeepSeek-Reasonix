@@ -161,8 +161,12 @@ func (m *model) onKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.shell = true
 			return m, nil
 		}
-	case "up", "down":
-		if m.composer.LineCount() <= 1 && m.recall(msg.String() == "up") {
+	case "up":
+		if m.composer.Line() == 0 && m.recall(true) {
+			return m, nil
+		}
+	case "down":
+		if m.composer.Line() == m.composer.LineCount()-1 && m.recall(false) {
 			return m, nil
 		}
 	}
