@@ -43,10 +43,43 @@ for (const scheme of ["light", "dark"]) {
       const room = Math.min(g.scroll, g.view * 0.6, 448);
       check(`${scheme}/${label}: long single-line text is visible without scrolling the box`, g.client >= room - 2, `box ${Math.round(g.h)}px, content ${g.scroll}px`);
     }
+    if (g) {
+      const kb = Math.round(height * 0.5);
+      await page.setViewportSize({ width, height: kb });
+      await page.waitForTimeout(300);
+      await page.locator(".reask textarea").focus();
+      await page.keyboard.press("Control+End");
+      await page.waitForTimeout(200);
+      const k = await page.evaluate(() => {
+        const el = document.querySelector(".reask textarea");
+        const r = el.getBoundingClientRect();
+        return { h: r.height, view: innerHeight, caretAtEnd: el.selectionStart === el.value.length };
+      });
+      check(`${scheme}/${label}: with the viewport shrunk to ${kb}px (soft keyboard) the box still fits it and keeps the caret`, k.h <= k.view * 0.6 + 2 && k.caretAtEnd, `box ${Math.round(k.h)}px of ${k.view}px`);
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(300);
+    }
     await page.locator(".reask").scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}/reask-${TAG}-${scheme}-${label}.png` });
     await ctx.close();
   }
+}
+
+for (const [label, width, height] of [["wide", 1440, 900], ["phone", 390, 800]]) {
+  const ctx = await browser.newContext({ locale: "zh-CN", viewport: { width, height } });
+  const page = await ctx.newPage();
+  await page.goto(`${PAGE}?queue=2&queuebody`, { waitUntil: "networkidle" });
+  await page.waitForSelector(".queue .qi", { timeout: 15000 });
+  await page.waitForTimeout(600);
+  await page.locator('.queue .qi').first().locator('button:has-text("改")').click();
+  await page.waitForTimeout(600);
+  const q = await page.evaluate(() => {
+    const el = document.querySelector(".queue .qedit");
+    return el ? { client: el.clientHeight, scroll: el.scrollHeight, view: innerHeight } : null;
+  });
+  check(`queue/${label}: the inline editor opened`, !!q);
+  if (q) check(`queue/${label}: a long single line shows well past one row of the editor`, q.client >= Math.min(q.scroll, q.view * 0.6, 150) - 2, `editor ${q.client}px, content ${q.scroll}px`);
+  await ctx.close();
 }
 await browser.close();
 console.log(fails.length ? `\n${fails.length} failed` : "\nall passed");

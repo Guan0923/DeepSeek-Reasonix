@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Queue as QueueSnapshot, QueueItem } from "../port/port";
 import { t } from "../i18n";
+import { useFitHeight } from "./fitHeight";
 import { reason } from "../i18n/kernel";
 import { BLOCK_WHY } from "../i18n/queue_why";
 
@@ -99,6 +100,7 @@ export function Queue({ queue, running, onRead, onEdit, onMove, onCancel, onSend
   const [unread, setUnread] = useState<{ id: string; why: string } | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const readEpoch = useRef(0);
+  useFitHeight(box, editing ? draft : "");
 
   // The body arrives after the click, so focus waits for the field to exist.
   useEffect(() => {
@@ -212,7 +214,7 @@ export function Queue({ queue, running, onRead, onEdit, onMove, onCancel, onSend
                   ref={box}
                   className="qedit"
                   value={draft}
-                  rows={Math.min(6, draft.split("\n").length)}
+                  rows={1}
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={commit}
                   onKeyDown={(e) => {
