@@ -22,29 +22,26 @@ func writeTestFile(t *testing.T, path, body string) {
 	}
 }
 
-// The receipt lists what the turn changed and left unchecked. State the host
-// wrote itself, a repository's own store and a cache its tool tagged as one are
-// not that work, so none of them may reach the card.
+// State the host wrote itself and a repository's own store are not the work.
+// A CACHEDIR.TAG anyone can write must not hide what sits beside it.
 func TestReceiptListsOnlyTheWorkProduct(t *testing.T) {
 	root := testenv.TempDir(t)
 	work := filepath.Join(root, "src", "api.py")
 	snapshot := filepath.Join(root, taskmonitor.StoreDir, "20261008-step-5", "snapshot.json")
-	cache := filepath.Join(root, ".pytest_cache", "v", "cache", "lastfailed")
 	gitfile := filepath.Join(root, ".git")
-	untagged := filepath.Join(root, "build", "out.txt")
+	tagged := filepath.Join(root, ".cache", "out.txt")
 	writeTestFile(t, work, "x\n")
 	writeTestFile(t, snapshot, "{}\n")
-	writeTestFile(t, cache, "{}\n")
-	writeTestFile(t, filepath.Join(root, ".pytest_cache", "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n")
 	writeTestFile(t, gitfile, "gitdir: ../elsewhere\n")
-	writeTestFile(t, untagged, "x\n")
+	writeTestFile(t, tagged, "x\n")
+	writeTestFile(t, filepath.Join(root, ".cache", "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n")
 
 	a := &Agent{}
 	a.writeWorkspaceRoot = root
 	ledger := evidence.NewLedger()
 	ledger.Record(evidence.Receipt{
 		ToolName: "bash", Success: true, Mutation: true, MutationEvidence: evidence.MutationProven,
-		Paths: []string{work, snapshot, cache, gitfile, untagged},
+		Paths: []string{work, snapshot, gitfile, tagged},
 	})
 	c := buildShadowContract("fix the download", ledger.Receipts(), nil)
 	got := completionReceipt(completion.Build(c, ledger, a.pathInWorkspace))
@@ -55,12 +52,12 @@ func TestReceiptListsOnlyTheWorkProduct(t *testing.T) {
 	for _, ch := range got.Changes {
 		paths = append(paths, ch.Path)
 	}
-	want := []string{work, untagged}
+	want := []string{work, tagged}
 	if len(paths) != len(want) || !strings.EqualFold(paths[0], want[0]) || !strings.EqualFold(paths[1], want[1]) {
 		t.Fatalf("changes = %q, want only %q", paths, want)
 	}
 	for _, g := range got.Gaps {
-		if g.Kind == "unreviewed_change" && !strings.EqualFold(g.Detail, work) && !strings.EqualFold(g.Detail, untagged) {
+		if g.Kind == "unreviewed_change" && !strings.EqualFold(g.Detail, work) && !strings.EqualFold(g.Detail, tagged) {
 			t.Errorf("gap %+v names state the host or a tool owns", g)
 		}
 	}

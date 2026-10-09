@@ -5,13 +5,12 @@ import (
 	"runtime"
 	"strings"
 
-	"reasonix/internal/base/fileutil"
 	"reasonix/internal/runtime/taskmonitor"
 )
 
 // hostOwnedPath reports whether path is state the host or a tool wrote about
-// the work rather than the work: the task-snapshot store, or anything under a
-// directory that tagged itself a cache.
+// the work rather than the work. Only what the host itself writes counts; a
+// marker file anyone can create, the model included, declares nothing.
 func hostOwnedPath(root, path string) bool {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(root, path)
@@ -23,14 +22,7 @@ func hostOwnedPath(root, path string) bool {
 	if underDir(rel, taskmonitor.StoreDir) {
 		return true
 	}
-	for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
-		if dir == root || len(dir) <= len(root) {
-			return false
-		}
-		if fileutil.IsTaggedCacheDir(dir) {
-			return true
-		}
-	}
+	return false
 }
 
 func underDir(rel, dir string) bool {
