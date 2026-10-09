@@ -75,4 +75,10 @@ const (
 	NoticeCodeExtensionSkipped = "extension_skipped"
 	// A reopened session's inbox held unfinished instructions and came up paused; Detail is the InboxRecovered payload.
 	NoticeCodeInboxRecovered = "inbox_recovered"
+	// A background job ended; Detail is the JobNotice payload, its text the English fallback.
+	NoticeCodeJobFinished = "job_finished"
+	// A background job was killed; Detail is the JobNotice payload, its text the English fallback.
+	NoticeCodeJobKilled = "job_killed"
+	// A background job failed; Detail is the diagnostic naming the error.
+	NoticeCodeJobFailed = "job_failed"
 )

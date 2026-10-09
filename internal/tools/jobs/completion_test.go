@@ -181,3 +181,41 @@ func TestCompletionEventIDIsDeterministic(t *testing.T) {
 		t.Errorf("id = %q, want %q", got, want)
 	}
 }
+
+func TestCompletionNoticeCarriesTypedIdentity(t *testing.T) {
+	sink := &recordingSink{}
+	m := NewManager(sink)
+	defer m.Close()
+	run := func(err error) {
+		j := m.Start("bash", "make build", func(context.Context, io.Writer) (string, error) { return "", err })
+		<-j.done
+	}
+	run(nil)
+	run(io.ErrUnexpectedEOF)
+	waitFor(t, func() bool {
+		sink.mu.Lock()
+		defer sink.mu.Unlock()
+		return len(sink.events) >= 4
+	})
+	codes := map[string]event.Event{}
+	for _, ev := range sink.events {
+		if ev.Kind == event.Notice && ev.Code != "" {
+			codes[ev.Code] = ev
+		}
+	}
+	fin, ok := codes[event.NoticeCodeJobFinished]
+	if !ok {
+		t.Fatalf("no %s notice in %+v", event.NoticeCodeJobFinished, sink.events)
+	}
+	p, ok := event.DecodeJobNotice(fin.Detail)
+	if !ok || p.Kind != "bash" || p.Label != "make build" || p.ID == "" {
+		t.Fatalf("payload = %+v ok=%v from %q", p, ok, fin.Detail)
+	}
+	if !strings.Contains(fin.Text, "background bash finished") {
+		t.Fatalf("English fallback = %q", fin.Text)
+	}
+	failed, ok := codes[event.NoticeCodeJobFailed]
+	if !ok || failed.Level != event.LevelWarn || !strings.Contains(failed.Detail, "unexpected EOF") {
+		t.Fatalf("failed notice = %+v", failed)
+	}
+}

@@ -324,6 +324,19 @@ func codedNoticeText(it *Item) string {
 		if p, ok := event.DecodeInboxRecovered(it.Detail); ok {
 			return fmt.Sprintf(i18n.M.NoticeInboxRecoveredFmt, p.Count)
 		}
+	case event.NoticeCodeJobFinished, event.NoticeCodeJobKilled:
+		if p, ok := event.DecodeJobNotice(it.Detail); ok {
+			name := p.Label
+			if name == "" {
+				name = p.ID
+			}
+			if it.Code == event.NoticeCodeJobKilled {
+				return fmt.Sprintf(i18n.M.NoticeJobKilledFmt, name)
+			}
+			return fmt.Sprintf(i18n.M.NoticeJobFinishedFmt, name)
+		}
+	case event.NoticeCodeJobFailed:
+		return i18n.M.NoticeJobFailed
 	case event.NoticeCodeExtensionSkipped:
 		if p, ok := event.DecodeExtensionSkipped(it.Detail); ok && p.Reason == event.ExtensionSkipReasonNoLiveSidecar {
 			return fmt.Sprintf(i18n.M.NoticeExtSkippedFmt, p.Extension, p.Point)

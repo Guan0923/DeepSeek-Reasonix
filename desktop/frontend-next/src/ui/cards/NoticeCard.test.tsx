@@ -175,3 +175,30 @@ describe("a /compact notice", () => {
     expect(box.textContent).not.toContain("{ext}");
   });
 });
+
+describe("a background job notice", () => {
+  const text = (over: Partial<Notice>) => draw({ level: "info", ...over }).querySelector(".find .t")?.textContent ?? "";
+  const payload = JSON.stringify({ kind: "bash", id: "bash-126", label: "make build" });
+
+  it("is worded from its typed payload, not the kernel's English", () => {
+    const said = text({ code: "job_finished", text: "background bash finished: bash-126", detail: payload });
+    expect(said).toBe(t("后台任务已结束：{name}", { name: "make build" }));
+    expect(said).not.toContain("background bash");
+  });
+
+  it("names the job by id when it carries no label", () => {
+    expect(text({ code: "job_killed", text: "x", detail: JSON.stringify({ kind: "task", id: "task-3" }) }))
+      .toBe(t("后台任务已终止：{name}", { name: "task-3" }));
+  });
+
+  it("keeps the diagnostic under a failure", () => {
+    const box = draw({ code: "job_failed", text: "background bash failed: needs attention", detail: "background bash failed: bash-1 — boom" });
+    expect(box.querySelector(".find .t")?.textContent).toBe(t("后台任务失败，需要处理"));
+    expect(box.querySelector(".why")?.textContent).toContain("boom");
+  });
+
+  it("keeps the text of a stored notice with no code, or an unreadable payload", () => {
+    expect(text({ code: undefined, text: "background bash finished: bash-126", detail: undefined })).toBe("background bash finished: bash-126");
+    expect(text({ code: "job_finished", text: "background bash finished: bash-1", detail: "not json" })).toBe("background bash finished: bash-1");
+  });
+});
