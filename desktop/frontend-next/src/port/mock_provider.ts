@@ -77,9 +77,9 @@ export class MockProvider extends MockBoundary {
   // Mirrors the kernel catalog: two wires answer one OpenAI model listing.
   async protocols(): Promise<Protocol[]> {
     return [
-      { kind: "openai", discovery: "openai", serverWebSearch: false, reasoningParams: true, effortField: "reasoning_effort" },
-      { kind: "responses", discovery: "openai", serverWebSearch: true, reasoningParams: true, effortField: "reasoning.effort" },
-      { kind: "anthropic", discovery: "anthropic", serverWebSearch: true, reasoningParams: false, effortField: "output_config.effort" },
+      { kind: "openai", discovery: "openai", serverWebSearch: false, reasoningParams: true, effortField: "reasoning_effort", effortUnder: ["openai"] },
+      { kind: "responses", discovery: "openai", serverWebSearch: true, reasoningParams: true, effortField: "reasoning.effort", effortUnder: [] },
+      { kind: "anthropic", discovery: "anthropic", serverWebSearch: true, reasoningParams: false, effortField: "output_config.effort", effortUnder: ["anthropic"] },
     ];
   }
 

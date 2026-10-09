@@ -419,7 +419,7 @@ export function EditConn({
               <i className="tip">
                 {t("端点控制思考深度的方式。此项无法自动探测：中转站转发的是第三方模型，只有你知道其后端。选择后才能调整推理强度，选择错误会导致请求被端点拒绝。")}
               </i>
-              <EffortShape field={entry.effortField} protocol={think} level={levels[0]} />
+              <EffortShape field={think === (entry.reasoningProtocol ?? "") ? entry.effortField : undefined} level={levels[0]} />
             </label>
             <label className="grow">
               <span>{t("推理档位")}</span>

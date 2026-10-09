@@ -63,7 +63,8 @@ export function AddProvider({
   const nameBad = !composing && name.trim() !== "" && !sourceNameUsable(name);
   const extraBad = extra.trim() !== "" && parseExtraBody(extra) === null;
   const protocolCanThink = catalog.find((p) => p.kind === kind)?.reasoningParams ?? false;
-  const effortField = catalog.find((p) => p.kind === kind)?.effortField;
+  const wire = catalog.find((p) => p.kind === kind);
+  const effortField = wire?.effortUnder?.length && !wire.effortUnder.includes(thinkingProtocol) ? undefined : wire?.effortField;
   // A wire with no listing shape has nothing to read: the model id is declared
   // rather than discovered, and offering a probe that must fail reads as a
   // broken endpoint instead of a protocol that never had one.
@@ -304,7 +305,7 @@ export function AddProvider({
                 ))}
               </select>
               <i>{t("使用「自动」时由模型和接口协议决定；只有中转站文档明确要求时才手动指定。")}</i>
-              <EffortShape field={effortField} protocol={thinkingProtocol} />
+              <EffortShape field={effortField} />
             </label>
           )}
           <div className="setting-line">

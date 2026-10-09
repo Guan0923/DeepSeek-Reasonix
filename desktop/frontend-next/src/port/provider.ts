@@ -30,8 +30,8 @@ export interface ProviderEntry {
   // where a relay can actually reject the request over it.
   canSetThinking?: boolean;
   sendsThinking?: boolean;
-  // Where a chosen effort level lands in this wire's request body, as a dotted
-  // path. The protocol declares it; the panels word their help from it.
+  // Where a chosen effort level lands in this entry's request body, as a dotted
+  // path; absent when its resolved reasoning protocol reshapes the request.
   effortField?: string;
   // How this endpoint carries context between turns, and whether its protocol
   // has the choice at all. "" is vendor detection, which is what an endpoint
@@ -91,6 +91,9 @@ export interface Protocol {
   serverWebSearch: boolean;
   reasoningParams: boolean;
   effortField?: string;
+  // The reasoning protocols under which that field holds; empty when the wire
+  // fixes it whatever protocol is chosen.
+  effortUnder?: string[];
 }
 
 // What an endpoint turned out to be. Every field is a guess the user confirms

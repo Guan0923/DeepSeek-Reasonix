@@ -155,7 +155,7 @@ func (s *Server) providers(w http.ResponseWriter, _ *http.Request) {
 			WebSearch:          config.EffectiveWebSearch(p),
 			CanSetThinking:     config.CanConfigureThinkingParams(p),
 			SendsThinking:      config.SendsThinkingParams(p),
-			EffortField:        effortFieldOf(p.Kind),
+			EffortField:        config.EffortFieldForEntry(p),
 			CanSetContinuation: config.CanConfigureContinuation(p),
 			Continuation:       string(config.ContinuationOf(p)),
 			Default:            p.DefaultModel(),
@@ -191,6 +191,9 @@ type protocolView struct {
 	ServerWebSearch bool   `json:"serverWebSearch"`
 	ReasoningParams bool   `json:"reasoningParams"`
 	EffortField     string `json:"effortField"`
+	// EffortUnder is the reasoning protocols under which the field holds; empty
+	// when the wire fixes it.
+	EffortUnder []string `json:"effortUnder"`
 }
 
 // providerProtocols lists what a chooser may offer, so a wire added to the
@@ -206,6 +209,7 @@ func (s *Server) providerProtocols(w http.ResponseWriter, _ *http.Request) {
 			ServerWebSearch: p.ServerWebSearch,
 			ReasoningParams: p.ReasoningParams,
 			EffortField:     p.EffortField,
+			EffortUnder:     nonNilStrings(p.EffortUnder),
 		})
 	}
 	writeJSON(w, out)
@@ -561,9 +565,4 @@ func writeProbeFailure(w http.ResponseWriter, err error, apiKey string) {
 		message += ": " + detail
 	}
 	refuse(w, status, code, message, probe.Params)
-}
-
-func effortFieldOf(kind string) string {
-	p, _ := config.ProtocolFor(kind)
-	return p.EffortField
 }

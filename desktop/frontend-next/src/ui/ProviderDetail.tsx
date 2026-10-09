@@ -188,7 +188,7 @@ export function ProviderDetail({
               <span className="why">
                 {t(entry.sendsThinking === false ? "只发送常规聊天参数，不再指定思考深度；模型自身的推理行为不受影响。" : "部分中转站不支持思考控制字段，会拒绝整个请求。遇到这种情况请切换为「不发送」。")}
               </span>
-              {entry.sendsThinking !== false && <EffortShape field={entry.effortField} protocol={entry.reasoningProtocol ?? ""} level={entry.supportedEfforts?.[0]} className="why" />}
+              {entry.sendsThinking !== false && <EffortShape field={entry.effortField} level={entry.supportedEfforts?.[0]} className="why" />}
             </div>
           )}
           {entry.canSetContinuation && (

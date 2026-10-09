@@ -127,7 +127,7 @@ func TestEffortOnAResponsesEntryFollowsItsDeclaration(t *testing.T) {
 	}
 }
 
-func TestEffortOnAnUndeclaredResponsesEntryIsRefusedWithWhatToDeclare(t *testing.T) {
+func TestEffortOnAnUndeclaredResponsesEntryIsReportedNotConfigurable(t *testing.T) {
 	i18n.DetectLanguage("en")
 	c, take := settingsController(t)
 	seedUserConfig(t, responsesRelaySeed)

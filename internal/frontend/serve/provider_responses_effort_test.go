@@ -32,18 +32,24 @@ func newResponsesRelayServer(t *testing.T) string {
 func TestProtocolCatalogCarriesWhereEffortLands(t *testing.T) {
 	base := newResponsesRelayServer(t)
 	var got []struct {
-		Kind            string `json:"kind"`
-		ReasoningParams bool   `json:"reasoningParams"`
-		EffortField     string `json:"effortField"`
+		Kind            string   `json:"kind"`
+		ReasoningParams bool     `json:"reasoningParams"`
+		EffortField     string   `json:"effortField"`
+		EffortUnder     []string `json:"effortUnder"`
 	}
 	getJSON(t, base+"/providers/protocols", &got)
 	want := map[string]string{}
+	under := map[string][]string{}
 	for _, p := range config.Protocols() {
 		want[p.Kind] = p.EffortField
+		under[p.Kind] = p.EffortUnder
 	}
 	for _, p := range got {
 		if p.EffortField != want[p.Kind] {
 			t.Errorf("%s: effortField = %q, want the table's %q", p.Kind, p.EffortField, want[p.Kind])
+		}
+		if !slices.Equal(p.EffortUnder, under[p.Kind]) && len(p.EffortUnder)+len(under[p.Kind]) > 0 {
+			t.Errorf("%s: effortUnder = %v, want %v", p.Kind, p.EffortUnder, under[p.Kind])
 		}
 		if p.Kind == "responses" && (!p.ReasoningParams || p.EffortField != "reasoning.effort") {
 			t.Errorf("responses catalog row = %+v", p)
@@ -98,5 +104,33 @@ func TestResponsesProviderSavesItsEffortDeclaration(t *testing.T) {
 	}
 	if _, err := config.NormalizeEffort(entry, "xhigh"); err != nil {
 		t.Fatalf("/effort xhigh on the saved entry: %v", err)
+	}
+}
+
+func TestProviderListWithholdsTheFieldWhenTheResolvedProtocolReshapesIt(t *testing.T) {
+	base := newResponsesRelayServer(t)
+	cfg := `default_model = "relay/m"
+
+[[providers]]
+name = "relay"
+kind = "openai"
+base_url = "https://relay.example.com/v1"
+models = ["m"]
+default = "m"
+api_key_env = "RICH_API_KEY"
+`
+	for protocol, want := range map[string]string{"": "reasoning_effort", "openai": "reasoning_effort", "glm": "", "none": ""} {
+		body := cfg
+		if protocol != "" {
+			body += "reasoning_protocol = \"" + protocol + "\"\n"
+		}
+		if err := os.WriteFile(config.UserConfigPath(), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		var list []providerView
+		getJSON(t, base+"/providers", &list)
+		if len(list) != 1 || list[0].EffortField != want {
+			t.Errorf("protocol %q: effortField = %+v, want %q", protocol, list, want)
+		}
 	}
 }

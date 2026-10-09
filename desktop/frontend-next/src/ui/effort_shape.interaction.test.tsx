@@ -26,9 +26,9 @@ afterEach(() => {
 });
 
 const catalog: Protocol[] = [
-  { kind: "openai", discovery: "openai", serverWebSearch: false, reasoningParams: true, effortField: "reasoning_effort" },
-  { kind: "responses", discovery: "openai", serverWebSearch: true, reasoningParams: true, effortField: "reasoning.effort" },
-  { kind: "odd-wire", discovery: "odd", serverWebSearch: false, reasoningParams: true, effortField: "a.b.c" },
+  { kind: "openai", discovery: "openai", serverWebSearch: false, reasoningParams: true, effortField: "reasoning_effort", effortUnder: ["openai"] },
+  { kind: "responses", discovery: "openai", serverWebSearch: true, reasoningParams: true, effortField: "reasoning.effort", effortUnder: [] },
+  { kind: "odd-wire", discovery: "odd", serverWebSearch: false, reasoningParams: true, effortField: "a.b.c", effortUnder: [] },
 ];
 
 const entry = (kind: string, over: Partial<ProviderEntry> = {}): ProviderEntry => ({
@@ -81,6 +81,18 @@ describe("the edit form words the thinking parameter from the protocol's declara
     expect(screen.queryByText(/当前接口类型会按/)).toBeNull();
   });
 
+  it("says nothing when the kernel resolved the entry to a shape that is not the wire's own", () => {
+    editConn(entry("openai", { effortField: undefined, reasoningProtocol: "glm" }));
+    expect(screen.queryByText(/当前接口类型会按/)).toBeNull();
+  });
+
+  it("drops the line while the picked protocol differs from the saved one", async () => {
+    editConn(entry("openai", { reasoningProtocol: "openai" }));
+    expect(screen.getByText(/当前接口类型会按 reasoning_effort/)).toBeTruthy();
+    await userEvent.selectOptions(thinkingSelect(), "glm");
+    expect(screen.queryByText(/当前接口类型会按/)).toBeNull();
+  });
+
   it("says nothing about a field the kernel did not declare", () => {
     editConn(entry("openai", { effortField: undefined }));
     expect(screen.queryByText(/当前接口类型会按/)).toBeNull();
@@ -98,6 +110,19 @@ describe("add, edit and detail read one declaration", () => {
     expect(sw.disabled).toBe(false);
     expect(sw.getAttribute("aria-checked")).toBe("true");
     expect(screen.getByText('当前接口类型会按 reasoning.effort 发送，例如 {"reasoning":{"effort":"high"}}')).toBeTruthy();
+  });
+
+  it("Add provider shows a Chat shape line only under a protocol the wire declares", async () => {
+    const port = { protocols: vi.fn(async () => catalog), saveProvider: vi.fn() } as unknown as Port;
+    render(<AddProvider port={port} taken={[]} known={[]} onDone={() => {}} onCancel={() => {}} />);
+    await screen.findByLabelText("接口协议");
+    await userEvent.click(screen.getByText("高级连接选项"));
+    expect(screen.queryByText(/当前接口类型会按/)).toBeNull();
+    const pick = screen.getAllByRole("combobox").find((c) => c.querySelector('option[value="glm"]')) as HTMLSelectElement;
+    await userEvent.selectOptions(pick, "openai");
+    expect(screen.getByText(/当前接口类型会按 reasoning_effort/)).toBeTruthy();
+    await userEvent.selectOptions(pick, "glm");
+    expect(screen.queryByText(/当前接口类型会按/)).toBeNull();
   });
 
   it("the detail page shows the thinking row for a Responses source and words it the same way", async () => {
