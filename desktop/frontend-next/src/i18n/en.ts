@@ -799,6 +799,7 @@ export const EN: Record<string, string> = {
   // ── 其余 ─────────────────────────────────────────────────────────
   "没有打开的会话": "No session open",
   "没有匹配的项": "Nothing matches",
+  "搜索模型或服务商…": "Search models or providers…",
   "筛选": "Filter",
   "补全": "Completions",
   "交还给插件": "Hand back to the extension",
