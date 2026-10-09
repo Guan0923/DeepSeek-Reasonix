@@ -1338,6 +1338,26 @@ export const EN: Record<string, string> = {
     "Reading the staged changes failed",
   "提交请求格式不正确":
     "The commit request was malformed",
+  "另一个会话正在写入这个工作区，请稍后重试切换分支":
+    "Another session is writing to this workspace; try switching branches again shortly",
+  "后台任务仍在运行，请先停止再切换分支":
+    "Background jobs are still running; stop them before switching branches",
+  "任务运行中，分支要等这轮结束再切":
+    "A turn is running; wait for it to finish before moving the branch",
+  "这个工作区不是 git 仓库，没有分支可切换":
+    "This workspace is not a git repository, so there is no branch to switch to",
+  "切换分支的请求格式不正确":
+    "The branch switch request was malformed",
+  "这不是有效的分支名":
+    "That is not a usable branch name",
+  "没有这个名字的本地分支":
+    "No local branch with that name",
+  "有未提交的修改会被这次切换覆盖，请先提交或暂存（git stash）":
+    "Uncommitted changes would be overwritten by the switch; commit or stash them first",
+  "该分支已在另一个 worktree 中检出，请先在那边切走":
+    "That branch is checked out in another worktree; switch away there first",
+  "git 未能完成这次分支切换":
+    "git could not complete the branch switch",
   "新增工具":
     "New tools",
   "agent 可以调用，每次调用照常经过权限确认":

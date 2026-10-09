@@ -36,6 +36,8 @@ const (
 // wrong. Declared and not inferred, for the reason the sensitive paths are: no
 // spelling tells a mirrored contract from a struct with json tags.
 var mirroredWireTypes = []wireMirror{
+	{"internal/frontend/serve/branch.go", "workspaceBranchesView", tsWorkspaceFile, "WorkspaceBranches"},
+	{"internal/platform/gitstatus/branches.go", "Branch", tsWorkspaceFile, "WorkspaceBranch"},
 	{"internal/frontend/serve/changes.go", "workspaceGitView", tsWorkspaceFile, "WorkspaceGit"},
 	{"internal/contract/eventwire/wire.go", "AskOrigin", tsWireFile, "AskOrigin"},
 	{"internal/contract/agentgraph/graph.go", "Node", tsWireFile, "GraphNode"},

@@ -251,6 +251,18 @@ const SAID: Record<string, string> = {
   "commit.git_failed": "读取暂存区失败",
   "commit.bad_request": "提交请求格式不正确",
 
+  // ── 分支切换：composer 的分支菜单拒得有名字 ─────────────────────
+  "branch.workspace_busy": "另一个会话正在写入这个工作区，请稍后重试切换分支",
+  "branch.jobs_running": "后台任务仍在运行，请先停止再切换分支",
+  "branch.turn_running": "任务运行中，分支要等这轮结束再切",
+  "branch.no_repository": "这个工作区不是 git 仓库，没有分支可切换",
+  "branch.bad_request": "切换分支的请求格式不正确",
+  "branch.bad_name": "这不是有效的分支名",
+  "branch.unknown": "没有这个名字的本地分支",
+  "branch.local_changes": "有未提交的修改会被这次切换覆盖，请先提交或暂存（git stash）",
+  "branch.in_use": "该分支已在另一个 worktree 中检出，请先在那边切走",
+  "branch.switch_failed": "git 未能完成这次分支切换",
+
   // ── 会话 ─────────────────────────────────────────────────────────
   "session.disabled": "这台服务器已关闭会话切换",
   "session.pending_cleanup": "该会话正在清理，请稍后再打开",
