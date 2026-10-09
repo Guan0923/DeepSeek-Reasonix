@@ -78,6 +78,11 @@ class BenchPort extends MockPort {
     return ONBOARDING ? { required: true, provider: "", model: "" } : null;
   }
 
+  async workspaceGit() {
+    const git = await super.workspaceGit();
+    return query.get("git") === "none" ? { ...git, repo: false } : git;
+  }
+
   async appearance() {
     let look = await super.appearance();
     if (query.has("zoom")) look = { ...look, zoom: Number(query.get("zoom")) };

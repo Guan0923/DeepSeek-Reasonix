@@ -11,6 +11,21 @@ interface Props {
   changeCount: number;
 }
 
+function fitCard(anchor: HTMLDivElement) {
+  const card = anchor.querySelector<HTMLElement>(".studio-branch-card");
+  if (!card) return;
+  const box = anchor.getBoundingClientRect();
+  const pane = anchor.closest(".pane")?.getBoundingClientRect();
+  const scale = anchor.offsetWidth ? box.width / anchor.offsetWidth : 1;
+  const left = Math.max(0, pane?.left ?? 0) + 12 * scale;
+  const right = Math.min(innerWidth, pane?.right ?? innerWidth) - 12 * scale;
+  card.style.maxWidth = `${Math.max(0, Math.min(260, (right - left) / scale))}px`;
+  const width = card.getBoundingClientRect().width;
+  const offset = (Math.max(left, Math.min(box.left, right - width)) - box.left) / scale;
+  card.style.left = `${offset}px`;
+  card.style.setProperty("--branch-tip-anchor", `${15 - offset}px`);
+}
+
 // The composer's branch chip: the workspace's branch as git itself names it.
 // A detached HEAD names its short SHA; a workspace with no repository keeps a
 // muted chip that says so instead of vanishing.
@@ -18,7 +33,7 @@ export function BranchChip({ git, changeCount }: Props) {
   const branchTipId = useId();
   if (git && !git.repo) {
     return (
-      <div className="studio-branch-pop">
+      <div className="studio-branch-pop" onMouseEnter={(e) => fitCard(e.currentTarget)} onFocusCapture={(e) => fitCard(e.currentTarget)}>
         <div className="mode plain studio-branch" data-norepo="" tabIndex={0} aria-describedby={branchTipId}>
           <span className="ic" aria-hidden="true"><StudioIcon name="branch" /></span>
           <span className="lb">{t("非 Git 仓库")}</span>
@@ -32,7 +47,7 @@ export function BranchChip({ git, changeCount }: Props) {
   }
   if (!git?.repo) return null;
   return (
-    <div className="studio-branch-pop">
+    <div className="studio-branch-pop" onMouseEnter={(e) => fitCard(e.currentTarget)} onFocusCapture={(e) => fitCard(e.currentTarget)}>
       <div
         className="mode plain studio-branch"
         tabIndex={0}
