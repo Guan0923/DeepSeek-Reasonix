@@ -83,6 +83,27 @@ for (const [label, width, height] of [["wide", 1440, 900], ["phone", 390, 800]])
   if (q) check(`queue/${label}: a long single line fills the editor up to its cap or the room the list leaves`, q.cap >= 100 && q.client >= Math.min(q.scroll, q.cap * 0.9, q.room - 24), `editor ${q.client}px, content ${q.scroll}px, cap ${q.cap}px, room ${q.room}px`);
   await ctx.close();
 }
+for (const [label, width, height] of [["wide", 1440, 900], ["phone", 390, 800]]) {
+  for (const [what, fill] of [["long line", null], ["sixty lines", Array.from({ length: 60 }, (_, i) => `line ${i + 1}`).join("\n")]]) {
+    const ctx = await browser.newContext({ locale: "zh-CN", viewport: { width, height } });
+    const page = await ctx.newPage();
+    await page.goto(`${PAGE}?queue=4&queuebody`, { waitUntil: "networkidle" });
+    await page.waitForSelector(".queue .qi", { timeout: 15000 });
+    await page.waitForTimeout(600);
+    await page.locator(".queue .qi").nth(1).locator('button:has-text("改")').click();
+    await page.waitForTimeout(600);
+    if (fill) { await page.locator(".queue .qedit").fill(fill); await page.waitForTimeout(400); }
+    const g = await page.evaluate(() => {
+      const el = document.querySelector(".queue .qedit");
+      if (!el) return null;
+      const list = el.closest(".qitems").getBoundingClientRect();
+      const row = el.closest(".qi").getBoundingClientRect();
+      return { top: row.top - list.top, bottom: list.bottom - row.bottom, room: list.height, row: row.height };
+    });
+    check(`queue/${label}/${what}: the editor row sits whole inside the list's visible area`, !!g && g.top >= -0.5 && g.bottom >= -0.5, g ? `row ${Math.round(g.row)}px in ${Math.round(g.room)}px, ${Math.round(g.top)}px above / ${Math.round(g.bottom)}px below` : "");
+    await ctx.close();
+  }
+}
 await browser.close();
 console.log(fails.length ? `\n${fails.length} failed` : "\nall passed");
 process.exit(fails.length ? 1 : 0);

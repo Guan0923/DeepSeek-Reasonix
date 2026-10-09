@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, type RefObject } from "react";
 // The floor is one line: under an interface zoom scrollHeight is not in the
 // units the height written back is, and a smaller number squeezes the box shut.
 // A placeholder is not content, so an empty box is one line whatever it wraps to.
-export function useFitHeight(box: RefObject<HTMLTextAreaElement | null>, text: string, beforeFit?: (el: HTMLTextAreaElement) => void) {
+export function useFitHeight(box: RefObject<HTMLTextAreaElement | null>, text: string, beforeFit?: (el: HTMLTextAreaElement) => void, room?: (el: HTMLTextAreaElement) => number) {
   const fit = useCallback(() => {
     const el = box.current;
     if (!el) return;
@@ -11,7 +11,9 @@ export function useFitHeight(box: RefObject<HTMLTextAreaElement | null>, text: s
     const line = parseFloat(getComputedStyle(el).lineHeight) || 22;
     el.style.height = "auto";
     el.style.height = `${text ? Math.max(line, el.scrollHeight) : line}px`;
-  }, [box, text, beforeFit]);
+    const left = room?.(el);
+    if (left !== undefined && left < el.offsetHeight) el.style.height = `${Math.max(line, left)}px`;
+  }, [box, text, beforeFit, room]);
 
   useLayoutEffect(fit, [fit]);
 
@@ -26,6 +28,10 @@ export function useFitHeight(box: RefObject<HTMLTextAreaElement | null>, text: s
       fit();
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    window.addEventListener("resize", fit);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
   }, [box, fit]);
 }
