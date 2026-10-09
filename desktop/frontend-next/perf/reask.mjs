@@ -55,7 +55,7 @@ for (const scheme of ["light", "dark"]) {
         const r = el.getBoundingClientRect();
         return { h: r.height, view: innerHeight, caretAtEnd: el.selectionStart === el.value.length };
       });
-      check(`${scheme}/${label}: with the viewport shrunk to ${kb}px (soft keyboard) the box still fits it and keeps the caret`, k.h <= k.view * 0.6 + 2 && k.caretAtEnd, `box ${Math.round(k.h)}px of ${k.view}px`);
+      check(`${scheme}/${label}: with the viewport shrunk to ${kb}px the box stays within 60% of it and the caret stays at the end`, k.h <= k.view * 0.6 + 2 && k.caretAtEnd, `box ${Math.round(k.h)}px of ${k.view}px`);
       await page.setViewportSize({ width, height });
       await page.waitForTimeout(300);
     }
@@ -75,10 +75,12 @@ for (const [label, width, height] of [["wide", 1440, 900], ["phone", 390, 800]])
   await page.waitForTimeout(600);
   const q = await page.evaluate(() => {
     const el = document.querySelector(".queue .qedit");
-    return el ? { client: el.clientHeight, scroll: el.scrollHeight, view: innerHeight } : null;
+    if (!el) return null;
+    const room = el.closest(".qitems")?.clientHeight ?? Infinity;
+    return { client: el.clientHeight, scroll: el.scrollHeight, cap: parseFloat(getComputedStyle(el).maxHeight), room };
   });
   check(`queue/${label}: the inline editor opened`, !!q);
-  if (q) check(`queue/${label}: a long single line shows well past one row of the editor`, q.client >= Math.min(q.scroll, q.view * 0.6, 150) - 2, `editor ${q.client}px, content ${q.scroll}px`);
+  if (q) check(`queue/${label}: a long single line fills the editor up to its cap or the room the list leaves`, q.cap >= 100 && q.client >= Math.min(q.scroll, q.cap * 0.9, q.room - 24), `editor ${q.client}px, content ${q.scroll}px, cap ${q.cap}px, room ${q.room}px`);
   await ctx.close();
 }
 await browser.close();

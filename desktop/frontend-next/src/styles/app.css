@@ -482,7 +482,7 @@
   .qwhy[data-err] { color: var(--err-ink) }
   .qedit {
     flex: 1; min-width: 0; padding: 2px 5px; border: 1px solid var(--focus); border-radius: var(--r-xs);
-    background: var(--surface); color: var(--text); font: inherit; resize: none; max-height: min(60vh, 20rem); max-height: min(60dvh, 20rem);
+    background: var(--surface); color: var(--text); font: inherit; resize: none;
   }
 
   .steermark {
