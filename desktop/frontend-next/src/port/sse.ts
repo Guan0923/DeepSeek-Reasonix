@@ -1,6 +1,6 @@
 import { PLAN_ACTIONS, type PlanAction } from "./session";
-import type { AccountState, AgentPort, Appearance, ChipCall, CompactionSettings, Completion, DeviceGrant, ProviderProbe, UpdateProgress, VersionHub, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, SessionEntry, SessionStatus, WalletReading, HookDryRun, HookEntry, MemoryCatalog, MemoryEdit, MemoryEntry, UsageQuery, UsageReport, McpDraft, PluginExport, Queue, Queued, NotifyPrefs, TrayPrefs, WorkspaceInfo } from "./port";
-import { HttpError, type Attachment, type ChangeDiff, type CommitProposal, type CommitRequest, type CommitResult, type DroppedRef, type WorkspaceFile, type WorkspaceFiles, type WorkspaceChanges } from "./port";
+import type { AccountState, AgentPort, Appearance, ChipCall, CompactionSettings, Completion, DeviceGrant, ProviderProbe, UpdateProgress, VersionHub, VersionNotes, ApprovalMode, ApprovalVerdict, Checkpoint, RewindPlan, RewindResult, RewindScope, HistoryMessage, HostTodo, BrowserTab, ModelEntry, Preset, ProviderSetup, RoleAssignments, RoleOverride, SessionEntry, SessionStatus, WalletReading, HookDryRun, HookEntry, MemoryCatalog, MemoryEdit, MemoryEntry, UsageQuery, UsageReport, McpDraft, PluginExport, Queue, Queued, NotifyPrefs, TrayPrefs, WorkspaceInfo } from "./port";
+import { HttpError, type ChangeDiff, type CommitProposal, type CommitRequest, type CommitResult, type WorkspaceFile, type WorkspaceFiles, type WorkspaceChanges } from "./port";
 import { SseFeedback } from "./sse_feedback";
 import type { StoragePlan, StorageQuery, StorageState } from "./storage";
 import type { ExecutionGraphRead, TrajectoryRead, WireEvent } from "./wire";
@@ -191,6 +191,14 @@ export class SsePort extends SseFeedback implements AgentPort {
     return this.post("/roles", { role, ref });
   }
 
+  roleOverrides() {
+    return this.get<Record<string, RoleOverride[]>>("/roles/overrides");
+  }
+
+  clearRoleOverride(role: string, key: string) {
+    return this.post("/roles/overrides/clear", { role, key });
+  }
+
   storage(query?: StorageQuery) {
     const q = query?.layout ? "?layout=1" : query?.root ? "?root=" + encodeURIComponent(query.root) : "";
     return this.get<StorageState>("/storage" + q);
@@ -231,6 +239,13 @@ export class SsePort extends SseFeedback implements AgentPort {
         body: JSON.stringify({ icon, closeToTray }),
       }),
     );
+  }
+
+  async versionNotes(version: string, retry = false): Promise<VersionNotes> {
+    const path = `/studio/versions/${encodeURIComponent(version)}/notes${retry ? "?retry=1" : ""}`;
+    const res = await fetch(path, { credentials: "same-origin" });
+    if (!res.ok) await SsePort.fail(path, res);
+    return (await res.json()) as VersionNotes;
   }
 
   async pinVersion(version: string): Promise<void> {
@@ -407,32 +422,14 @@ export class SsePort extends SseFeedback implements AgentPort {
     return this.post("/resume", { path });
   }
 
+  markSessionViewed() { return this.post("/sessions/viewed"); }
+
   newSession() {
     return this.post("/new");
   }
 
   deleteSession(name: string) {
     return this.post("/delete-session", { name });
-  }
-
-  // JSON, not raw bytes: csrfGuard admits nothing else, and that guard is what
-  // stops a cross-site form posting here at all.
-  async attach(blob: Blob, name?: string) {
-    const buf = new Uint8Array(await blob.arrayBuffer());
-    let bin = "";
-    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    const res = await fetch(this.base + "/attachments", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ mime: blob.type, name: name ?? "", data: btoa(bin) }),
-    });
-    if (!res.ok) throw new HttpError(res.status, `/attachments: ${res.status} ${await res.text()}`);
-    return (await res.json()) as Attachment;
-  }
-
-  dropRefs(paths: string[]) {
-    return this.post0<DroppedRef[]>("/drop", { paths });
   }
 
   changes() {
@@ -665,7 +662,7 @@ export class SsePort extends SseFeedback implements AgentPort {
   }
 
   submit(text: string, chips?: ChipCall) {
-    return this.post("/submit", { input: text, ...chips });
+    return this.postMaybe<Queued>("/submit", { input: text, ...chips });
   }
   steer(text: string) {
     return this.post0<Queued>("/inbox/items", { input: text, intent: "steer" });
@@ -718,16 +715,16 @@ export class SsePort extends SseFeedback implements AgentPort {
     return this.post(paused ? "/inbox/pause" : "/inbox/resume");
   }
   cancel() {
-    return this.post("/cancel");
+    return this.postAcked("/cancel");
   }
   // Approve(id, allow, session, persist) — "always" is a session grant, not a
   // persisted config change.
   planDecision(id: string, action: PlanAction) {
-    return this.post("/plan-decision", { id, action: PLAN_ACTIONS[action] });
+    return this.postAcked("/plan-decision", { id, action: PLAN_ACTIONS[action] });
   }
 
   approve(id: string, verdict: ApprovalVerdict) {
-    return this.post("/approve", {
+    return this.postAcked("/approve", {
       id,
       allow: verdict !== "deny",
       // A rule written down also covers the rest of this session, so the answer
@@ -737,7 +734,7 @@ export class SsePort extends SseFeedback implements AgentPort {
     });
   }
   answer(id: string, answers: { questionId: string; selected: string[] }[]) {
-    return this.post("/answer", {
+    return this.postAcked("/answer", {
       id,
       answers: answers.map((a) => ({ QuestionID: a.questionId, Selected: a.selected })),
     });
@@ -776,8 +773,11 @@ export class SsePort extends SseFeedback implements AgentPort {
   setPreset(preset: Preset) {
     return this.post("/preset", { preset });
   }
-  setModel(ref: string, asDefault = false) {
-    return this.post("/model", asDefault ? { ref, default: true } : { ref });
+  setModel(ref: string) {
+    return this.post("/model", { ref });
+  }
+  setDefaultModel(ref: string) {
+    return this.post("/default-model", { ref });
   }
   setEffort(effort: string) {
     return this.post("/effort", { effort });

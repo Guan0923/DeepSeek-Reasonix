@@ -301,8 +301,9 @@ type Options struct {
 	SubagentGate *SharedHeadlessGate
 	Label        string
 	ModelRef     string
-	Effort       string             // resolved effective provider effort; not a request-scoped override
-	ModelModes   []config.ModelMode // optional modes the session's model declares
+	Effort       string                // resolved effective provider effort; not a request-scoped override
+	ModelModes   []config.ModelMode    // optional modes the session's model declares
+	ModelEntry   *config.ProviderEntry // the resolved entry the session was built on; nil leaves ModelFace unanswered
 	// ProviderFingerprint identifies resolved provider build inputs; empty fails closed.
 	ProviderFingerprint string
 	SystemPrompt        string
@@ -485,6 +486,7 @@ func New(opts Options) *Controller {
 	if c.executor != nil {
 		c.wireMutationObserver()
 		c.executor.SetMemoryQueue(c)
+		c.executor.SetPathObserver(c.skills.pathHits)
 	}
 	// Auto Guard is built into Auto. Ask and YOLO bypass it through the mode
 	// provider, so no separate enablement state is needed.
@@ -1074,6 +1076,7 @@ func (c *Controller) ReloadCommands(ctx context.Context) error {
 			Description: sk.Description,
 			ArgHint:     sk.ArgumentHint,
 			Skill:       true,
+			Unlisted:    func() bool { return !c.skills.pathHits.Eligible(sk) },
 			Render: func(args []string) string {
 				cur, err := c.skills.forModel(sk)
 				if err != nil {

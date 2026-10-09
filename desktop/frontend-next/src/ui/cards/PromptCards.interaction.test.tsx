@@ -35,6 +35,23 @@ describe("decision cards", () => {
     expect(approve).toHaveBeenCalledTimes(1);
   });
 
+  it("hands the card back after a failed submit so the same answer can be retried", async () => {
+    const item = {
+      t: "approval", id: "row", a: { id: "gate", tool: "bash", subject: "run checks" },
+    } as Extract<Item, { t: "approval" }>;
+    const failed = vi.fn();
+    const approve = vi.fn()
+      .mockImplementationOnce(async () => failed(new Error("kernel busy or unreachable")))
+      .mockResolvedValueOnce(undefined);
+    render(<ApprovalCard item={item} onApprove={approve} onFullAccess={vi.fn(pending)} onPlan={vi.fn(pending)} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "允许这一次" }));
+    await waitFor(() => expect((screen.getByRole("button", { name: "允许这一次" }) as HTMLButtonElement).disabled).toBe(false));
+    await userEvent.click(screen.getByRole("button", { name: "允许这一次" }));
+    expect(failed).toHaveBeenCalledTimes(1);
+    expect(approve).toHaveBeenCalledTimes(2);
+  });
+
   // An answer the host drops must not be offered: the card used to promise "do
   // not ask again" and send a grant that died with the session, and the grant
   // that actually writes a rule was not reachable from this window at all.

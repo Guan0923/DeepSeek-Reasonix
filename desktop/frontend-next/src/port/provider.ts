@@ -62,6 +62,11 @@ export interface ProviderEntry {
   // on top of the protocol.
   contextWindow?: number;
   maxOutputTokens?: number;
+  // Seconds the endpoint may stay silent before the call is read as dropped;
+  // absent is the built-in default.
+  idleTimeoutSeconds?: number;
+  // What a source without one waits; the kernel owns the number.
+  idleTimeoutDefault?: number;
   headers?: Record<string, string>;
   extraBody?: Record<string, unknown>;
 }
@@ -110,8 +115,9 @@ export interface ProviderProbe {
   noProxy: boolean;
 }
 
-// What re-probing a saved provider found. `error` carries the endpoint's own
-// words, because "401" and "no chat models" send the user to different fixes.
+// What re-probing a saved provider found. A failure carries `code`, the dotted
+// identity the add flow's refusals use, because "401" and "no chat models" send
+// the user to different fixes; the endpoint's own words ride along as `detail`.
 export interface ProviderCheck {
   ok: boolean;
   kind?: string;
@@ -126,7 +132,12 @@ export interface ProviderCheck {
   vision?: string[];
   ambiguous?: boolean;
   noProxy?: boolean;
-  error?: string;
+  code?: string;
+  // Only the numbers the code's sentence needs: `status`, `count`.
+  params?: Record<string, number>;
+  httpStatus?: number;
+  // The endpoint's error text, for display; never an input to `code`.
+  detail?: string;
 }
 
 export type ProviderModelCheckStatus = "available" | "unavailable" | "unknown";
@@ -176,6 +187,8 @@ export interface ProviderEdit {
   // compaction off for this source.
   contextWindow?: number;
   maxOutputTokens?: number;
+  // 0 is the built-in default; omitted leaves the stored value alone.
+  idleTimeoutSeconds?: number;
   headers?: Record<string, string>;
   extraBody?: Record<string, unknown>;
   // Which request shape controls thinking here. "" is auto — no declaration,
