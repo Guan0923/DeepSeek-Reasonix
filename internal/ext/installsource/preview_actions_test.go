@@ -191,3 +191,27 @@ func TestPairsKeepDistinctKeysDistinctAndFlagACollapse(t *testing.T) {
 		t.Fatalf("typed escape and the real character must stay apart: %v cut=%v", out, p.cut)
 	}
 }
+
+func TestThemesOnlyRejectsEachCountAndRuntimeAlone(t *testing.T) {
+	base := func() action { return action{Kind: "plugin", ThemeCount: 1} }
+	for name, set := range map[string]func(*action){
+		"skills":   func(a *action) { a.SkillCount = 1 },
+		"agents":   func(a *action) { a.AgentCount = 1 },
+		"commands": func(a *action) { a.CommandCount = 1 },
+		"hooks":    func(a *action) { a.HookCount = 1 },
+		"tools":    func(a *action) { a.ToolCount = 1 },
+		"prompts":  func(a *action) { a.PromptCount = 1 },
+		"runtime":  func(a *action) { a.Runtime = &RuntimePlanInfo{} },
+		"no theme": func(a *action) { a.ThemeCount = 0 },
+		"kind":     func(a *action) { a.Kind = "skill" },
+	} {
+		a := base()
+		set(&a)
+		if themesOnly([]action{a}) {
+			t.Errorf("%s alone must disqualify the plan", name)
+		}
+	}
+	if !themesOnly([]action{base()}) {
+		t.Fatal("the baseline is themes only")
+	}
+}

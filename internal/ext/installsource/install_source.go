@@ -63,6 +63,8 @@ type Options struct {
 	// a preview handed out. On for the model, whose apply would otherwise be the
 	// first moment anyone could learn what the source holds; off for hosts.
 	RequireApprovedPlan bool
+	// PreparePlugin replaces plugin source resolution; tests only.
+	PreparePlugin func(ctx context.Context, source, mode string) (root, commit string, cleanup func(), err error)
 }
 
 // Tool is install_source. Callers hold the concrete type so a call is
@@ -130,6 +132,7 @@ func NewTool(opts Options) *Tool {
 		onDisconnect:        opts.OnDisconnect,
 		approval:            opts.Approval,
 		requireApprovedPlan: opts.RequireApprovedPlan,
+		preparePlugin:       opts.PreparePlugin,
 	}
 }
 
