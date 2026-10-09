@@ -25,7 +25,7 @@ func (c *Controller) runSynchronousTurn(
 	}
 	defer func() {
 		if releaseWorkspace != nil {
-			releaseWorkspace()
+			releaseWorkspace.release()
 		}
 	}()
 	ctx, cancel := context.WithCancel(extension.ContextWithRuntimeOwner(ctx, c.RuntimeOwner()))

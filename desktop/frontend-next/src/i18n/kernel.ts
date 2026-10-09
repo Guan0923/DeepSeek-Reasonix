@@ -252,6 +252,8 @@ const SAID: Record<string, string> = {
   "commit.bad_request": "提交请求格式不正确",
 
   // ── 分支切换：composer 的分支菜单拒得有名字 ─────────────────────
+  "branch.workspace_busy": "另一个会话正在写入这个工作区，请稍后重试切换分支",
+  "branch.jobs_running": "后台任务仍在运行，请先停止再切换分支",
   "branch.turn_running": "任务运行中，分支要等这轮结束再切",
   "branch.no_repository": "这个工作区不是 git 仓库，没有分支可切换",
   "branch.bad_request": "切换分支的请求格式不正确",

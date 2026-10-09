@@ -338,3 +338,31 @@ func worktreeBeside(t *testing.T, dir string) string {
 	t.Cleanup(func() { _ = os.RemoveAll(other) })
 	return other
 }
+
+func TestBranchesKeepLocalNameWhenATagHasTheSameName(t *testing.T) {
+	dir := branchesWithCommits(t)
+	git(t, dir, "tag", "next")
+	list, ok, err := Branches(t.Context(), opened(t, dir))
+	if err != nil || !ok {
+		t.Fatalf("Branches: %v %v", ok, err)
+	}
+	found := false
+	for _, branch := range list {
+		if branch.Name == "next" {
+			found = true
+		}
+		if branch.Name == "heads/next" {
+			t.Error("tag ambiguity changed the local branch's name")
+		}
+	}
+	if !found {
+		t.Fatal("local next branch is missing")
+	}
+	if err := SwitchBranch(t.Context(), opened(t, dir), "next"); err != nil {
+		t.Fatal(err)
+	}
+	current, ok := Summary(t.Context(), opened(t, dir))
+	if !ok || current.Branch != "next" {
+		t.Fatalf("after switch = %+v, %v", current, ok)
+	}
+}

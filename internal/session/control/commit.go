@@ -73,7 +73,7 @@ func (c *Controller) CommitStaged(ctx context.Context, req CommitRequest) (Commi
 	if err != nil {
 		return CommitResult{}, err
 	}
-	defer releaseWorkspace()
+	defer releaseWorkspace.release()
 	res, err := gitcommit.Commit(ctx, c.workspaceRepo, req.Message, req.Fingerprint, req.AcknowledgeSecrets)
 	if err != nil {
 		return CommitResult{}, err

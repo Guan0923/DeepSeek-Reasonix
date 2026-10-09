@@ -485,7 +485,7 @@ func (c *Controller) beginRotation() error {
 	}
 	defer func() {
 		if releaseWorkspace != nil {
-			releaseWorkspace()
+			releaseWorkspace.release()
 		}
 	}()
 	c.mu.Lock()

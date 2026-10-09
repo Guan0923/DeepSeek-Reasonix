@@ -1332,6 +1332,10 @@ export const EN: Record<string, string> = {
     "Reading the staged changes failed",
   "提交请求格式不正确":
     "The commit request was malformed",
+  "另一个会话正在写入这个工作区，请稍后重试切换分支":
+    "Another session is writing to this workspace; try switching branches again shortly",
+  "后台任务仍在运行，请先停止再切换分支":
+    "Background jobs are still running; stop them before switching branches",
   "任务运行中，分支要等这轮结束再切":
     "A turn is running; wait for it to finish before moving the branch",
   "这个工作区不是 git 仓库，没有分支可切换":

@@ -11,6 +11,7 @@ import (
 type workspaceActivity struct {
 	mu           sync.Mutex
 	readers      int
+	jobs         int
 	checkout     chan struct{}
 	inboxWaiters map[*Controller]struct{}
 	references   int
@@ -52,21 +53,54 @@ func (c *Controller) workspaceActivity() (*workspaceActivity, func(), error) {
 	}, nil
 }
 
-func (c *Controller) holdWorkspaceActivity(ctx context.Context) (func(), error) {
+type workspaceActivityUse struct {
+	activity         *workspaceActivity
+	releaseReference func()
+	background       bool
+}
+
+func (u *workspaceActivityUse) release() {
+	if u == nil {
+		return
+	}
+	if a := u.activity; a != nil {
+		a.mu.Lock()
+		if u.background {
+			a.jobs--
+		} else {
+			a.readers--
+		}
+		a.mu.Unlock()
+	}
+	u.releaseReference()
+}
+
+func (u *workspaceActivityUse) retainJobs() {
+	if a := u.activity; a != nil {
+		a.mu.Lock()
+		a.readers--
+		a.jobs++
+		u.background = true
+		a.mu.Unlock()
+	}
+}
+
+func (c *Controller) holdWorkspaceActivity(ctx context.Context) (*workspaceActivityUse, error) {
 	return c.acquireWorkspaceActivity(ctx, true)
 }
 
-func (c *Controller) tryWorkspaceActivity() (func(), error) {
+func (c *Controller) tryWorkspaceActivity() (*workspaceActivityUse, error) {
 	return c.acquireWorkspaceActivity(context.Background(), false)
 }
 
-func (c *Controller) acquireWorkspaceActivity(ctx context.Context, wait bool) (func(), error) {
+func (c *Controller) acquireWorkspaceActivity(ctx context.Context, wait bool) (*workspaceActivityUse, error) {
 	activity, release, err := c.workspaceActivity()
 	if err != nil {
 		return nil, err
 	}
+	use := &workspaceActivityUse{activity: activity, releaseReference: release}
 	if activity == nil {
-		return release, nil
+		return use, nil
 	}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -78,12 +112,7 @@ func (c *Controller) acquireWorkspaceActivity(ctx context.Context, wait bool) (f
 		if done == nil {
 			activity.readers++
 			activity.mu.Unlock()
-			return func() {
-				activity.mu.Lock()
-				activity.readers--
-				activity.mu.Unlock()
-				release()
-			}, nil
+			return use, nil
 		}
 		activity.mu.Unlock()
 		if !wait {
@@ -99,6 +128,33 @@ func (c *Controller) acquireWorkspaceActivity(ctx context.Context, wait bool) (f
 	}
 }
 
+func (a *workspaceActivity) conflictLocked() error {
+	if a.readers != 0 {
+		return ErrTurnRunning
+	}
+	if a.jobs != 0 {
+		return ErrJobsRunning
+	}
+	if a.checkout != nil {
+		return ErrWorkspaceBusy
+	}
+	return nil
+}
+
+func (c *Controller) workspaceActivityConflict() error {
+	activity, release, err := c.workspaceActivity()
+	if err != nil {
+		return err
+	}
+	defer release()
+	if activity == nil {
+		return nil
+	}
+	activity.mu.Lock()
+	defer activity.mu.Unlock()
+	return activity.conflictLocked()
+}
+
 func (c *Controller) excludeWorkspaceActivity() (func(), error) {
 	activity, release, err := c.workspaceActivity()
 	if err != nil {
@@ -108,10 +164,10 @@ func (c *Controller) excludeWorkspaceActivity() (func(), error) {
 		return release, nil
 	}
 	activity.mu.Lock()
-	if activity.readers != 0 || activity.checkout != nil {
+	if err := activity.conflictLocked(); err != nil {
 		activity.mu.Unlock()
 		release()
-		return nil, ErrTurnRunning
+		return nil, err
 	}
 	activity.checkout = make(chan struct{})
 	activity.mu.Unlock()
@@ -153,16 +209,17 @@ func (c *Controller) resumeInboxAfterWorkspaceCheckout() {
 }
 
 // Cancellation does not end a background process; its done channel does.
-func (c *Controller) releaseWorkspaceTurn(release func()) {
-	if release == nil {
+func (c *Controller) releaseWorkspaceTurn(use *workspaceActivityUse) {
+	if use == nil {
 		return
 	}
 	if c.jobs == nil || !c.jobs.HasUnfinishedForSession("") {
-		release()
+		use.release()
 		return
 	}
+	use.retainJobs()
 	go func() {
-		defer release()
+		defer use.release()
 		for {
 			running := c.jobs.Running()
 			if len(running) == 0 {

@@ -129,6 +129,7 @@ type action struct {
 	// serializing to JSON.
 	entry      config.PluginEntry
 	skill      skillCandidate
+	skillFiles map[string][]string
 	disconnect func() // optional MCP rollback; nil when not connected
 	// preparedRoot lets a multi-plugin marketplace apply reuse the exact clone
 	// that produced its approved plan instead of cloning the same repository
@@ -203,6 +204,7 @@ func publicActions(in []action) []action {
 		out[i].failure = nil
 		out[i].entry = config.PluginEntry{}
 		out[i].skill = skillCandidate{}
+		out[i].skillFiles = nil
 		out[i].preparedRoot = ""
 		out[i].cleanup = nil
 	}

@@ -146,7 +146,7 @@
 
 body { background: var(--page); }
 .app { --rail-open: 238px; background: var(--page); }
-.app[data-nav="on"] { --nav-w: 48px; }
+.app[data-nav="on"] { --nav-w: var(--nav-open); }
 .app::after { opacity: .012; }
 
 /* Window bar */
@@ -194,7 +194,7 @@ body { background: var(--page); }
 .chrome .thbtn:hover { background: var(--overlay); }
 
 /* Primary navigation and workspace rail */
-.nav { position: fixed; z-index: 12; inset: 0 auto 0 0; width: var(--nav-w); overflow: hidden; padding: calc(var(--chrome-h) + 8px) 0 10px; gap: 4px; background: color-mix(in srgb, var(--page) 92%, var(--surface)); border-right-color: var(--hair); }
+.nav { position: fixed; z-index: 13; inset: 0 auto 0 0; width: var(--nav-open); translate: calc(var(--nav-w) - var(--nav-open)) 0; padding: calc(var(--chrome-h) + 8px) 0 10px; gap: 4px; background: color-mix(in srgb, var(--page) 92%, var(--surface)); border-right-color: var(--hair); }
 .nav > * { flex: none; }
 .app:not([data-nav="on"]) .nav { border-right-width: 0; }
 [data-titlebar="app"] .nav { -webkit-app-region: drag; }
@@ -2290,8 +2290,8 @@ body { font-size: 14px; line-height: 1.75; }
   left: 0;
   bottom: calc(100% + 9px);
   width: max-content;
-  min-width: 210px;
-  max-width: 260px;
+  min-width: 0;
+  max-width: min(260px, calc(100vw - 24px)); white-space: normal; overflow-wrap: anywhere;
   display: grid;
   gap: 3px;
   padding: 10px 12px;
@@ -2310,7 +2310,7 @@ body { font-size: 14px; line-height: 1.75; }
 .studio-branch-card::after {
   content: "";
   position: absolute;
-  left: 15px;
+  left: var(--branch-tip-anchor, 15px);
   top: 100%;
   width: 8px;
   height: 8px;

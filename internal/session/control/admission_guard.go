@@ -61,7 +61,7 @@ func (c *Controller) admitGuardedTurn(body func(ctx context.Context) error, park
 	}
 	defer func() {
 		if releaseWorkspace != nil {
-			releaseWorkspace()
+			releaseWorkspace.release()
 		}
 	}()
 	c.mu.Lock()

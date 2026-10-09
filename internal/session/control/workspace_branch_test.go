@@ -203,9 +203,14 @@ func TestSwitchWorkspaceBranchWaitsForBackgroundWorkToExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	branchSignal(t, started)
+	for _, switcher := range []*Controller{c, peer} {
+		if _, _, err := switcher.SwitchWorkspaceBranch(t.Context(), "next"); !errors.Is(err, ErrJobsRunning) || errors.Is(err, ErrTurnRunning) {
+			t.Fatalf("running background job refusal = %v", err)
+		}
+	}
 	manager.Kill(jobID)
-	if _, _, err := c.SwitchWorkspaceBranch(t.Context(), "next"); !errors.Is(err, ErrTurnRunning) {
-		t.Errorf("switch while cancelled job still runs = %v, want ErrTurnRunning", err)
+	if _, _, err := c.SwitchWorkspaceBranch(t.Context(), "next"); !errors.Is(err, ErrJobsRunning) {
+		t.Errorf("switch while cancelled job still runs = %v, want ErrJobsRunning", err)
 	}
 	assertWorkspaceBranch(t, c, "main", "one\n")
 	unblock()
@@ -216,7 +221,7 @@ func TestSwitchWorkspaceBranchWaitsForBackgroundWorkToExit(t *testing.T) {
 		if err == nil {
 			break
 		}
-		if !errors.Is(err, ErrTurnRunning) || time.Now().After(deadline) {
+		if !errors.Is(err, ErrJobsRunning) || time.Now().After(deadline) {
 			t.Fatal(err)
 		}
 		time.Sleep(time.Millisecond)
@@ -509,9 +514,7 @@ func TestSwitchWorkspaceBranchHonorsExistingWriterLease(t *testing.T) {
 	if err := owner.AcquirePaths(t.Context(), []string{filepath.Join(dir, "a.txt")}); err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-	defer cancel()
-	if _, _, err := c.SwitchWorkspaceBranch(ctx, "next"); !errors.Is(err, context.DeadlineExceeded) || !errors.Is(err, workspacelease.ErrConflict) {
+	if _, _, err := c.SwitchWorkspaceBranch(t.Context(), "next"); !errors.Is(err, ErrWorkspaceBusy) || !errors.Is(err, workspacelease.ErrConflict) {
 		t.Fatalf("switch must respect an existing workspace writer: %v", err)
 	}
 	assertWorkspaceBranch(t, c, "main", "one\n")
@@ -610,5 +613,73 @@ func TestCancelWithInboxItemsRestartsSurvivorAfterCheckoutWake(t *testing.T) {
 		t.Fatalf("unexpected additional dispatch: %q", input)
 	default:
 	}
+	assertWorkspaceGuardReleased(t, c)
+}
+
+type branchLeaseWaitContext struct {
+	context.Context
+	waiting chan struct{}
+	once    sync.Once
+}
+
+func (c *branchLeaseWaitContext) Done() <-chan struct{} {
+	c.once.Do(func() { close(c.waiting) })
+	return c.Context.Done()
+}
+
+func TestSwitchWorkspaceLeaseWaitKeepsAdmissionOpen(t *testing.T) {
+	c, dir := branchFixture(t)
+	owner, err := workspacelease.New(dir, config.WorkspaceLeaseDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner.BeginRun()
+	defer owner.EndRun()
+	if err := owner.AcquireWrite(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+	observed := &branchLeaseWaitContext{Context: ctx, waiting: make(chan struct{})}
+	result := make(chan error, 1)
+	go func() { _, _, err := c.SwitchWorkspaceBranch(observed, "next"); result <- err }()
+	branchSignal(t, observed.waiting)
+	peer := branchPeer(t, dir, nil, nil)
+	running, release := make(chan struct{}), make(chan struct{})
+	unblock := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(unblock)
+	admitted := peer.runGuarded(func(context.Context) error { close(running); <-release; return nil })
+	if admitted != turnStarted {
+		t.Errorf("lease contention blocked another pane's input: %v", admitted)
+	} else {
+		branchSignal(t, running)
+	}
+	select {
+	case err := <-result:
+		if !errors.Is(err, ErrWorkspaceBusy) {
+			t.Errorf("lease refusal must be internally bounded, got %v", err)
+		}
+	case <-time.After(time.Second):
+		cancel()
+		<-result
+		t.Error("branch switch waited indefinitely for the workspace lease")
+	}
+	assertWorkspaceBranch(t, c, "main", "one\n")
+	unblock()
+	if err := peer.waitTurnIdle(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	peer.autosaveWG.Wait()
+	assertWorkspaceGuardReleased(t, c)
+}
+
+func TestSwitchWorkspaceBranchPreservesCallerCancellation(t *testing.T) {
+	c, _ := branchFixture(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, _, err := c.SwitchWorkspaceBranch(ctx, "next"); !errors.Is(err, context.Canceled) || errors.Is(err, ErrWorkspaceBusy) {
+		t.Fatalf("canceled request = %v", err)
+	}
+	assertWorkspaceBranch(t, c, "main", "one\n")
 	assertWorkspaceGuardReleased(t, c)
 }

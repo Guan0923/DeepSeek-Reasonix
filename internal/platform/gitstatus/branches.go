@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -52,7 +53,7 @@ func Branches(ctx context.Context, repo gitcmd.Repo) (list []Branch, ok bool, er
 		return nil, false, nil
 	}
 	raw, err := repo.Top().Command(ctx, "for-each-ref",
-		"--format=%(refname:short)%00%(HEAD)%00%(worktreepath)",
+		"--format=%(refname:lstrip=2)%00%(HEAD)%00%(worktreepath)",
 		"--sort=refname", "refs/heads").Output()
 	if err != nil {
 		return nil, false, err
@@ -132,16 +133,16 @@ func SwitchBranch(ctx context.Context, repo gitcmd.Repo, name string) error {
 // would overwrite, including file/directory replacements. Unrelated local
 // paths ride along with the switch.
 func preFlight(ctx context.Context, repo gitcmd.Repo, name string) error {
-	raw, err := repo.Top().Command(ctx, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignored").Output()
+	raw, err := repo.Top().Command(ctx, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignored=matching").Output()
 	if err != nil {
 		return err
 	}
-	var untracked []string
+	var untracked []Change
 	for _, c := range ParsePorcelainZ(raw) {
 		if c.Status != "??" && c.Status != "!!" {
 			return fmt.Errorf("%w: %s has uncommitted changes; commit or stash first", ErrLocalChanges, c.Path)
 		}
-		untracked = append(untracked, c.Path)
+		untracked = append(untracked, c)
 	}
 	if len(untracked) == 0 {
 		return nil
@@ -161,7 +162,18 @@ func preFlight(ctx context.Context, repo gitcmd.Repo, name string) error {
 			}
 		}
 	}
-	for _, p := range untracked {
+	for _, change := range untracked {
+		p := change.Path
+		if change.Status == "!!" && strings.HasSuffix(p, "/") && !held[strings.TrimSuffix(p, "/")] {
+			collision, err := ignoredTreeCollision(repo.WorkTree, p, held)
+			if err != nil {
+				return err
+			}
+			if collision == "" {
+				continue
+			}
+			return fmt.Errorf("%w: %s is ignored and %s would overwrite it", ErrLocalChanges, collision, name)
+		}
 		path := strings.TrimSuffix(p, "/")
 		collision := directories[path]
 		for {
@@ -176,6 +188,41 @@ func preFlight(ctx context.Context, repo gitcmd.Repo, name string) error {
 		}
 	}
 	return nil
+}
+
+// Matching ignores collapse whole directories; inspect only target paths
+// beneath them so an unrelated ignored sibling never blocks a switch.
+func ignoredTreeCollision(root, directory string, held map[string]bool) (string, error) {
+	for target := range held {
+		if !strings.HasPrefix(target, directory) {
+			continue
+		}
+		path := strings.TrimSuffix(directory, "/")
+		info, err := os.Lstat(filepath.Join(root, filepath.FromSlash(path)))
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		if !info.IsDir() {
+			return path, nil
+		}
+		for part := range strings.SplitSeq(strings.TrimPrefix(target, directory), "/") {
+			path += "/" + part
+			info, err := os.Lstat(filepath.Join(root, filepath.FromSlash(path)))
+			if os.IsNotExist(err) {
+				break
+			}
+			if err != nil {
+				return "", err
+			}
+			if path == target || !info.IsDir() {
+				return path, nil
+			}
+		}
+	}
+	return "", nil
 }
 
 // sameTree compares two spellings of one directory: Clean for the separators a

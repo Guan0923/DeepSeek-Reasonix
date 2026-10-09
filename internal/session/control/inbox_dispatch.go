@@ -25,7 +25,7 @@ func (c *Controller) endRotation() {
 	c.gate.workspaceRelease = nil
 	c.mu.Unlock()
 	if releaseWorkspace != nil {
-		releaseWorkspace()
+		releaseWorkspace.release()
 	}
 	c.maybeDispatchInbox()
 }

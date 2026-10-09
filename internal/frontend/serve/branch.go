@@ -64,6 +64,10 @@ func refuseBranch(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case r.Context().Err() != nil:
 		// The person cancelled; nobody is left to read an answer.
+	case errors.Is(err, control.ErrWorkspaceBusy):
+		busy(w, "branch.workspace_busy", "another operation is using the workspace; try again shortly", nil)
+	case errors.Is(err, control.ErrJobsRunning):
+		busy(w, "branch.jobs_running", "background jobs are running; stop them before switching branches", nil)
 	case errors.Is(err, control.ErrTurnRunning):
 		busy(w, "branch.turn_running", "a turn is running; the branch cannot move under it", nil)
 	case errors.Is(err, gitcmd.ErrNotRepository):

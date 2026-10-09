@@ -25,7 +25,7 @@ type turnGate struct {
 	// cancel stops the turn that is running. It belongs here, not beside this
 	// state: three sites set it on the line after running, verbatim.
 	cancel           context.CancelFunc
-	workspaceRelease func()
+	workspaceRelease *workspaceActivityUse
 }
 
 // begin admits a turn and binds what stops it. Admission is the caller's to
