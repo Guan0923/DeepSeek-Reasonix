@@ -17,6 +17,7 @@
 - [环境变量](#环境变量)
 - [Web 前端](#web-前端)
 - [配置路径](./CONFIG_PATHS.md)
+- [日志与崩溃文件](#日志与崩溃文件)
 - [思考语言](./REASONING_LANGUAGE.md)
 - [任务合约与暂停策略](./TASK_CONTRACT.md)
 - [自定义 OpenAI-compatible provider](#自定义-openai-compatible-provider)
@@ -1179,6 +1180,26 @@ Review the staged diff. Focus on $ARGUMENTS, list bugs with file:line.
 
 `$ARGUMENTS` 展开为全部空格分隔参数，`$1`…`$N` 为位置参数。MCP prompts 也以
 `/mcp__<server>__<prompt>` 形式出现在这里。
+
+## 日志与崩溃文件
+
+Studio 的日志放在窗口配置目录下，不在 Reasonix home 里：
+
+| 平台 | 日志目录 |
+| --- | --- |
+| macOS | `~/Library/Application Support/Reasonix Studio/io.reasonix.studio.<实例>/logs` |
+| Windows | `%APPDATA%\Reasonix Studio\io.reasonix.studio.<实例>\logs` |
+| Linux | `~/.config/Reasonix Studio/io.reasonix.studio.<实例>/logs` |
+
+| 文件 | 内容 |
+| --- | --- |
+| `shell.log` | 窗口进程：启动、内核启动与握手，以及内核如何退出（`host: died code=… signal=…`），并附崩溃文件末尾几行。 |
+| `host.log` | 内核自己的输出。成功的轮询请求不再按 INFO 记录，错误能保留更久。 |
+| `crash/host-<时间>-<版本>-<pid>.log` | 内核被致命错误或 panic 终止时 Go 运行时打印的内容，例如 `fatal error: out of memory`。保留最新 5 个，每个只留最后 256 KiB；正常退出不留文件。 |
+
+除崩溃文件外，每个日志达 1 MiB 就轮转（保留 3 份）。内核意外退出后，下次启动会提示一次。
+
+反馈问题时请附上 `shell.log`、`host.log` 和 `crash/` 里较新的文件。`shell.log` 和 `host.log` 已抹去启动凭据；崩溃文件是运行时的原始输出，可能含堆栈、路径和 panic 文本，分享前请先自行检查。
 
 ## 内置文档检索
 
