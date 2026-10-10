@@ -19,7 +19,6 @@ import (
 	"reasonix/internal/state/sessionstore"
 	"strings"
 	"sync"
-	"time"
 
 	"reasonix/internal/assembly/boot"
 	"reasonix/internal/base/nilutil"
@@ -624,41 +623,6 @@ func writeJSONCached(w http.ResponseWriter, r *http.Request, v any) {
 	w.Header().Set("ETag", etag)
 	w.Header().Set("Cache-Control", "private, max-age=0, must-revalidate")
 	_, _ = w.Write(body)
-}
-
-// logMiddleware logs each request's method, path, and status.
-func logMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rw, r)
-		slog.Info("serve: request",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rw.status,
-			"duration", time.Since(start).String(),
-		)
-	})
-}
-
-// responseWriter captures the status code for logging.
-type responseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.status = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-// Flush delegates to the underlying ResponseWriter if it supports flushing
-// (required for SSE /events). Without this the type assertion in the events
-// handler fails and the stream endpoint returns 500.
-func (rw *responseWriter) Flush() {
-	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
-	}
 }
 
 // rewind rewinds the session to a checkpoint.
