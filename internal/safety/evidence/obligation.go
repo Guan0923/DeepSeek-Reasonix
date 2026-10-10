@@ -190,10 +190,19 @@ func (l *Ledger) mutationsBeyondProse(root string) (beyond []string, scoped, cha
 		if !r.Mutation {
 			continue
 		}
-		// A named-path writer replaces atomically, so its failure wrote
-		// nothing; any other failed mutation may have changed files unobserved.
+		// A failure proves nothing was left unwritten: tool.after can fail a
+		// finished write and a move can stop half-done, so a failed named-path
+		// call keeps its targets; any other failed mutation is unscoped.
 		if !r.Success {
-			scoped = scoped && r.Write
+			if !r.Write {
+				scoped = false
+				continue
+			}
+			for _, path := range r.MutationPaths {
+				if !proseMutationPath(root, path) && !slices.Contains(beyond, path) {
+					beyond = append(beyond, path)
+				}
+			}
 			continue
 		}
 		changed = true

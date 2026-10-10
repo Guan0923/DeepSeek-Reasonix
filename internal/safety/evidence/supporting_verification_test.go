@@ -16,6 +16,9 @@ func TestSupportingVerificationExemptionRequiresProvenScope(t *testing.T) {
 	}{
 		{name: "supporting only"},
 		{name: "move code to prose", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"main.go", "main.md"}}}, wantDebt: true},
+		{name: "failed move leaves code half-moved", extra: []Receipt{{Success: false, Write: true, Mutation: true, Paths: []string{"main.go", "main.md"}}}, wantDebt: true},
+		{name: "failed prose write", extra: []Receipt{{Success: false, Write: true, Mutation: true, Paths: []string{"other.md"}}}},
+		{name: "failed opaque mutation", extra: []Receipt{{ToolName: "bash", Success: false, Mutation: true}}, wantDebt: true},
 		{name: "delete code", extra: []Receipt{{Success: true, Mutation: true, MutationEvidence: MutationProven, PathsComplete: true, Paths: []string{"main.go"}}}, wantDebt: true},
 		{name: "created code", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"other.md"}, Created: []string{"main.go"}}}, wantDebt: true},
 		{name: "deleted uppercase document", extra: []Receipt{{Success: true, Write: true, Mutation: true, MutationEvidence: MutationProven, Paths: []string{"gone.MD"}}}},

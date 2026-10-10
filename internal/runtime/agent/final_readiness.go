@@ -549,7 +549,7 @@ func (a *Agent) verificationCause() string {
 	case !scoped:
 		return " (a change ran whose extent the host could not establish)"
 	case contract.DeclaresChecks():
-		return " (the project declares checks)"
+		return " (checks are declared for this task or project)"
 	}
 	return ""
 }

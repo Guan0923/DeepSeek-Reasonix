@@ -34,10 +34,10 @@ func TestEffectMarkdownOnlyTurnInCodeWorkspace(t *testing.T) {
 			call("b", "bash", `{"command":"echo 'class Q {}' >> Program.cs"}`),
 			call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`),
 		}, wantPath: "could not establish", debt: true},
-		{name: "failed named write to code writes nothing", turns: []testutil.Turn{
+		{name: "failed named write to code then README", turns: []testutil.Turn{
 			call("bad", "write_file", `{"path":"Program.cs/x.cs","content":"class Q {}\n"}`),
 			call("readme", "write_file", `{"path":"README.md","content":"A neutral note.\n"}`),
-		}},
+		}, wantPath: "x.cs", debt: true},
 		{name: "code only", code: true, turns: []testutil.Turn{call("src", "write_file", `{"path":"Program.cs","content":"class P {}\n"}`)}, wantPath: "Program.cs", debt: true},
 		{name: "code renamed to prose", code: true, turns: []testutil.Turn{call("mv", "move_file", `{"source_path":"Program.cs","destination_path":"Program.md"}`)}, wantPath: "Program.cs", debt: true},
 	} {
