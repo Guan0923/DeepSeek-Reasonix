@@ -340,5 +340,6 @@ Each file rotates at 1 MiB (3 files kept) except the crash files above. After an
 unexpected kernel exit the next launch says so once.
 
 When reporting a problem, attach `shell.log`, `host.log` and any newer file in
-`crash/`. They are redacted of the launch credential but may contain paths and
-model names; read them first.
+`crash/`. `shell.log` and `host.log` are redacted of the launch credential; the
+crash files are the runtime's raw output and may contain stack frames, paths and
+panic text. Read them before sharing.

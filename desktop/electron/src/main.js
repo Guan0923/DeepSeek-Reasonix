@@ -225,7 +225,7 @@ function announceHostExit() {
   const userData = app.getPath("userData");
   const exit = pendingHostExit(userData);
   if (!exit) return;
-  const text = hostExitNotice(app.getLocale(), exit, logs.dir);
+  const text = hostExitNotice(uiLang(), exit, logs.dir);
   dialog
     .showMessageBox(win, { type: "warning", message: text.message, detail: text.detail, buttons: [text.ok] })
     .then(() => clearHostExit(userData))
